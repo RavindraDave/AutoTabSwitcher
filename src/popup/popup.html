@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Auto Tab Switcher Options</title>
+    <link
+      rel="stylesheet"
+      href="../css/bootstrap.min.css"
+    />
+    <script src="popup.js"></script>
+  </head>
+
+  <body>
+    <div class="container mt-3" style="min-width: 350px;min-height: 330px;">
+      <div class="card">
+        <div class="card-header">
+          Auto Tab Switcher Options
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label for="delayTime" class="card-title">Delay Time (in seconds)</label>
+            <input
+              type="number"
+              class="form-control"
+              id="delayTimeInput"
+              placeholder="Enter delay time in seconds"
+            />
+            <br>
+            <div class="custom-control custom-switch mb-3">
+              <input type="checkbox" class="custom-control-input" id="enabledCheckbox">
+              <label class="custom-control-label" for="enabledCheckbox">Enabled</label>
+            </div>
+            
+            <button type="button" class="btn btn-primary" id="saveButton">
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+
+     
+    </div>
+  </body>
+</html>

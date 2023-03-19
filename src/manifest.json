@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Auto Tab Switcher",
+  "description": "Automatically switches to the next tab every few seconds",
+  "version": "1.0.0",
+  "icons": {
+    "16": "icon.png"
+  },
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "./popup/popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
