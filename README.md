@@ -26,7 +26,7 @@ This extension follows Chrome Extension Manifest V3 best practices:
 
 ### Project Structure
 
-```
+```plaintext
 AutoTabSwitcher/
 ├── src/                          # Source files
 │   ├── background.ts             # Service worker (TypeScript)
