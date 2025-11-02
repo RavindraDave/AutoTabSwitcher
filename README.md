@@ -81,13 +81,19 @@ AutoTabSwitcher/
 
 ### Build Scripts
 
+#### Development
 - **`npm run build`** - Clean, compile TypeScript, and copy assets to dist/
 - **`npm run watch`** - Watch mode for development (auto-recompile on changes)
 - **`npm run clean`** - Remove the dist/ directory (cross-platform using rimraf)
 - **`npm run build:ts`** - Compile TypeScript only
 - **`npm run build:assets`** - Copy static assets only
 
+#### Production (Chrome Web Store)
+- **`npm run build:prod`** - Prepare for Chrome Web Store deployment (supports 5-second minimum)
+
 **Note**: All build scripts are cross-platform compatible (Windows, macOS, Linux). We use `rimraf` for cross-platform file deletion instead of platform-specific commands.
+
+**Production Build**: The production version supports a 5-second minimum delay (instead of 60 seconds for development). See `PRODUCTION-SETUP.md` for details.
 
 ### Development Workflow
 
@@ -121,6 +127,21 @@ This will automatically recompile TypeScript files when you save changes.
 3. **Verify installation**
    - You should see the Auto Tab Switcher icon in your toolbar
    - The badge should show "OFF" by default
+
+### For Chrome Web Store (Production)
+
+To prepare for Chrome Web Store deployment with 5-second minimum support:
+
+```bash
+npm install
+npm run build:prod
+```
+
+This switches to the hybrid implementation that supports delays as low as 5 seconds. See `PRODUCTION-SETUP.md` for complete deployment instructions.
+
+**Key differences**:
+- **Development**: 60-second minimum (unpacked extension)
+- **Production**: 5-second minimum (Chrome Web Store version)
 
 ## Usage
 

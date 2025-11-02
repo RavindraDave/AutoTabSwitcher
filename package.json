@@ -8,6 +8,7 @@
     "build:ts": "tsc",
     "build:assets": "node scripts/copy-assets.js",
     "build": "npm run build:ts && npm run build:assets",
+    "build:prod": "bash scripts/prepare-production.sh",
     "watch": "tsc --watch",
     "dev": "npm run build && npm run watch",
     "test": "jest",
