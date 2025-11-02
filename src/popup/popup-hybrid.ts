@@ -1,7 +1,10 @@
 /**
- * Auto Tab Switcher - Popup UI Controller
+ * Auto Tab Switcher - Popup UI Controller (Hybrid Implementation)
  *
- * Handles the extension popup interface for configuring tab switching settings.
+ * This version adapts the minimum delay based on whether the extension
+ * is packed (Chrome Web Store) or unpacked (development).
+ *
+ * For production use, replace popup.ts with this file and rename to popup.ts
  */
 
 // Types for storage data
@@ -10,10 +13,17 @@ interface StorageData {
   enabled?: boolean;
 }
 
-// Constants
-// Chrome alarms API minimum is 1 minute for unpacked extensions
-const MIN_DELAY_SECONDS = 60; // 1 minute - matches Chrome's minimum
-const DEFAULT_DELAY_SECONDS = MIN_DELAY_SECONDS; // Use minimum as default
+// Environment detection
+function isPacked(): boolean {
+  // Unpacked extensions don't have update_url in manifest
+  return !chrome.runtime.getManifest().update_url;
+}
+
+// Constants - adaptive based on environment
+const MIN_DELAY_SECONDS_DEVELOPMENT = 60; // 1 minute for unpacked (development)
+const MIN_DELAY_SECONDS_PRODUCTION = 5;   // 5 seconds for packed (Chrome Web Store)
+const MIN_DELAY_SECONDS = isPacked() ? MIN_DELAY_SECONDS_PRODUCTION : MIN_DELAY_SECONDS_DEVELOPMENT;
+const DEFAULT_DELAY_SECONDS = MIN_DELAY_SECONDS;
 const MAX_DELAY_SECONDS = 3600; // 1 hour
 
 /**
@@ -44,6 +54,9 @@ async function loadSettings(): Promise<void> {
     // Set input constraints
     delayTimeInput.min = String(MIN_DELAY_SECONDS);
     delayTimeInput.max = String(MAX_DELAY_SECONDS);
+
+    // Update placeholder to show minimum
+    delayTimeInput.placeholder = `Enter delay time (min: ${MIN_DELAY_SECONDS}s)`;
   } catch (error) {
     console.error('Error loading settings:', error);
   }
@@ -58,9 +71,10 @@ function validateDelayTime(value: number): { valid: boolean; error?: string } {
   }
 
   if (value < MIN_DELAY_SECONDS) {
+    const environment = isPacked() ? 'Chrome Web Store version' : 'development version';
     return {
       valid: false,
-      error: `Delay must be at least ${MIN_DELAY_SECONDS} seconds (Chrome's minimum for alarms API)`,
+      error: `Delay must be at least ${MIN_DELAY_SECONDS} seconds (${environment})`,
     };
   }
 
@@ -96,12 +110,39 @@ function showError(message: string): void {
   errorEl.textContent = message;
   errorEl.style.display = 'block';
 
-  // Auto-hide after 3 seconds
+  // Auto-hide after 5 seconds
   setTimeout(() => {
     if (errorEl) {
       errorEl.style.display = 'none';
     }
-  }, 3000);
+  }, 5000);
+}
+
+/**
+ * Show info message to user about environment
+ */
+function showEnvironmentInfo(): void {
+  const infoEl = document.getElementById('environmentInfo');
+  if (!infoEl) {
+    const info = document.createElement('div');
+    info.id = 'environmentInfo';
+    info.className = 'alert alert-info mt-2';
+    info.style.fontSize = '0.85em';
+
+    const environment = isPacked() ? 'Production' : 'Development';
+    const minDelay = MIN_DELAY_SECONDS;
+
+    info.innerHTML = `
+      <strong>${environment} Mode</strong><br>
+      Minimum delay: ${minDelay} seconds
+      ${!isPacked() ? '<br><small>Production version allows 5-second minimum</small>' : ''}
+    `;
+
+    const formGroup = document.querySelector('.form-group');
+    if (formGroup) {
+      formGroup.appendChild(info);
+    }
+  }
 }
 
 /**
@@ -169,6 +210,9 @@ function initializePopup(): void {
   // Load current settings
   loadSettings();
 
+  // Show environment info
+  showEnvironmentInfo();
+
   // Save button click handler
   btnSave.addEventListener('click', (event: MouseEvent) => {
     event.preventDefault();
@@ -188,6 +232,12 @@ function initializePopup(): void {
       saveSettings();
     }
   });
+
+  // Log environment
+  console.log(
+    `Popup initialized (${isPacked() ? 'PACKED' : 'UNPACKED'} extension)`,
+    `Min delay: ${MIN_DELAY_SECONDS}s`
+  );
 }
 
 // Initialize when DOM is ready
