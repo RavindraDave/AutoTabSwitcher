@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "Automatically switches to the next tab every few seconds",
   "scripts": {
-    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "build:ts": "tsc",
+    "build:assets": "node scripts/copy-assets.js",
+    "build": "npm run build:ts && npm run build:assets",
     "watch": "tsc --watch",
-    "clean": "rm -rf dist"
+    "dev": "npm run build && npm run watch"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.254",
