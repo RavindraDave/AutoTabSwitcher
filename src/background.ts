@@ -8,7 +8,10 @@
 
 // Constants
 const ALARM_NAME = 'tabSwitcher';
-const DEFAULT_DELAY_TIME = 10000; // 10 seconds
+// Chrome alarms API minimum period is 1 minute for unpacked extensions
+// See: https://developer.chrome.com/docs/extensions/reference/alarms/
+const MIN_DELAY_MS = 60000; // 60 seconds (1 minute) - Chrome's minimum
+const DEFAULT_DELAY_TIME = MIN_DELAY_MS; // Use minimum as default
 const DEFAULT_ENABLED = false;
 
 // Types for storage data
@@ -73,15 +76,16 @@ async function toggleTabSwitcher(): Promise<void> {
     const delayTime = data.delayTime ?? DEFAULT_DELAY_TIME;
 
     if (enabled) {
-      // Create alarm with the specified delay (in minutes for chrome.alarms)
-      const periodInMinutes = delayTime / 60000;
+      // Clamp delay to Chrome's minimum (1 minute for unpacked extensions)
+      const clampedDelayMs = Math.max(delayTime, MIN_DELAY_MS);
+      const periodInMinutes = clampedDelayMs / 60000;
 
       await chrome.alarms.create(ALARM_NAME, {
         delayInMinutes: periodInMinutes,
         periodInMinutes: periodInMinutes,
       });
 
-      console.log(`Tab switcher started with ${delayTime}ms delay`);
+      console.log(`Tab switcher started with ${clampedDelayMs}ms delay (requested: ${delayTime}ms)`);
     } else {
       console.log('Tab switcher stopped');
     }

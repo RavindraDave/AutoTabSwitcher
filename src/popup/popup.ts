@@ -11,8 +11,9 @@ interface StorageData {
 }
 
 // Constants
-const DEFAULT_DELAY_SECONDS = 10;
-const MIN_DELAY_SECONDS = 1;
+// Chrome alarms API minimum is 1 minute for unpacked extensions
+const MIN_DELAY_SECONDS = 60; // 1 minute - matches Chrome's minimum
+const DEFAULT_DELAY_SECONDS = MIN_DELAY_SECONDS; // Use minimum as default
 const MAX_DELAY_SECONDS = 3600; // 1 hour
 
 /**
@@ -59,7 +60,7 @@ function validateDelayTime(value: number): { valid: boolean; error?: string } {
   if (value < MIN_DELAY_SECONDS) {
     return {
       valid: false,
-      error: `Delay must be at least ${MIN_DELAY_SECONDS} second`,
+      error: `Delay must be at least ${MIN_DELAY_SECONDS} seconds (Chrome's minimum for alarms API)`,
     };
   }
 

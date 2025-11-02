@@ -5,7 +5,7 @@ A Chrome extension that automatically cycles through open tabs at configurable i
 ## Features
 
 - 🔄 Automatically cycles through open tabs in the current window
-- ⏱️ Configurable delay time (1 second to 1 hour)
+- ⏱️ Configurable delay time (1 minute to 1 hour)
 - 🎚️ Easy enable/disable toggle
 - 📊 Visual badge indicator (ON/OFF with color coding)
 - 💾 Persistent settings across browser sessions
@@ -130,7 +130,7 @@ This will automatically recompile TypeScript files when you save changes.
    - Click the extension icon in your toolbar
 
 2. **Configure settings**
-   - Set your desired delay time in seconds (1-3600)
+   - Set your desired delay time in seconds (60-3600)
    - Toggle the "Enabled" checkbox to start/stop
    - Click "Save" to apply changes
 
@@ -140,8 +140,10 @@ This will automatically recompile TypeScript files when you save changes.
 
 ### Settings
 
-- **Delay Time**: Time between tab switches (1 second to 1 hour)
+- **Delay Time**: Time between tab switches (1 minute to 1 hour)
 - **Enabled**: Master toggle for the auto-switcher
+
+**Note**: The minimum delay of 1 minute (60 seconds) is enforced by Chrome's alarms API for unpacked extensions. This ensures reliable periodic execution in Manifest V3 service workers.
 
 Settings are automatically persisted and will be restored when you restart Chrome.
 
