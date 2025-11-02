@@ -85,10 +85,14 @@ scripts/          # Build scripts
 ## Build Process
 
 The build process:
-1. Cleans dist/ directory
+1. Cleans dist/ directory (using `rimraf` for cross-platform compatibility)
 2. Compiles TypeScript to JavaScript
 3. Copies static assets (HTML, CSS, images, manifest)
 4. Generates source maps
+
+**Cross-Platform Compatibility**: All build scripts work on Windows, macOS, and Linux. We use:
+- `rimraf` for cross-platform file deletion (instead of `rm -rf`)
+- Node.js scripts for file operations (instead of shell commands)
 
 ## Common Tasks
 

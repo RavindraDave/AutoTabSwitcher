@@ -83,9 +83,11 @@ AutoTabSwitcher/
 
 - **`npm run build`** - Clean, compile TypeScript, and copy assets to dist/
 - **`npm run watch`** - Watch mode for development (auto-recompile on changes)
-- **`npm run clean`** - Remove the dist/ directory
+- **`npm run clean`** - Remove the dist/ directory (cross-platform using rimraf)
 - **`npm run build:ts`** - Compile TypeScript only
 - **`npm run build:assets`** - Copy static assets only
+
+**Note**: All build scripts are cross-platform compatible (Windows, macOS, Linux). We use `rimraf` for cross-platform file deletion instead of platform-specific commands.
 
 ### Development Workflow
 
