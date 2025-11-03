@@ -7,18 +7,17 @@
  */
 
 import { isPacked } from './utils/environment';
-import { ALARM_NAME, MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED } from './core/constants';
+import { MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED } from './core/constants';
 import { initializeStorage, getSettings } from './core/storage';
-import { updateBadge } from './core/badge-manager';
-import { switchTab } from './core/tab-switcher';
-import { isPaused, setupActivityListeners } from './core/activity-tracker';
+import { setupActivityListeners } from './core/activity-tracker';
+import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_MS = isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;
 const DEFAULT_DELAY_TIME = MIN_DELAY_MS;
 
 /**
- * Start or stop the tab switcher alarm based on current settings
+ * Start or stop the tab switcher using hybrid timing mechanism
  */
 async function toggleTabSwitcher(): Promise<void> {
   try {
@@ -27,56 +26,12 @@ async function toggleTabSwitcher(): Promise<void> {
     const enabled = data.enabled ?? DEFAULT_ENABLED;
     const delayTime = data.delayTime ?? DEFAULT_DELAY_TIME;
 
-    // Clear any existing alarm first
-    await chrome.alarms.clear(ALARM_NAME);
-
-    if (enabled) {
-      // Clamp delay to minimum value
-      const clampedDelayMs = Math.max(delayTime, MIN_DELAY_MS);
-      const periodInMinutes = clampedDelayMs / 60000;
-
-      // Create alarm with the configured delay
-      await chrome.alarms.create(ALARM_NAME, {
-        delayInMinutes: periodInMinutes,
-        periodInMinutes: periodInMinutes,
-      });
-
-      console.log(`Tab switcher started: ${clampedDelayMs}ms delay (requested: ${delayTime}ms)`);
-    } else {
-      console.log('Tab switcher stopped');
-    }
-
-    await updateBadge(enabled);
+    // Delegate to hybrid timer implementation
+    await toggleHybridTimer(enabled, delayTime, MIN_DELAY_MS);
   } catch (error) {
     console.error('Error toggling tab switcher:', error);
   }
 }
-
-/**
- * Handle alarm events - this is where the actual tab switching happens
- */
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === ALARM_NAME) {
-    const data = await getSettings(['enabled']);
-    const enabled = data.enabled ?? DEFAULT_ENABLED;
-
-    // Short-circuit if disabled
-    if (!enabled) {
-      return;
-    }
-
-    // Check if switching is paused due to user activity
-    const paused = await isPaused();
-
-    if (paused) {
-      console.log('Auto-switching paused due to recent user activity');
-      await updateBadge(enabled, true);
-    } else {
-      await updateBadge(enabled, false);
-      await switchTab();
-    }
-  }
-});
 
 /**
  * Handle storage changes - restart alarm if settings changed
@@ -131,6 +86,9 @@ chrome.windows.onCreated.addListener(async () => {
     console.error('Error in window creation handler:', error);
   }
 });
+
+// Set up alarm listener (for hybrid timing)
+setupAlarmListener();
 
 // Set up activity detection listeners
 setupActivityListeners();
