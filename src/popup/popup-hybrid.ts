@@ -13,6 +13,8 @@ interface StorageData {
   enabled?: boolean;
   windowMode?: 'global' | 'current-window';
   selectedWindowId?: number;
+  pauseOnActivity?: boolean;
+  pauseDuration?: number; // in milliseconds
 }
 
 // Environment detection
@@ -27,6 +29,9 @@ const MIN_DELAY_SECONDS_PRODUCTION = 5;   // 5 seconds for packed (Chrome Web St
 const MIN_DELAY_SECONDS = isPacked() ? MIN_DELAY_SECONDS_PRODUCTION : MIN_DELAY_SECONDS_DEVELOPMENT;
 const DEFAULT_DELAY_SECONDS = MIN_DELAY_SECONDS;
 const MAX_DELAY_SECONDS = 3600; // 1 hour
+const DEFAULT_PAUSE_DURATION_SECONDS = 30; // 30 seconds default
+const MIN_PAUSE_DURATION_SECONDS = 5; // 5 seconds minimum
+const MAX_PAUSE_DURATION_SECONDS = 300; // 5 minutes maximum
 
 /**
  * Update window information display
@@ -74,6 +79,16 @@ async function handleWindowModeChange(mode: 'global' | 'current-window'): Promis
 }
 
 /**
+ * Handle pause on activity checkbox change
+ */
+function handlePauseOnActivityChange(checked: boolean): void {
+  const pauseDurationSection = document.getElementById('pauseDurationSection');
+  if (pauseDurationSection) {
+    pauseDurationSection.style.display = checked ? 'block' : 'none';
+  }
+}
+
+/**
  * Load and display current settings from storage
  */
 async function loadSettings(): Promise<void> {
@@ -83,6 +98,8 @@ async function loadSettings(): Promise<void> {
       'enabled',
       'windowMode',
       'selectedWindowId',
+      'pauseOnActivity',
+      'pauseDuration',
     ])) as StorageData;
 
     const delayTimeInput = document.getElementById(
@@ -94,6 +111,12 @@ async function loadSettings(): Promise<void> {
     const windowModeRadios = document.getElementsByName(
       'windowMode'
     ) as NodeListOf<HTMLInputElement>;
+    const pauseOnActivityCheckbox = document.getElementById(
+      'pauseOnActivityCheckbox'
+    ) as HTMLInputElement;
+    const pauseDurationInput = document.getElementById(
+      'pauseDurationInput'
+    ) as HTMLInputElement;
 
     // Convert milliseconds to seconds for display
     const delayInSeconds = data.delayTime
@@ -116,9 +139,24 @@ async function loadSettings(): Promise<void> {
       await updateWindowInfo(data.selectedWindowId);
     }
 
+    // Set pause on activity settings
+    const pauseOnActivity = data.pauseOnActivity ?? false;
+    pauseOnActivityCheckbox.checked = pauseOnActivity;
+
+    // Convert pause duration from milliseconds to seconds
+    const pauseDurationInSeconds = data.pauseDuration
+      ? Math.round(data.pauseDuration / 1000)
+      : DEFAULT_PAUSE_DURATION_SECONDS;
+    pauseDurationInput.value = String(pauseDurationInSeconds);
+
+    // Show/hide pause duration section based on checkbox
+    handlePauseOnActivityChange(pauseOnActivity);
+
     // Set input constraints
     delayTimeInput.min = String(MIN_DELAY_SECONDS);
     delayTimeInput.max = String(MAX_DELAY_SECONDS);
+    pauseDurationInput.min = String(MIN_PAUSE_DURATION_SECONDS);
+    pauseDurationInput.max = String(MAX_PAUSE_DURATION_SECONDS);
 
     // Update placeholder to show minimum
     delayTimeInput.placeholder = `Enter delay time (min: ${MIN_DELAY_SECONDS}s)`;
@@ -147,6 +185,31 @@ function validateDelayTime(value: number): { valid: boolean; error?: string } {
     return {
       valid: false,
       error: `Delay must be at most ${MAX_DELAY_SECONDS} seconds`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate pause duration input
+ */
+function validatePauseDuration(value: number): { valid: boolean; error?: string } {
+  if (isNaN(value)) {
+    return { valid: false, error: 'Please enter a valid pause duration' };
+  }
+
+  if (value < MIN_PAUSE_DURATION_SECONDS) {
+    return {
+      valid: false,
+      error: `Pause duration must be at least ${MIN_PAUSE_DURATION_SECONDS} seconds`,
+    };
+  }
+
+  if (value > MAX_PAUSE_DURATION_SECONDS) {
+    return {
+      valid: false,
+      error: `Pause duration must be at most ${MAX_PAUSE_DURATION_SECONDS} seconds`,
     };
   }
 
@@ -221,23 +284,70 @@ async function saveSettings(): Promise<void> {
     const enabledCheckbox = document.getElementById(
       'enabledCheckbox'
     ) as HTMLInputElement;
+    const pauseOnActivityCheckbox = document.getElementById(
+      'pauseOnActivityCheckbox'
+    ) as HTMLInputElement;
+    const pauseDurationInput = document.getElementById(
+      'pauseDurationInput'
+    ) as HTMLInputElement;
 
     const delayInSeconds = parseInt(delayTimeInput.value, 10);
 
-    // Validate input
+    // Validate delay time
     const validation = validateDelayTime(delayInSeconds);
     if (!validation.valid) {
       showError(validation.error || 'Invalid delay time');
       return;
     }
 
+    // Validate pause duration if pause on activity is enabled
+    const pauseOnActivity = pauseOnActivityCheckbox.checked;
+    let pauseDuration = DEFAULT_PAUSE_DURATION_SECONDS * 1000; // Default in ms
+
+    if (pauseOnActivity) {
+      const pauseDurationInSeconds = parseInt(pauseDurationInput.value, 10);
+      const pauseValidation = validatePauseDuration(pauseDurationInSeconds);
+      if (!pauseValidation.valid) {
+        showError(pauseValidation.error || 'Invalid pause duration');
+        return;
+      }
+      pauseDuration = pauseDurationInSeconds * 1000; // Convert to milliseconds
+    }
+
+    // Get window mode selection
+    const checkedRadio = document.querySelector(
+      'input[name="windowMode"]:checked'
+    ) as HTMLInputElement | null;
+    const windowMode = (checkedRadio?.value as 'global' | 'current-window') ?? 'global';
+
     // Convert seconds to milliseconds for storage
     const delayTime = delayInSeconds * 1000;
     const enabled = enabledCheckbox.checked;
 
-    await chrome.storage.local.set({ delayTime, enabled });
+    // Get current window ID if current-window mode is selected
+    let selectedWindowId: number | undefined;
+    if (windowMode === 'current-window') {
+      const currentWindow = await chrome.windows.getCurrent();
+      selectedWindowId = currentWindow.id;
+    }
 
-    console.log('Settings saved:', { delayTime, enabled });
+    await chrome.storage.local.set({
+      delayTime,
+      enabled,
+      windowMode,
+      selectedWindowId,
+      pauseOnActivity,
+      pauseDuration,
+    });
+
+    console.log('Settings saved:', {
+      delayTime,
+      enabled,
+      windowMode,
+      selectedWindowId,
+      pauseOnActivity,
+      pauseDuration
+    });
 
     // Close popup after successful save
     window.close();
@@ -266,8 +376,14 @@ function initializePopup(): void {
   const btnSave = document.getElementById('saveButton');
   const delayTimeInput = document.getElementById('delayTimeInput');
   const enabledCheckbox = document.getElementById('enabledCheckbox');
+  const windowModeRadios = document.getElementsByName(
+    'windowMode'
+  ) as NodeListOf<HTMLInputElement>;
+  const pauseOnActivityCheckbox = document.getElementById(
+    'pauseOnActivityCheckbox'
+  ) as HTMLInputElement;
 
-  if (!btnSave || !delayTimeInput || !enabledCheckbox) {
+  if (!btnSave || !delayTimeInput || !enabledCheckbox || !pauseOnActivityCheckbox) {
     console.error('Required DOM elements not found');
     return;
   }
@@ -288,6 +404,22 @@ function initializePopup(): void {
   enabledCheckbox.addEventListener('change', (event: Event) => {
     const target = event.target as HTMLInputElement;
     handleEnabledChange(target.checked);
+  });
+
+  // Window mode radio change handlers
+  windowModeRadios.forEach((radio) => {
+    radio.addEventListener('change', (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      if (target.checked) {
+        handleWindowModeChange(target.value as 'global' | 'current-window');
+      }
+    });
+  });
+
+  // Pause on activity checkbox change handler
+  pauseOnActivityCheckbox.addEventListener('change', (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    handlePauseOnActivityChange(target.checked);
   });
 
   // Allow Enter key to save

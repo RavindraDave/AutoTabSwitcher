@@ -25,9 +25,14 @@ const MIN_DELAY_MS = isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOP
 const DEFAULT_DELAY_TIME = MIN_DELAY_MS;
 const DEFAULT_ENABLED = false;
 const DEFAULT_WINDOW_MODE = 'global'; // 'global' or 'current-window'
+const DEFAULT_PAUSE_ON_ACTIVITY = false; // Pause when user is active
+const DEFAULT_PAUSE_DURATION = 30000; // 30 seconds pause after user activity
 
 // Timer state (for setInterval approach)
 let intervalTimerId: number | undefined;
+
+// Track last user activity timestamp
+let lastUserActivityTime: number = 0;
 
 // Types for storage data
 interface StorageData {
@@ -35,17 +40,47 @@ interface StorageData {
   enabled?: boolean;
   windowMode?: 'global' | 'current-window';
   selectedWindowId?: number;
+  pauseOnActivity?: boolean;
+  pauseDuration?: number; // in milliseconds
 }
 
 /**
- * Update the extension badge text based on enabled status
+ * Check if auto-switching is currently paused due to user activity
  */
-async function updateBadge(enabled: boolean): Promise<void> {
-  const badgeText = enabled ? 'ON' : 'OFF';
-  await chrome.action.setBadgeText({ text: badgeText });
+async function isPaused(): Promise<boolean> {
+  const data = await chrome.storage.local.get(['pauseOnActivity', 'pauseDuration']) as StorageData;
+  const pauseOnActivity = data.pauseOnActivity ?? DEFAULT_PAUSE_ON_ACTIVITY;
 
-  // Set badge color for better visibility
-  const badgeColor = enabled ? '#4CAF50' : '#9E9E9E'; // Green : Gray
+  if (!pauseOnActivity) {
+    return false; // Feature disabled
+  }
+
+  const pauseDuration = data.pauseDuration ?? DEFAULT_PAUSE_DURATION;
+  const now = Date.now();
+  const timeSinceActivity = now - lastUserActivityTime;
+
+  return timeSinceActivity < pauseDuration;
+}
+
+/**
+ * Update the extension badge text based on enabled and paused status
+ */
+async function updateBadge(enabled: boolean, paused: boolean = false): Promise<void> {
+  let badgeText: string;
+  let badgeColor: string;
+
+  if (!enabled) {
+    badgeText = 'OFF';
+    badgeColor = '#9E9E9E'; // Gray
+  } else if (paused) {
+    badgeText = '⏸'; // Pause symbol
+    badgeColor = '#FF9800'; // Orange
+  } else {
+    badgeText = 'ON';
+    badgeColor = '#4CAF50'; // Green
+  }
+
+  await chrome.action.setBadgeText({ text: badgeText });
   await chrome.action.setBadgeBackgroundColor({ color: badgeColor });
 }
 
@@ -122,9 +157,19 @@ function startIntervalTimer(delayMs: number): void {
     intervalTimerId = undefined;
   }
 
-  // Start new interval
-  intervalTimerId = setInterval(() => {
-    switchTab();
+  // Start new interval with pause checking
+  intervalTimerId = setInterval(async () => {
+    const paused = await isPaused();
+    const data = await chrome.storage.local.get(['enabled']) as StorageData;
+    const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+    if (paused) {
+      console.log('Auto-switching paused due to recent user activity');
+      await updateBadge(enabled, true);
+    } else {
+      await updateBadge(enabled, false);
+      await switchTab();
+    }
   }, delayMs) as unknown as number;
 
   console.log(`Interval timer started with ${delayMs}ms delay`);
@@ -211,9 +256,20 @@ async function toggleTabSwitcher(): Promise<void> {
 /**
  * Handle alarm events - this is where the actual tab switching happens for alarms
  */
-chrome.alarms.onAlarm.addListener((alarm) => {
+chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === ALARM_NAME) {
-    switchTab();
+    // Check if switching is paused due to user activity
+    const paused = await isPaused();
+    const data = await chrome.storage.local.get(['enabled']) as StorageData;
+    const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+    if (paused) {
+      console.log('Auto-switching paused due to recent user activity');
+      await updateBadge(enabled, true);
+    } else {
+      await updateBadge(enabled, false);
+      await switchTab();
+    }
   }
 });
 
@@ -247,6 +303,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       delayTime: DEFAULT_DELAY_TIME,
       windowMode: DEFAULT_WINDOW_MODE,
       selectedWindowId: undefined,
+      pauseOnActivity: DEFAULT_PAUSE_ON_ACTIVITY,
+      pauseDuration: DEFAULT_PAUSE_DURATION,
     });
   }
 
@@ -284,6 +342,53 @@ chrome.windows.onCreated.addListener(async () => {
     }
   } catch (error) {
     console.error('Error in window creation handler:', error);
+  }
+});
+
+/**
+ * Activity Detection Listeners
+ * These listeners track user activity to pause auto-switching when user is working
+ */
+
+/**
+ * Update last activity time
+ */
+function recordUserActivity(): void {
+  lastUserActivityTime = Date.now();
+  console.log('User activity detected, updating timestamp');
+}
+
+/**
+ * Detect tab updates (user navigating, reloading, etc.)
+ */
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, _tab) => {
+  // Only count meaningful updates as activity
+  if (changeInfo.url || changeInfo.status === 'loading') {
+    recordUserActivity();
+  }
+});
+
+/**
+ * Detect new tab creation (user opening tabs)
+ */
+chrome.tabs.onCreated.addListener(() => {
+  recordUserActivity();
+});
+
+/**
+ * Detect tab switching (user manually switching tabs)
+ */
+chrome.tabs.onActivated.addListener(() => {
+  recordUserActivity();
+});
+
+/**
+ * Detect window focus changes (user switching windows)
+ */
+chrome.windows.onFocusChanged.addListener((windowId) => {
+  // windowId is -1 when all Chrome windows lose focus
+  if (windowId !== chrome.windows.WINDOW_ID_NONE) {
+    recordUserActivity();
   }
 });
 
