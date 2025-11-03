@@ -12,5 +12,5 @@
  * @returns true if packed (production), false if unpacked (development)
  */
 export function isPacked(): boolean {
-  return !chrome.runtime.getManifest().update_url;
+  return !!chrome.runtime.getManifest().update_url;
 }
