@@ -6,12 +6,15 @@
  * All state is persisted in chrome.storage.local.
  */
 
-import { ALARM_NAME, MIN_DELAY_MS_DEVELOPMENT as MIN_DELAY_MS, DEFAULT_ENABLED } from './core/constants';
+import { isPacked } from './utils/environment';
+import { ALARM_NAME, MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED } from './core/constants';
 import { initializeStorage, getSettings } from './core/storage';
 import { updateBadge } from './core/badge-manager';
 import { switchTab } from './core/tab-switcher';
 import { isPaused, setupActivityListeners } from './core/activity-tracker';
 
+// Determine minimum delay based on environment
+const MIN_DELAY_MS = isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;
 const DEFAULT_DELAY_TIME = MIN_DELAY_MS;
 
 /**
@@ -54,10 +57,16 @@ async function toggleTabSwitcher(): Promise<void> {
  */
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === ALARM_NAME) {
-    // Check if switching is paused due to user activity
-    const paused = await isPaused();
     const data = await getSettings(['enabled']);
     const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+    // Short-circuit if disabled
+    if (!enabled) {
+      return;
+    }
+
+    // Check if switching is paused due to user activity
+    const paused = await isPaused();
 
     if (paused) {
       console.log('Auto-switching paused due to recent user activity');

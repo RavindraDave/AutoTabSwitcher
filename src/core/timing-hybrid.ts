@@ -27,9 +27,15 @@ function startIntervalTimer(delayMs: number): void {
 
   // Start new interval with pause checking
   intervalTimerId = setInterval(async () => {
-    const paused = await isPaused();
     const data = await getSettings(['enabled']);
     const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+    // Short-circuit if disabled
+    if (!enabled) {
+      return;
+    }
+
+    const paused = await isPaused();
 
     if (paused) {
       console.log('Auto-switching paused due to recent user activity');
@@ -124,10 +130,16 @@ export async function toggleHybridTimer(enabled: boolean, delayMs: number, minDe
 export function setupAlarmListener(): void {
   chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === ALARM_NAME) {
-      // Check if switching is paused due to user activity
-      const paused = await isPaused();
       const data = await getSettings(['enabled']);
       const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+      // Short-circuit if disabled
+      if (!enabled) {
+        return;
+      }
+
+      // Check if switching is paused due to user activity
+      const paused = await isPaused();
 
       if (paused) {
         console.log('Auto-switching paused due to recent user activity');
