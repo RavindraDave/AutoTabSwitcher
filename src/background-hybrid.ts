@@ -8,15 +8,11 @@
  * For production use, replace background.ts with this file and rename to background.ts
  */
 
+import { isPacked } from './utils/environment';
+
 // Constants
 const ALARM_NAME = 'tabSwitcher';
 const MIN_ALARM_DELAY_MS = 30000; // Chrome alarms API minimum for packed extensions
-
-// Environment detection
-const isPacked = (): boolean => {
-  // Unpacked extensions don't have update_url in manifest
-  return !chrome.runtime.getManifest().update_url;
-};
 
 // Minimum delays based on environment
 const MIN_DELAY_MS_DEVELOPMENT = 60000; // 60 seconds for unpacked (development)

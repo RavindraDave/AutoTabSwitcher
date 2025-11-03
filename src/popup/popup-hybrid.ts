@@ -7,6 +7,8 @@
  * For production use, replace popup.ts with this file and rename to popup.ts
  */
 
+import { isPacked } from '../utils/environment';
+
 // Types for storage data
 interface StorageData {
   delayTime?: number;
@@ -15,12 +17,6 @@ interface StorageData {
   selectedWindowId?: number;
   pauseOnActivity?: boolean;
   pauseDuration?: number; // in milliseconds
-}
-
-// Environment detection
-function isPacked(): boolean {
-  // Unpacked extensions don't have update_url in manifest
-  return !chrome.runtime.getManifest().update_url;
 }
 
 // Constants - adaptive based on environment

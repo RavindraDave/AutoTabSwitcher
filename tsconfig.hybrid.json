@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*-hybrid.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "scripts",
+    "src/**/*.test.ts",
+    "src/**/__tests__/**",
+    "src/background.ts",
+    "src/popup/popup.ts"
+  ]
+}
