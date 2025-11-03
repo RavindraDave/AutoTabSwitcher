@@ -6,156 +6,39 @@
  * All state is persisted in chrome.storage.local.
  */
 
-// Constants
-const ALARM_NAME = 'tabSwitcher';
-// Chrome alarms API minimum period is 1 minute for unpacked extensions
-// See: https://developer.chrome.com/docs/extensions/reference/alarms/
-const MIN_DELAY_MS = 60000; // 60 seconds (1 minute) - Chrome's minimum
-const DEFAULT_DELAY_TIME = MIN_DELAY_MS; // Use minimum as default
-const DEFAULT_ENABLED = false;
-const DEFAULT_WINDOW_MODE = 'global'; // 'global' or 'current-window'
-const DEFAULT_PAUSE_ON_ACTIVITY = false; // Pause when user is active
-const DEFAULT_PAUSE_DURATION = 30000; // 30 seconds pause after user activity
+import { ALARM_NAME, MIN_DELAY_MS_DEVELOPMENT as MIN_DELAY_MS, DEFAULT_ENABLED } from './core/constants';
+import { initializeStorage, getSettings } from './core/storage';
+import { updateBadge } from './core/badge-manager';
+import { switchTab } from './core/tab-switcher';
+import { isPaused, setupActivityListeners } from './core/activity-tracker';
 
-// Track last user activity timestamp
-let lastUserActivityTime: number = 0;
-
-// Types for storage data
-interface StorageData {
-  delayTime?: number;
-  enabled?: boolean;
-  windowMode?: 'global' | 'current-window';
-  selectedWindowId?: number;
-  pauseOnActivity?: boolean;
-  pauseDuration?: number; // in milliseconds
-}
-
-/**
- * Check if auto-switching is currently paused due to user activity
- */
-async function isPaused(): Promise<boolean> {
-  const data = await chrome.storage.local.get(['pauseOnActivity', 'pauseDuration']) as StorageData;
-  const pauseOnActivity = data.pauseOnActivity ?? DEFAULT_PAUSE_ON_ACTIVITY;
-
-  if (!pauseOnActivity) {
-    return false; // Feature disabled
-  }
-
-  const pauseDuration = data.pauseDuration ?? DEFAULT_PAUSE_DURATION;
-  const now = Date.now();
-  const timeSinceActivity = now - lastUserActivityTime;
-
-  return timeSinceActivity < pauseDuration;
-}
-
-/**
- * Update the extension badge text based on enabled and paused status
- */
-async function updateBadge(enabled: boolean, paused: boolean = false): Promise<void> {
-  let badgeText: string;
-  let badgeColor: string;
-
-  if (!enabled) {
-    badgeText = 'OFF';
-    badgeColor = '#9E9E9E'; // Gray
-  } else if (paused) {
-    badgeText = '⏸'; // Pause symbol
-    badgeColor = '#FF9800'; // Orange
-  } else {
-    badgeText = 'ON';
-    badgeColor = '#4CAF50'; // Green
-  }
-
-  await chrome.action.setBadgeText({ text: badgeText });
-  await chrome.action.setBadgeBackgroundColor({ color: badgeColor });
-}
-
-/**
- * Switch to the next tab based on window mode configuration
- */
-async function switchTab(): Promise<void> {
-  try {
-    // Get settings to determine which window(s) to switch
-    const data = await chrome.storage.local.get(['windowMode', 'selectedWindowId']) as StorageData;
-    const windowMode = data.windowMode ?? DEFAULT_WINDOW_MODE;
-    const selectedWindowId = data.selectedWindowId;
-
-    let targetWindowId: number | undefined;
-
-    if (windowMode === 'current-window') {
-      // Use the specific selected window
-      if (!selectedWindowId) {
-        console.warn('Current-window mode but no window selected');
-        return;
-      }
-
-      // Verify the window still exists
-      try {
-        await chrome.windows.get(selectedWindowId);
-        targetWindowId = selectedWindowId;
-      } catch (error) {
-        console.warn('Selected window no longer exists, disabling auto-switching');
-        await chrome.storage.local.set({ enabled: false });
-        await updateBadge(false);
-        return;
-      }
-    } else {
-      // Global mode: switch in the currently focused window
-      const currentWindow = await chrome.windows.getCurrent();
-      targetWindowId = currentWindow.id;
-    }
-
-    // Query tabs in the target window
-    const tabs = await chrome.tabs.query({ windowId: targetWindowId });
-
-    if (tabs.length <= 1) {
-      return; // Nothing to switch if only one tab
-    }
-
-    const currentTab = tabs.find((tab) => tab.active);
-
-    if (!currentTab || currentTab.index === undefined) {
-      console.warn('No active tab found in target window');
-      return;
-    }
-
-    const currentTabIndex = currentTab.index;
-    const nextTabIndex = (currentTabIndex + 1) % tabs.length;
-    const nextTab = tabs[nextTabIndex];
-
-    if (nextTab && nextTab.id) {
-      await chrome.tabs.update(nextTab.id, { active: true });
-      console.log(`Switched to next tab in window ${targetWindowId} (mode: ${windowMode})`);
-    }
-  } catch (error) {
-    console.error('Error switching tabs:', error);
-  }
-}
+const DEFAULT_DELAY_TIME = MIN_DELAY_MS;
 
 /**
  * Start or stop the tab switcher alarm based on current settings
  */
 async function toggleTabSwitcher(): Promise<void> {
   try {
-    // Always clear existing alarm first
-    await chrome.alarms.clear(ALARM_NAME);
-
     // Get current settings from storage
-    const data = await chrome.storage.local.get(['enabled', 'delayTime']) as StorageData;
+    const data = await getSettings(['enabled', 'delayTime']);
     const enabled = data.enabled ?? DEFAULT_ENABLED;
     const delayTime = data.delayTime ?? DEFAULT_DELAY_TIME;
 
+    // Clear any existing alarm first
+    await chrome.alarms.clear(ALARM_NAME);
+
     if (enabled) {
-      // Clamp delay to Chrome's minimum (1 minute for unpacked extensions)
+      // Clamp delay to minimum value
       const clampedDelayMs = Math.max(delayTime, MIN_DELAY_MS);
       const periodInMinutes = clampedDelayMs / 60000;
 
+      // Create alarm with the configured delay
       await chrome.alarms.create(ALARM_NAME, {
         delayInMinutes: periodInMinutes,
         periodInMinutes: periodInMinutes,
       });
 
-      console.log(`Tab switcher started with ${clampedDelayMs}ms delay (requested: ${delayTime}ms)`);
+      console.log(`Tab switcher started: ${clampedDelayMs}ms delay (requested: ${delayTime}ms)`);
     } else {
       console.log('Tab switcher stopped');
     }
@@ -173,7 +56,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === ALARM_NAME) {
     // Check if switching is paused due to user activity
     const paused = await isPaused();
-    const data = await chrome.storage.local.get(['enabled']) as StorageData;
+    const data = await getSettings(['enabled']);
     const enabled = data.enabled ?? DEFAULT_ENABLED;
 
     if (paused) {
@@ -210,15 +93,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('Extension installed/updated:', details.reason);
 
   if (details.reason === 'install') {
-    // Set defaults only on fresh install
-    await chrome.storage.local.set({
-      enabled: DEFAULT_ENABLED,
-      delayTime: DEFAULT_DELAY_TIME,
-      windowMode: DEFAULT_WINDOW_MODE,
-      selectedWindowId: undefined,
-      pauseOnActivity: DEFAULT_PAUSE_ON_ACTIVITY,
-      pauseDuration: DEFAULT_PAUSE_DURATION,
-    });
+    await initializeStorage(DEFAULT_DELAY_TIME);
   }
 
   // Always update badge and restart switcher on install/update
@@ -238,8 +113,7 @@ chrome.runtime.onStartup.addListener(async () => {
  */
 chrome.windows.onCreated.addListener(async () => {
   try {
-    // Check if switcher should be running
-    const data = await chrome.storage.local.get(['enabled']) as StorageData;
+    const data = await getSettings(['enabled']);
     if (data.enabled) {
       console.log('New window created, ensuring switcher is active');
       await toggleTabSwitcher();
@@ -249,52 +123,8 @@ chrome.windows.onCreated.addListener(async () => {
   }
 });
 
-/**
- * Activity Detection Listeners
- * These listeners track user activity to pause auto-switching when user is working
- */
-
-/**
- * Update last activity time
- */
-function recordUserActivity(): void {
-  lastUserActivityTime = Date.now();
-  console.log('User activity detected, updating timestamp');
-}
-
-/**
- * Detect tab updates (user navigating, reloading, etc.)
- */
-chrome.tabs.onUpdated.addListener((_tabId, changeInfo, _tab) => {
-  // Only count meaningful updates as activity
-  if (changeInfo.url || changeInfo.status === 'loading') {
-    recordUserActivity();
-  }
-});
-
-/**
- * Detect new tab creation (user opening tabs)
- */
-chrome.tabs.onCreated.addListener(() => {
-  recordUserActivity();
-});
-
-/**
- * Detect tab switching (user manually switching tabs)
- */
-chrome.tabs.onActivated.addListener(() => {
-  recordUserActivity();
-});
-
-/**
- * Detect window focus changes (user switching windows)
- */
-chrome.windows.onFocusChanged.addListener((windowId) => {
-  // windowId is -1 when all Chrome windows lose focus
-  if (windowId !== chrome.windows.WINDOW_ID_NONE) {
-    recordUserActivity();
-  }
-});
+// Set up activity detection listeners
+setupActivityListeners();
 
 // Initialize on script load (when service worker starts)
 toggleTabSwitcher();
