@@ -23,6 +23,26 @@
               placeholder="Enter delay time in seconds"
             />
             <br>
+
+            <label class="card-title">Window Mode</label>
+            <div class="mb-3">
+              <div class="custom-control custom-radio">
+                <input type="radio" id="windowModeGlobal" name="windowMode" value="global" class="custom-control-input" checked>
+                <label class="custom-control-label" for="windowModeGlobal">
+                  All Windows
+                  <small class="form-text text-muted">Switch tabs in any focused window</small>
+                </label>
+              </div>
+              <div class="custom-control custom-radio">
+                <input type="radio" id="windowModeCurrentWindow" name="windowMode" value="current-window" class="custom-control-input">
+                <label class="custom-control-label" for="windowModeCurrentWindow">
+                  Current Window Only
+                  <small class="form-text text-muted">Switch tabs only in this window</small>
+                </label>
+              </div>
+              <div id="windowInfo" style="display: none; margin-top: 8px;"></div>
+            </div>
+
             <div class="custom-control custom-switch mb-3">
               <input type="checkbox" class="custom-control-input" id="enabledCheckbox">
               <label class="custom-control-label" for="enabledCheckbox">Enabled</label>

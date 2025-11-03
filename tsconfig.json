@@ -50,6 +50,7 @@
     "dist",
     "scripts",
     "src/**/*.test.ts",
-    "src/**/__tests__/**"
+    "src/**/__tests__/**",
+    "src/**/*-hybrid.ts"
   ]
 }

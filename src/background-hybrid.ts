@@ -24,6 +24,7 @@ const MIN_DELAY_MS_PRODUCTION = 5000;   // 5 seconds for packed (Chrome Web Stor
 const MIN_DELAY_MS = isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;
 const DEFAULT_DELAY_TIME = MIN_DELAY_MS;
 const DEFAULT_ENABLED = false;
+const DEFAULT_WINDOW_MODE = 'global'; // 'global' or 'current-window'
 
 // Timer state (for setInterval approach)
 let intervalTimerId: number | undefined;
@@ -32,6 +33,8 @@ let intervalTimerId: number | undefined;
 interface StorageData {
   delayTime?: number;
   enabled?: boolean;
+  windowMode?: 'global' | 'current-window';
+  selectedWindowId?: number;
 }
 
 /**
@@ -47,11 +50,42 @@ async function updateBadge(enabled: boolean): Promise<void> {
 }
 
 /**
- * Switch to the next tab in the current window
+ * Switch to the next tab based on window mode configuration
  */
 async function switchTab(): Promise<void> {
   try {
-    const tabs = await chrome.tabs.query({ currentWindow: true });
+    // Get settings to determine which window(s) to switch
+    const data = await chrome.storage.local.get(['windowMode', 'selectedWindowId']) as StorageData;
+    const windowMode = data.windowMode ?? DEFAULT_WINDOW_MODE;
+    const selectedWindowId = data.selectedWindowId;
+
+    let targetWindowId: number | undefined;
+
+    if (windowMode === 'current-window') {
+      // Use the specific selected window
+      if (!selectedWindowId) {
+        console.warn('Current-window mode but no window selected');
+        return;
+      }
+
+      // Verify the window still exists
+      try {
+        await chrome.windows.get(selectedWindowId);
+        targetWindowId = selectedWindowId;
+      } catch (error) {
+        console.warn('Selected window no longer exists, disabling auto-switching');
+        await chrome.storage.local.set({ enabled: false });
+        await updateBadge(false);
+        return;
+      }
+    } else {
+      // Global mode: switch in the currently focused window
+      const currentWindow = await chrome.windows.getCurrent();
+      targetWindowId = currentWindow.id;
+    }
+
+    // Query tabs in the target window
+    const tabs = await chrome.tabs.query({ windowId: targetWindowId });
 
     if (tabs.length <= 1) {
       return; // Nothing to switch if only one tab
@@ -60,7 +94,7 @@ async function switchTab(): Promise<void> {
     const currentTab = tabs.find((tab) => tab.active);
 
     if (!currentTab || currentTab.index === undefined) {
-      console.warn('No active tab found');
+      console.warn('No active tab found in target window');
       return;
     }
 
@@ -70,6 +104,7 @@ async function switchTab(): Promise<void> {
 
     if (nextTab && nextTab.id) {
       await chrome.tabs.update(nextTab.id, { active: true });
+      console.log(`Switched to next tab in window ${targetWindowId} (mode: ${windowMode})`);
     }
   } catch (error) {
     console.error('Error switching tabs:', error);
@@ -190,7 +225,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     return;
   }
 
-  const relevantChanges = 'enabled' in changes || 'delayTime' in changes;
+  const relevantChanges = 'enabled' in changes || 'delayTime' in changes ||
+                          'windowMode' in changes || 'selectedWindowId' in changes;
 
   if (relevantChanges) {
     console.log('Settings changed, restarting tab switcher');
@@ -209,6 +245,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     await chrome.storage.local.set({
       enabled: DEFAULT_ENABLED,
       delayTime: DEFAULT_DELAY_TIME,
+      windowMode: DEFAULT_WINDOW_MODE,
+      selectedWindowId: undefined,
     });
   }
 

@@ -8,6 +8,8 @@
 interface StorageData {
   delayTime?: number;
   enabled?: boolean;
+  windowMode?: 'global' | 'current-window';
+  selectedWindowId?: number;
 }
 
 // Constants
@@ -17,6 +19,51 @@ const DEFAULT_DELAY_SECONDS = MIN_DELAY_SECONDS; // Use minimum as default
 const MAX_DELAY_SECONDS = 3600; // 1 hour
 
 /**
+ * Update window information display
+ */
+async function updateWindowInfo(windowId: number): Promise<void> {
+  try {
+    const windowInfoEl = document.getElementById('windowInfo');
+    if (!windowInfoEl) return;
+
+    const window = await chrome.windows.get(windowId, { populate: true });
+    const tabCount = window.tabs ? window.tabs.length : 0;
+
+    windowInfoEl.innerHTML = `
+      <small class="text-muted">
+        <strong>Selected Window:</strong> Window ${windowId} (${tabCount} tabs)
+      </small>
+    `;
+    windowInfoEl.style.display = 'block';
+  } catch (error) {
+    console.error('Error getting window info:', error);
+    const windowInfoEl = document.getElementById('windowInfo');
+    if (windowInfoEl) {
+      windowInfoEl.style.display = 'none';
+    }
+  }
+}
+
+/**
+ * Handle window mode change
+ */
+async function handleWindowModeChange(mode: 'global' | 'current-window'): Promise<void> {
+  const windowInfoEl = document.getElementById('windowInfo');
+  if (!windowInfoEl) return;
+
+  if (mode === 'current-window') {
+    // Get current window and show info
+    const currentWindow = await chrome.windows.getCurrent();
+    if (currentWindow.id) {
+      await updateWindowInfo(currentWindow.id);
+    }
+  } else {
+    // Hide window info for global mode
+    windowInfoEl.style.display = 'none';
+  }
+}
+
+/**
  * Load and display current settings from storage
  */
 async function loadSettings(): Promise<void> {
@@ -24,6 +71,8 @@ async function loadSettings(): Promise<void> {
     const data = (await chrome.storage.local.get([
       'delayTime',
       'enabled',
+      'windowMode',
+      'selectedWindowId',
     ])) as StorageData;
 
     const delayTimeInput = document.getElementById(
@@ -32,6 +81,9 @@ async function loadSettings(): Promise<void> {
     const enabledCheckbox = document.getElementById(
       'enabledCheckbox'
     ) as HTMLInputElement;
+    const windowModeRadios = document.getElementsByName(
+      'windowMode'
+    ) as NodeListOf<HTMLInputElement>;
 
     // Convert milliseconds to seconds for display
     const delayInSeconds = data.delayTime
@@ -40,6 +92,19 @@ async function loadSettings(): Promise<void> {
 
     delayTimeInput.value = String(delayInSeconds);
     enabledCheckbox.checked = data.enabled ?? false;
+
+    // Set window mode
+    const windowMode = data.windowMode ?? 'global';
+    windowModeRadios.forEach((radio) => {
+      if (radio.value === windowMode) {
+        radio.checked = true;
+      }
+    });
+
+    // Show window info if in current-window mode
+    if (windowMode === 'current-window' && data.selectedWindowId) {
+      await updateWindowInfo(data.selectedWindowId);
+    }
 
     // Set input constraints
     delayTimeInput.min = String(MIN_DELAY_SECONDS);
@@ -125,13 +190,31 @@ async function saveSettings(): Promise<void> {
       return;
     }
 
+    // Get window mode selection
+    const checkedRadio = document.querySelector(
+      'input[name="windowMode"]:checked'
+    ) as HTMLInputElement | null;
+    const windowMode = (checkedRadio?.value as 'global' | 'current-window') ?? 'global';
+
     // Convert seconds to milliseconds for storage
     const delayTime = delayInSeconds * 1000;
     const enabled = enabledCheckbox.checked;
 
-    await chrome.storage.local.set({ delayTime, enabled });
+    // Get current window ID if current-window mode is selected
+    let selectedWindowId: number | undefined;
+    if (windowMode === 'current-window') {
+      const currentWindow = await chrome.windows.getCurrent();
+      selectedWindowId = currentWindow.id;
+    }
 
-    console.log('Settings saved:', { delayTime, enabled });
+    await chrome.storage.local.set({
+      delayTime,
+      enabled,
+      windowMode,
+      selectedWindowId,
+    });
+
+    console.log('Settings saved:', { delayTime, enabled, windowMode, selectedWindowId });
 
     // Close popup after successful save
     window.close();
@@ -160,6 +243,9 @@ function initializePopup(): void {
   const btnSave = document.getElementById('saveButton');
   const delayTimeInput = document.getElementById('delayTimeInput');
   const enabledCheckbox = document.getElementById('enabledCheckbox');
+  const windowModeRadios = document.getElementsByName(
+    'windowMode'
+  ) as NodeListOf<HTMLInputElement>;
 
   if (!btnSave || !delayTimeInput || !enabledCheckbox) {
     console.error('Required DOM elements not found');
@@ -179,6 +265,16 @@ function initializePopup(): void {
   enabledCheckbox.addEventListener('change', (event: Event) => {
     const target = event.target as HTMLInputElement;
     handleEnabledChange(target.checked);
+  });
+
+  // Window mode radio change handlers
+  windowModeRadios.forEach((radio) => {
+    radio.addEventListener('change', (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      if (target.checked) {
+        handleWindowModeChange(target.value as 'global' | 'current-window');
+      }
+    });
   });
 
   // Allow Enter key to save
