@@ -23,6 +23,48 @@
               placeholder="Enter delay time in seconds"
             />
             <br>
+
+            <label class="card-title">Window Mode</label>
+            <div class="mb-3">
+              <div class="custom-control custom-radio">
+                <input type="radio" id="windowModeGlobal" name="windowMode" value="global" class="custom-control-input" checked>
+                <label class="custom-control-label" for="windowModeGlobal">
+                  All Windows
+                  <small class="form-text text-muted">Switch tabs in any focused window</small>
+                </label>
+              </div>
+              <div class="custom-control custom-radio">
+                <input type="radio" id="windowModeCurrentWindow" name="windowMode" value="current-window" class="custom-control-input">
+                <label class="custom-control-label" for="windowModeCurrentWindow">
+                  Current Window Only
+                  <small class="form-text text-muted">Switch tabs only in this window</small>
+                </label>
+              </div>
+              <div id="windowInfo" style="display: none; margin-top: 8px;"></div>
+            </div>
+
+            <label class="card-title">Pause on Activity</label>
+            <div class="custom-control custom-switch mb-2">
+              <input type="checkbox" class="custom-control-input" id="pauseOnActivityCheckbox">
+              <label class="custom-control-label" for="pauseOnActivityCheckbox">
+                Pause when user is active
+                <small class="form-text text-muted">Temporarily pause switching when you interact with tabs or windows</small>
+              </label>
+            </div>
+
+            <div id="pauseDurationSection" style="display: none; margin-bottom: 1rem;">
+              <label for="pauseDurationInput" class="small">Pause duration (in seconds)</label>
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                id="pauseDurationInput"
+                placeholder="Pause duration in seconds"
+                min="5"
+                max="300"
+              />
+              <small class="form-text text-muted">How long to pause after activity (5-300 seconds)</small>
+            </div>
+
             <div class="custom-control custom-switch mb-3">
               <input type="checkbox" class="custom-control-input" id="enabledCheckbox">
               <label class="custom-control-label" for="enabledCheckbox">Enabled</label>
