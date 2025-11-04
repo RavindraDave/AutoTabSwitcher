@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Auto Tab Switcher - Settings</title>
+    <link rel="stylesheet" href="../css/bootstrap.min.css" />
+    <script src="options.js"></script>
+    <style>
+      body {
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .settings-container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .settings-section {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: #333;
+      }
+      .section-description {
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+      }
+      .setting-item {
+        margin-bottom: 20px;
+      }
+      .setting-item:last-child {
+        margin-bottom: 0;
+      }
+      .save-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .header-section {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .header-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: #333;
+      }
+      .header-subtitle {
+        color: #666;
+        font-size: 1rem;
+      }
+      .alert {
+        display: none;
+      }
+      .future-feature {
+        opacity: 0.6;
+      }
+      #windowSelectContainer {
+        margin-top: 12px;
+        display: none;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="settings-container">
+      <!-- Header -->
+      <div class="header-section">
+        <h1 class="header-title">⚙️ Auto Tab Switcher Settings</h1>
+        <p class="header-subtitle">Configure how the extension automatically switches between your tabs</p>
+        <div id="environmentInfo"></div>
+      </div>
+
+      <!-- Success/Error Messages -->
+      <div class="alert alert-success" id="successAlert">
+        <strong>Success!</strong> Settings saved successfully.
+      </div>
+      <div class="alert alert-danger" id="errorAlert">
+        <strong>Error!</strong> <span id="errorMessage"></span>
+      </div>
+
+      <!-- Basic Settings -->
+      <div class="settings-section">
+        <h2 class="section-title">Basic Settings</h2>
+        <p class="section-description">Configure the fundamental behavior of tab switching</p>
+
+        <div class="setting-item">
+          <label for="defaultDelayInput" class="form-label">
+            <strong>Default Delay Time</strong>
+          </label>
+          <input
+            type="number"
+            class="form-control"
+            id="defaultDelayInput"
+            placeholder="Enter delay in seconds"
+            min="5"
+            max="3600"
+          />
+          <small class="form-text text-muted">
+            Time between tab switches in seconds (<span id="minDelayLabel">60</span>-3600)
+          </small>
+        </div>
+
+        <div class="setting-item">
+          <div class="custom-control custom-switch">
+            <input type="checkbox" class="custom-control-input" id="enableOnStartupCheckbox">
+            <label class="custom-control-label" for="enableOnStartupCheckbox">
+              <strong>Enable on Browser Startup</strong>
+            </label>
+          </div>
+          <small class="form-text text-muted">
+            Automatically enable tab switching when Chrome starts
+          </small>
+        </div>
+      </div>
+
+      <!-- Window Mode -->
+      <div class="settings-section">
+        <h2 class="section-title">Window Mode</h2>
+        <p class="section-description">Choose whether to switch tabs globally or in a specific window</p>
+
+        <div class="setting-item">
+          <div class="custom-control custom-radio">
+            <input type="radio" id="windowModeGlobal" name="windowMode" value="global" class="custom-control-input" checked>
+            <label class="custom-control-label" for="windowModeGlobal">
+              <strong>All Windows (Global)</strong>
+            </label>
+          </div>
+          <small class="form-text text-muted" style="margin-left: 24px;">
+            Switch tabs across all browser windows regardless of which is focused
+          </small>
+        </div>
+
+        <div class="setting-item">
+          <div class="custom-control custom-radio">
+            <input type="radio" id="windowModeCurrentWindow" name="windowMode" value="current-window" class="custom-control-input">
+            <label class="custom-control-label" for="windowModeCurrentWindow">
+              <strong>Specific Window Only</strong>
+            </label>
+          </div>
+          <small class="form-text text-muted" style="margin-left: 24px;">
+            Switch tabs only in a selected window
+          </small>
+
+          <div id="windowSelectContainer">
+            <label for="windowSelect" class="form-label mt-2">
+              <strong>Select Window:</strong>
+            </label>
+            <select class="form-control" id="windowSelect">
+              <option value="">Loading windows...</option>
+            </select>
+            <small class="form-text text-muted">
+              Choose which window to monitor for tab switching
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pause on Activity -->
+      <div class="settings-section">
+        <h2 class="section-title">Pause on Activity</h2>
+        <p class="section-description">
+          Automatically pause tab switching when you interact with the browser to avoid interrupting your work
+        </p>
+
+        <div class="setting-item">
+          <div class="custom-control custom-switch">
+            <input type="checkbox" class="custom-control-input" id="pauseOnActivityCheckbox">
+            <label class="custom-control-label" for="pauseOnActivityCheckbox">
+              <strong>Enable Pause on Activity</strong>
+            </label>
+          </div>
+          <small class="form-text text-muted">
+            Temporarily pause automatic switching when you perform any of the actions below
+          </small>
+        </div>
+
+        <div id="pauseOptionsContainer" style="display: none; margin-top: 16px; padding-left: 24px;">
+          <div class="setting-item">
+            <label for="pauseDurationInput" class="form-label">
+              <strong>Pause Duration</strong>
+            </label>
+            <input
+              type="number"
+              class="form-control"
+              id="pauseDurationInput"
+              placeholder="Pause duration in seconds"
+              min="5"
+              max="300"
+            />
+            <small class="form-text text-muted">
+              How long to pause after detecting activity (5-300 seconds)
+            </small>
+          </div>
+
+          <div class="setting-item">
+            <p class="mb-2"><strong>Pause When:</strong></p>
+
+            <div class="custom-control custom-checkbox mb-2">
+              <input type="checkbox" class="custom-control-input" id="pauseOnTabSwitch" checked disabled>
+              <label class="custom-control-label" for="pauseOnTabSwitch">
+                You manually switch tabs
+              </label>
+            </div>
+
+            <div class="custom-control custom-checkbox mb-2">
+              <input type="checkbox" class="custom-control-input" id="pauseOnUrlNavigation" checked disabled>
+              <label class="custom-control-label" for="pauseOnUrlNavigation">
+                You navigate to a new URL
+              </label>
+            </div>
+
+            <div class="custom-control custom-checkbox mb-2">
+              <input type="checkbox" class="custom-control-input" id="pauseOnWindowFocus" checked disabled>
+              <label class="custom-control-label" for="pauseOnWindowFocus">
+                You change window focus
+              </label>
+            </div>
+
+            <div class="custom-control custom-checkbox mb-2">
+              <input type="checkbox" class="custom-control-input" id="pauseOnTabUpdate" checked disabled>
+              <label class="custom-control-label" for="pauseOnTabUpdate">
+                A tab updates (refresh/reload)
+              </label>
+            </div>
+
+            <small class="form-text text-muted">
+              Note: All activity triggers are currently enabled by default. Individual trigger configuration will be added in a future update.
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Settings (Placeholder) -->
+      <div class="settings-section future-feature">
+        <h2 class="section-title">Advanced Settings</h2>
+        <p class="section-description">
+          Additional features coming soon!
+        </p>
+
+        <div class="alert alert-info" style="display: block;">
+          <strong>Coming Soon!</strong> The following features are planned for future releases:
+          <ul class="mb-0 mt-2">
+            <li>Skip pinned tabs</li>
+            <li>Random tab order</li>
+            <li>Reverse switching direction</li>
+            <li>URL exclusion list</li>
+            <li>Customizable activity triggers</li>
+          </ul>
+        </div>
+
+        <!-- Commented placeholders for future use -->
+        <!--
+        <div class="setting-item">
+          <div class="custom-control custom-switch">
+            <input type="checkbox" class="custom-control-input" id="skipPinnedTabsCheckbox" disabled>
+            <label class="custom-control-label" for="skipPinnedTabsCheckbox">
+              <strong>Skip Pinned Tabs</strong>
+            </label>
+          </div>
+          <small class="form-text text-muted">
+            Don't switch to pinned tabs
+          </small>
+        </div>
+
+        <div class="setting-item">
+          <div class="custom-control custom-switch">
+            <input type="checkbox" class="custom-control-input" id="randomOrderCheckbox" disabled>
+            <label class="custom-control-label" for="randomOrderCheckbox">
+              <strong>Random Order</strong>
+            </label>
+          </div>
+          <small class="form-text text-muted">
+            Switch to tabs in random order instead of sequential
+          </small>
+        </div>
+
+        <div class="setting-item">
+          <div class="custom-control custom-switch">
+            <input type="checkbox" class="custom-control-input" id="reverseDirectionCheckbox" disabled>
+            <label class="custom-control-label" for="reverseDirectionCheckbox">
+              <strong>Reverse Direction</strong>
+            </label>
+          </div>
+          <small class="form-text text-muted">
+            Switch backwards through tabs instead of forwards
+          </small>
+        </div>
+
+        <div class="setting-item">
+          <label for="urlExclusionsTextarea" class="form-label">
+            <strong>URL Exclusions</strong>
+          </label>
+          <textarea
+            class="form-control"
+            id="urlExclusionsTextarea"
+            rows="3"
+            placeholder="Enter URL patterns to exclude (one per line)"
+            disabled
+          ></textarea>
+          <small class="form-text text-muted">
+            Tabs matching these patterns will be skipped (supports wildcards)
+          </small>
+        </div>
+        -->
+      </div>
+
+      <!-- Save Section -->
+      <div class="save-section">
+        <div>
+          <small class="text-muted">
+            Changes will take effect after clicking Save
+          </small>
+        </div>
+        <div>
+          <button type="button" class="btn btn-secondary mr-2" id="resetButton">
+            Reset to Defaults
+          </button>
+          <button type="button" class="btn btn-primary btn-lg" id="saveButton">
+            💾 Save Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

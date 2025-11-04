@@ -41,6 +41,18 @@ fs.copyFileSync(
   path.join(popupDistDir, 'popup.html')
 );
 
+// Copy options directory
+console.log('Copying options HTML...');
+const optionsDistDir = path.join(distDir, 'options');
+if (!fs.existsSync(optionsDistDir)) {
+  fs.mkdirSync(optionsDistDir, { recursive: true });
+}
+
+fs.copyFileSync(
+  path.join(srcDir, 'options', 'options.html'),
+  path.join(optionsDistDir, 'options.html')
+);
+
 // Copy CSS directory
 console.log('Copying CSS files...');
 const cssDistDir = path.join(distDir, 'css');

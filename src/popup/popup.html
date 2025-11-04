@@ -2,80 +2,81 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Auto Tab Switcher Options</title>
+    <title>Auto Tab Switcher</title>
     <link rel="stylesheet" href="../css/bootstrap.min.css" />
     <script src="popup.js"></script>
+    <style>
+      body {
+        min-width: 320px;
+        max-width: 320px;
+      }
+      .settings-link {
+        text-align: center;
+        padding: 8px;
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+      }
+      .settings-link a {
+        color: #007bff;
+        text-decoration: none;
+        font-size: 0.9rem;
+      }
+      .settings-link a:hover {
+        text-decoration: underline;
+      }
+    </style>
   </head>
 
   <body>
-    <div class="container mt-3" style="min-width: 350px;min-height: 330px;">
+    <div class="container mt-3 mb-2">
       <div class="card">
         <div class="card-header">
-          Auto Tab Switcher Options
+          <strong>Auto Tab Switcher</strong>
         </div>
         <div class="card-body">
+          <!-- Delay Time Input -->
           <div class="form-group">
-            <label for="delayTime" class="card-title">Delay Time (in seconds)</label>
+            <label for="delayTimeInput" class="font-weight-bold">
+              Delay Time (seconds)
+            </label>
             <input
               type="number"
               class="form-control"
               id="delayTimeInput"
               placeholder="Enter delay time in seconds"
             />
-            <br>
+            <small class="form-text text-muted">
+              Time between tab switches
+            </small>
+          </div>
 
-            <label class="card-title">Window Mode</label>
-            <div class="mb-3">
-              <div class="custom-control custom-radio">
-                <input type="radio" id="windowModeGlobal" name="windowMode" value="global" class="custom-control-input" checked>
-                <label class="custom-control-label" for="windowModeGlobal">
-                  All Windows
-                  <small class="form-text text-muted">Switch tabs in any focused window</small>
-                </label>
-              </div>
-              <div class="custom-control custom-radio">
-                <input type="radio" id="windowModeCurrentWindow" name="windowMode" value="current-window" class="custom-control-input">
-                <label class="custom-control-label" for="windowModeCurrentWindow">
-                  Current Window Only
-                  <small class="form-text text-muted">Switch tabs only in this window</small>
-                </label>
-              </div>
-              <div id="windowInfo" style="display: none; margin-top: 8px;"></div>
-            </div>
-
-            <label class="card-title">Pause on Activity</label>
-            <div class="custom-control custom-switch mb-2">
-              <input type="checkbox" class="custom-control-input" id="pauseOnActivityCheckbox">
-              <label class="custom-control-label" for="pauseOnActivityCheckbox">
-                Pause when user is active
-                <small class="form-text text-muted">Temporarily pause switching when you interact with tabs or windows</small>
+          <!-- Enabled Toggle -->
+          <div class="form-group">
+            <div class="custom-control custom-switch">
+              <input type="checkbox" class="custom-control-input" id="enabledCheckbox">
+              <label class="custom-control-label font-weight-bold" for="enabledCheckbox">
+                Enable Auto-Switching
               </label>
             </div>
-
-            <div id="pauseDurationSection" style="display: none; margin-bottom: 1rem;">
-              <label for="pauseDurationInput" class="small">Pause duration (in seconds)</label>
-              <input
-                type="number"
-                class="form-control form-control-sm"
-                id="pauseDurationInput"
-                placeholder="Pause duration in seconds"
-                min="5"
-                max="300"
-              />
-              <small class="form-text text-muted">How long to pause after activity (5-300 seconds)</small>
-            </div>
-
-            <div class="custom-control custom-switch mb-3">
-              <input type="checkbox" class="custom-control-input" id="enabledCheckbox">
-              <label class="custom-control-label" for="enabledCheckbox">Enabled</label>
-            </div>
-
-            <button type="button" class="btn btn-primary" id="saveButton">
-              Save
-            </button>
+            <small class="form-text text-muted">
+              Turn automatic tab switching on/off
+            </small>
           </div>
+
+          <!-- Environment Info (if available) -->
+          <div id="environmentInfo"></div>
+
+          <!-- Save Button -->
+          <button type="button" class="btn btn-primary btn-block" id="saveButton">
+            💾 Save
+          </button>
         </div>
       </div>
+    </div>
+
+    <!-- Settings Link -->
+    <div class="settings-link">
+      <a href="#" id="moreSettingsLink">⚙️ More Settings</a>
     </div>
   </body>
 </html>
