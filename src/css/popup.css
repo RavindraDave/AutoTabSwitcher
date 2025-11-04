@@ -27,3 +27,9 @@ body {
 .settings-link a:hover {
   text-decoration: underline;
 }
+
+#errorMessage {
+  display: none;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}

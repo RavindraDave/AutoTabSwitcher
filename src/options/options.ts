@@ -25,9 +25,11 @@ const DEFAULT_DELAY_SECONDS = MIN_DELAY_SECONDS_ENV;
 /**
  * Show success message
  */
-function showSuccess(_message: string): void {
+function showSuccess(message: string): void {
   const successAlert = document.getElementById('successAlert');
-  if (successAlert) {
+  const successMessage = document.getElementById('successMessage');
+  if (successAlert && successMessage) {
+    successMessage.textContent = message;
     successAlert.style.display = 'block';
     setTimeout(() => {
       successAlert.style.display = 'none';

@@ -35,10 +35,19 @@ function showEnvironmentInfo(): void {
 }
 
 /**
- * Show error message
+ * Show error message inline
  */
 function showError(message: string): void {
-  alert(message);
+  const errorEl = document.getElementById('errorMessage');
+  if (errorEl) {
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      errorEl.style.display = 'none';
+    }, 5000);
+  }
 }
 
 /**
