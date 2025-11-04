@@ -1,0 +1,29 @@
+/**
+ * Popup Styles
+ * Styles specific to the extension popup
+ */
+
+body {
+  min-width: 320px;
+  max-width: 320px;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-link {
+  text-align: center;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  margin: 0;
+}
+
+.settings-link a {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.settings-link a:hover {
+  text-decoration: underline;
+}
