@@ -5,6 +5,7 @@
 import { StorageData } from './types.js';
 import { DEFAULT_WINDOW_MODE } from './constants.js';
 import { updateBadge } from './badge-manager.js';
+import { logger } from './logger.js';
 
 /**
  * Switch to the next tab based on window mode configuration
@@ -37,6 +38,9 @@ export async function switchTab(): Promise<void> {
         targetWindowId = selectedWindowId;
       } catch (error) {
         console.warn('Selected window no longer exists, disabling auto-switching');
+        await logger.warn('TabSwitcher', 'Selected window no longer exists, disabling', {
+          selectedWindowId,
+        });
         await chrome.storage.local.set({ enabled: false });
         await updateBadge(false);
         return;
@@ -68,8 +72,19 @@ export async function switchTab(): Promise<void> {
     if (nextTab && nextTab.id) {
       await chrome.tabs.update(nextTab.id, { active: true });
       console.log(`Switched to next tab in window ${targetWindowId} (mode: ${windowMode})`);
+
+      await logger.info('TabSwitcher', 'Tab switched', {
+        windowId: targetWindowId,
+        windowMode,
+        fromTabIndex: currentTabIndex,
+        toTabIndex: nextTabIndex,
+        totalTabs: tabs.length,
+      });
     }
   } catch (error) {
     console.error('Error switching tabs:', error);
+    await logger.error('TabSwitcher', 'Error switching tabs', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
