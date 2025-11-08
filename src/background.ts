@@ -6,11 +6,11 @@
  * All state is persisted in chrome.storage.local.
  */
 
-import { isPacked } from './utils/environment';
-import { MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED } from './core/constants';
-import { initializeStorage, getSettings } from './core/storage';
-import { setupActivityListeners } from './core/activity-tracker';
-import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid';
+import { isPacked } from './utils/environment.js';
+import { MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED } from './core/constants.js';
+import { initializeStorage, getSettings } from './core/storage.js';
+import { setupActivityListeners } from './core/activity-tracker.js';
+import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_MS = isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;

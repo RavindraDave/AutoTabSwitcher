@@ -3,11 +3,11 @@
  * Uses chrome.alarms for >= 30s delays, setInterval for < 30s delays
  */
 
-import { ALARM_NAME, MIN_ALARM_DELAY_MS, DEFAULT_ENABLED } from './constants';
-import { getSettings } from './storage';
-import { updateBadge } from './badge-manager';
-import { switchTab } from './tab-switcher';
-import { isPaused } from './activity-tracker';
+import { ALARM_NAME, MIN_ALARM_DELAY_MS, DEFAULT_ENABLED } from './constants.js';
+import { getSettings } from './storage.js';
+import { updateBadge } from './badge-manager.js';
+import { switchTab } from './tab-switcher.js';
+import { isPaused } from './activity-tracker.js';
 
 // Timer state (for setInterval approach)
 let intervalTimerId: number | undefined;

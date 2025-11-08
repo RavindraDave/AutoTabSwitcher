@@ -2,7 +2,7 @@
  * Environment information display for hybrid popup
  */
 
-import { isPacked } from '../../utils/environment';
+import { isPacked } from '../../utils/environment.js';
 
 /**
  * Show info message to user about environment

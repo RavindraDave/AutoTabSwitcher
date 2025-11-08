@@ -2,13 +2,13 @@
  * Storage management helpers
  */
 
-import { StorageData } from './types';
+import { StorageData } from './types.js';
 import {
   DEFAULT_ENABLED,
   DEFAULT_WINDOW_MODE,
   DEFAULT_PAUSE_ON_ACTIVITY,
   DEFAULT_PAUSE_DURATION,
-} from './constants';
+} from './constants.js';
 
 /**
  * Initialize default storage values on extension install
