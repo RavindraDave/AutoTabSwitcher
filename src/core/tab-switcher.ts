@@ -73,6 +73,9 @@ export async function switchTab(): Promise<void> {
       await chrome.tabs.update(nextTab.id, { active: true });
       console.log(`Switched to next tab in window ${targetWindowId} (mode: ${windowMode})`);
 
+      // Store the timestamp of this switch
+      await chrome.storage.local.set({ lastSwitchTime: Date.now() });
+
       await logger.info('TabSwitcher', 'Tab switched', {
         windowId: targetWindowId,
         windowMode,
