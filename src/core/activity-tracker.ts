@@ -2,8 +2,8 @@
  * Activity tracking for pause-on-activity feature
  */
 
-import { StorageData } from './types';
-import { DEFAULT_PAUSE_ON_ACTIVITY, DEFAULT_PAUSE_DURATION } from './constants';
+import { StorageData } from './types.js';
+import { DEFAULT_PAUSE_ON_ACTIVITY, DEFAULT_PAUSE_DURATION } from './constants.js';
 
 /**
  * Track last user activity timestamp
