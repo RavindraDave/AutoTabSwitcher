@@ -94,3 +94,26 @@ export function handlePauseOnActivityChange(checked: boolean): void {
     pauseDurationSection.style.display = checked ? 'block' : 'none';
   }
 }
+
+/**
+ * Show warning when viewing settings from non-selected window in current-window mode
+ *
+ * @param selectedWindowId - The window where auto-switching is active
+ * @param currentWindowId - The current window ID (optional)
+ */
+export function showWindowModeWarning(selectedWindowId: number, currentWindowId?: number): void {
+  const windowInfoEl = document.getElementById('windowInfo');
+  if (!windowInfoEl) return;
+
+  const warningHtml = `
+    <div class="alert alert-warning mt-2 mb-0" role="alert" style="padding: 0.5rem; font-size: 0.875rem;">
+      <strong>⚠️ Note:</strong> Auto-switching is active in Window ${selectedWindowId}, not this window${currentWindowId ? ` (Window ${currentWindowId})` : ''}.
+    </div>
+  `;
+
+  // Append warning after window info
+  const existingContent = windowInfoEl.innerHTML;
+  if (!existingContent.includes('alert-warning')) {
+    windowInfoEl.innerHTML = existingContent + warningHtml;
+  }
+}

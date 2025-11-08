@@ -87,6 +87,30 @@ chrome.windows.onCreated.addListener(async () => {
   }
 });
 
+/**
+ * Handle window focus changes - update badge for current-window mode
+ * When user switches between windows, update badge to show correct status
+ */
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  // windowId is -1 (WINDOW_ID_NONE) when all Chrome windows lose focus
+  if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    return;
+  }
+
+  try {
+    const data = await getSettings(['windowMode']);
+    const windowMode = data.windowMode ?? 'global';
+
+    // Only update badge if in current-window mode
+    if (windowMode === 'current-window') {
+      // Force badge update by re-toggling
+      await toggleTabSwitcher();
+    }
+  } catch (error) {
+    console.error('Error in window focus change handler:', error);
+  }
+});
+
 // Set up alarm listener (for hybrid timing)
 setupAlarmListener();
 
