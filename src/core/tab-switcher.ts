@@ -2,9 +2,9 @@
  * Core tab switching logic
  */
 
-import { StorageData } from './types';
-import { DEFAULT_WINDOW_MODE } from './constants';
-import { updateBadge } from './badge-manager';
+import { StorageData } from './types.js';
+import { DEFAULT_WINDOW_MODE } from './constants.js';
+import { updateBadge } from './badge-manager.js';
 
 /**
  * Switch to the next tab based on window mode configuration

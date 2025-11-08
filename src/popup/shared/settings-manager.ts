@@ -2,10 +2,10 @@
  * Settings management for popup UI
  */
 
-import { StorageData } from '../../core/types';
-import { DEFAULT_PAUSE_DURATION_SECONDS } from '../../core/constants';
-import { validateDelayTime, validatePauseDuration } from './validation';
-import { showError, updateWindowInfo, handlePauseOnActivityChange } from './ui-helpers';
+import { StorageData } from '../../core/types.js';
+import { DEFAULT_PAUSE_DURATION_SECONDS } from '../../core/constants.js';
+import { validateDelayTime, validatePauseDuration } from './validation.js';
+import { showError, updateWindowInfo, handlePauseOnActivityChange } from './ui-helpers.js';
 
 /**
  * Load and display current settings from storage

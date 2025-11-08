@@ -7,7 +7,7 @@ import {
   MAX_DELAY_SECONDS,
   MIN_PAUSE_DURATION_SECONDS,
   MAX_PAUSE_DURATION_SECONDS,
-} from '../../core/constants';
+} from '../../core/constants.js';
 
 export interface ValidationResult {
   valid: boolean;

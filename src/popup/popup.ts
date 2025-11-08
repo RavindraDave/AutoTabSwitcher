@@ -4,9 +4,9 @@
  * Handles the extension popup interface for configuring tab switching settings.
  */
 
-import { MIN_DELAY_SECONDS, MAX_DELAY_SECONDS } from '../core/constants';
-import { loadSettings, saveSettings, handleEnabledChange } from './shared/settings-manager';
-import { handleWindowModeChange, handlePauseOnActivityChange } from './shared/ui-helpers';
+import { MIN_DELAY_SECONDS, MAX_DELAY_SECONDS } from '../core/constants.js';
+import { loadSettings, saveSettings, handleEnabledChange } from './shared/settings-manager.js';
+import { handleWindowModeChange, handlePauseOnActivityChange } from './shared/ui-helpers.js';
 
 // Use development minimum (60 seconds)
 const DEFAULT_DELAY_SECONDS = MIN_DELAY_SECONDS;
