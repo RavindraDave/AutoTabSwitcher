@@ -40,11 +40,79 @@
             opacity: 0.95;
         }
 
+        .featured-design {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 48px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .featured-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .featured-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 12px;
+        }
+
+        .featured-description {
+            font-size: 16px;
+            color: #718096;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .featured-preview {
+            width: 100%;
+            height: 600px;
+            border: none;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            background: #f5f5f5;
+        }
+
+        .featured-preview iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
         .design-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 32px;
             margin-bottom: 48px;
+        }
+
+        .section-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 32px;
+        }
+
+        .section-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .section-header p {
+            font-size: 14px;
+            opacity: 0.9;
         }
 
         .design-card {
@@ -186,6 +254,31 @@
         <div class="header">
             <h1>🎨 Auto Tab Switcher - Design Mockups</h1>
             <p>Choose your preferred compact popup design</p>
+        </div>
+
+        <!-- Featured Combined Design -->
+        <div class="featured-design">
+            <div class="featured-badge">⭐ RECOMMENDED</div>
+            <h2 class="featured-title">Combined Design - Modern + Countdown</h2>
+            <p class="featured-description">
+                The best of both worlds! This design combines the beautiful gradient aesthetic from Design A
+                with the engaging animated countdown ring from Design C. Features smooth animations,
+                color-coded status headers, and a live countdown timer showing seconds until the next tab switch.
+            </p>
+
+            <div class="featured-preview">
+                <iframe src="design-combined.html"></iframe>
+            </div>
+
+            <a href="design-combined.html" target="_blank" class="preview-button">
+                👁️ View Full Preview
+            </a>
+        </div>
+
+        <!-- Other Design Options -->
+        <div class="section-header">
+            <h2>Original Design Options</h2>
+            <p>Or choose from one of the original designs below</p>
         </div>
 
         <div class="design-grid">

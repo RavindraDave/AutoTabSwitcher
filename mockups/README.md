@@ -4,8 +4,9 @@ This folder contains design mockups for the new two-tier user interface.
 
 ## How to View
 
-1. **Quick Comparison**: Open `index.html` in your browser to see all three designs side-by-side
+1. **Quick Comparison**: Open `index.html` in your browser to see all designs
 2. **Individual Designs**:
+   - `design-combined.html` - ⭐ **RECOMMENDED** - Combines modern gradient with animated countdown
    - `design-a-modern.html` - Modern gradient design with colorful headers
    - `design-b-minimal.html` - Clean minimal design with toggle switch
    - `design-c-bold.html` - Bold status-focused design with countdown
@@ -33,14 +34,15 @@ This folder contains design mockups for the new two-tier user interface.
 
 ## Design Comparison
 
-| Feature | Design A | Design B | Design C |
-|---------|----------|----------|----------|
-| **Style** | Modern gradient | Minimal clean | Bold status |
-| **Visual Impact** | High | Low | Very High |
-| **Colors** | Gradient headers | Subtle accents | Full-width colors |
-| **Toggle Type** | Button | iOS Switch | Button |
-| **Countdown** | Text | Text | Ring/Circle |
-| **Best For** | Users who like vibrant UIs | Users who prefer simplicity | Users who want instant status |
+| Feature | Combined ⭐ | Design A | Design B | Design C |
+|---------|------------|----------|----------|----------|
+| **Style** | Modern gradient + countdown | Modern gradient | Minimal clean | Bold status |
+| **Visual Impact** | Very High | High | Low | Very High |
+| **Colors** | Gradient headers | Gradient headers | Subtle accents | Full-width colors |
+| **Toggle Type** | Button | Button | iOS Switch | Button |
+| **Countdown** | Animated ring | Text | Text | Ring/Circle |
+| **Animation** | Ring + pulse | Smooth transitions | Pulsing dot | Ring pulse |
+| **Best For** | Best overall experience | Vibrant UIs | Simplicity lovers | Status-focused users |
 
 ## What's Next?
 
