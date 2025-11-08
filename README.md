@@ -11,13 +11,23 @@ A powerful Chrome extension that automatically cycles through open tabs at confi
 - ⏸️ **Pause on activity** - Automatically pause when user is active
 - 🎚️ **Easy toggle** - Enable/disable with a single click
 - 💾 **Persistent settings** - All settings saved across browser sessions
+- ⚠️ **Mode change protection** - Confirmation dialog when switching to global mode
+- 🔍 **Diagnostic logging** - 30-minute rolling log for troubleshooting
 
 ### Visual Indicators
-- 📊 **Smart badge** - Shows status with color coding:
-  - 🟢 **ON** (green) - Auto-switching active
+- 📊 **Per-window smart badges** - Each window shows its own status:
+  - 🟢 **ON** (green) - Auto-switching active in this window
   - 🟠 **⏸** (orange) - Paused due to user activity
-  - ⚫ **OFF** (gray) - Disabled
+  - ⚫ **OFF** (gray) - Disabled or not the selected window
 - 🏷️ **Environment labels** - Shows "Production" or "Development" mode
+- 🪟 **Window-aware badges** - In current-window mode, only selected window shows active badge
+
+### Debugging & Support
+- 📋 **Diagnostic logs** - Last 30 minutes of activity tracked
+- 📤 **Export capabilities** - Download logs as text or JSON
+- 📋 **Copy to clipboard** - Easy sharing for support
+- 🔒 **Privacy-focused** - No sensitive data (URLs, titles) logged
+- 🧪 **Testing aid** - Track extension behavior during testing
 
 ### Technical Excellence
 - 🔧 **TypeScript** - Full type safety and modern code
@@ -68,12 +78,26 @@ A powerful Chrome extension that automatically cycles through open tabs at confi
 - Switches through all tabs across all windows
 - Best for monitoring multiple displays
 - Works regardless of which window is focused
+- All windows show the same badge status
 
 #### Current Window Mode
 - Only switches tabs in the selected window
 - Choose which window to monitor
-- Window selection dropdown appears when enabled
-- Automatically disables if window is closed
+- Selected window shows active badge (ON/⏸)
+- Other windows show OFF badge
+- Automatically disables if selected window is closed
+- **Protection**: Confirmation dialog when switching back to global mode
+
+### Badge Behavior
+
+The extension uses **per-window badges** to show accurate status:
+
+| Window Mode | Selected Window | Other Windows |
+|-------------|----------------|---------------|
+| **Global** | ON/⏸/OFF (same everywhere) | ON/⏸/OFF (same everywhere) |
+| **Current-Window** | ON/⏸ (active switching) | OFF (not switching here) |
+
+This helps you instantly see which windows are affected by auto-switching.
 
 ### Pause on Activity
 
@@ -94,6 +118,36 @@ The extension adapts minimum delays based on environment:
 | **Development** (unpacked) | 60 seconds | "Development Mode" in popup |
 | **Production** (Chrome Web Store) | 5 seconds | "Production Mode" in popup |
 
+### Diagnostic Logging
+
+Access diagnostic logs for troubleshooting production issues:
+
+**How to Access**:
+1. Click extension icon
+2. Click "🔍 View Diagnostics" link at bottom
+3. View logs, export, or share with support
+
+**Features**:
+- 📊 **30-minute rolling buffer** - Automatically keeps recent activity
+- 📋 **Multiple export formats** - Text, JSON, or clipboard
+- 🔒 **Privacy-focused** - URLs, titles, and sensitive data automatically redacted
+- 🏷️ **Categorized logs** - Filter by category (Settings, TabSwitcher, Window, etc.)
+- ⚠️ **Error tracking** - All errors captured with context
+- 🧪 **Testing aid** - Track behavior during QA
+
+**What Gets Logged**:
+- ✅ Extension lifecycle events (install, startup)
+- ✅ Settings changes (with before/after values)
+- ✅ Tab switching events (window ID, tab indexes, mode)
+- ✅ Window events (created, focused, closed)
+- ✅ Errors and warnings with details
+- ❌ NOT logged: Page URLs, tab titles, user content, auth tokens
+
+**Example Use Cases**:
+- User reports issue → export logs → send to support
+- QA testing → verify expected behavior from logs
+- Production debugging → understand what happened before error
+
 ## 🏗️ Architecture
 
 ### Modular Design
@@ -111,7 +165,8 @@ AutoTabSwitcher/
 │   │   ├── badge-manager.ts       # Per-window badge management
 │   │   ├── tab-switcher.ts        # Tab switching logic
 │   │   ├── activity-tracker.ts    # Activity detection
-│   │   └── timing-hybrid.ts       # Hybrid timing (alarms + intervals)
+│   │   ├── timing-hybrid.ts       # Hybrid timing (alarms + intervals)
+│   │   └── logger.ts              # Diagnostic logging system
 │   ├── popup/
 │   │   ├── popup.ts               # Popup controller (environment-aware)
 │   │   ├── index.ts               # Main popup interface
@@ -122,6 +177,11 @@ AutoTabSwitcher/
 │   │       ├── ui-helpers.ts      # UI helper functions
 │   │       ├── settings-manager.ts # Settings CRUD
 │   │       └── environment-info.ts # Environment display
+│   ├── options/
+│   │   ├── options.html           # Full settings page
+│   │   ├── options.ts             # Settings controller
+│   │   ├── diagnostics.html       # Diagnostic logs viewer
+│   │   └── diagnostics.ts         # Diagnostics controller
 │   ├── utils/
 │   │   └── environment.ts         # Runtime environment detection
 │   ├── css/
@@ -266,10 +326,11 @@ See `docs/SECURITY_REVIEW.md` for complete analysis.
 | Code duplication | ~90% | ~0% | 90% ↓ |
 
 **Code organization:**
-- Core modules: 7 files (badge, storage, timing, activity, tab-switcher, types, constants)
+- Core modules: 8 files (badge, storage, timing, activity, tab-switcher, logger, types, constants)
 - UI modules: 5 files (validation, ui-helpers, settings-manager, environment-info, main UI)
+- Options pages: 2 files (settings, diagnostics)
 - Utilities: 1 file (environment detection)
-- Total: 13 reusable modules + main entry points
+- Total: 16 reusable modules + main entry points
 
 ## 🐛 Bugs Fixed
 
@@ -355,8 +416,40 @@ This error occurs when trying to load the unpacked extension before building it.
 ### Window mode not working
 
 - Ensure selected window still exists
-- Check window dropdown shows correct window
-- Extension auto-disables if window closes
+- Check that badge shows correct status per window
+- In current-window mode: selected window shows ON/⏸, others show OFF
+- Extension auto-disables if selected window closes
+- Check diagnostics logs for detailed information
+
+### Badges showing incorrect status
+
+- Each window should show its own badge in current-window mode
+- Refresh page or create new tab to update badge
+- Check diagnostics to see badge update events
+- Verify windowMode setting in storage
+
+### Diagnostic logs
+
+**Viewing logs**:
+1. Click extension icon → "🔍 View Diagnostics"
+2. See last 30 minutes of activity
+3. Filter by category or log level
+
+**Exporting logs**:
+- **Text format**: For email support
+- **JSON format**: For developers
+- **Copy to clipboard**: Quick sharing
+
+**Clearing logs**:
+- Click "Clear Logs" button
+- Confirmation required
+- Useful after resolving issues
+
+**What to look for**:
+- Errors (red) indicate problems
+- Warnings (yellow) show potential issues
+- Info (blue) tracks normal operations
+- Check timestamps to correlate with user actions
 
 ### Settings not saving
 
@@ -388,15 +481,22 @@ Comprehensive documentation available:
 - [ ] Extension loads without errors
 - [ ] Settings save and persist
 - [ ] Badge updates correctly (ON/OFF/Paused)
+- [ ] Per-window badges show correct status
 - [ ] Tab switching works in global mode
 - [ ] Tab switching works in current-window mode
 - [ ] Window selection dropdown populates
+- [ ] Badge differentiation between windows
+- [ ] Mode change confirmation dialog appears
 - [ ] Pause on activity feature works
 - [ ] Pause duration configurable
 - [ ] Environment label correct (Dev/Prod)
 - [ ] Minimum delays enforced correctly
 - [ ] Service worker survives suspension
 - [ ] Extension works after browser restart
+- [ ] Diagnostic logs capture events
+- [ ] Log export works (text/JSON/clipboard)
+- [ ] Log clearing works with confirmation
+- [ ] Privacy: no URLs or titles in logs
 
 ### Type Checking
 
@@ -446,15 +546,21 @@ MIT License - see LICENSE file for details
 - ✨ Pause on activity with configurable duration
 - ✨ Hybrid timing for sub-30-second delays
 - ✨ Environment-aware minimum delays
-- ✨ Smart badge with pause indicator
+- ✨ Smart per-window badge indicators
 - ✨ Environment info display in popup
+- ✨ **Diagnostic logging system** (30-min rolling buffer)
+- ✨ **Diagnostics UI page** with export capabilities
+- ✨ **Mode change confirmation** dialog
+- ✨ **Privacy-focused logging** (no sensitive data)
 
 #### Architecture Improvements
-- 🏗️ Modular architecture with 12 shared modules
-- 🏗️ 73% code reduction through refactoring
+- 🏗️ Modular architecture with 16 shared modules
+- 🏗️ 80% code reduction through refactoring
 - 🏗️ Multi-config TypeScript setup
 - 🏗️ Separated core business logic from UI
 - 🏗️ Eliminated 90% code duplication
+- 🏗️ **Per-window badge management**
+- 🏗️ **Centralized logging infrastructure**
 
 #### Bug Fixes
 - 🐛 Fixed inverted isPacked() logic (critical)
@@ -462,6 +568,16 @@ MIT License - see LICENSE file for details
 - 🐛 Short-circuit logic when disabled (performance)
 - 🐛 Proper TypeScript type checking for all files
 - 🐛 Service worker state management fixes
+- 🐛 **Per-window badge display** (no longer global)
+- 🐛 **Badge updates on page refresh and new tabs**
+- 🐛 **Badge updates when tabs move between windows**
+
+#### User Experience
+- 💡 Clear visual feedback per window
+- 💡 Protection against accidental mode changes
+- 💡 Easy troubleshooting with diagnostic logs
+- 💡 Export logs for support requests
+- 💡 Better visibility into extension behavior
 
 #### Documentation
 - 📚 Complete development timeline (claude.md)
@@ -469,6 +585,8 @@ MIT License - see LICENSE file for details
 - 📚 Security review (SECURITY_REVIEW.md)
 - 📚 TypeScript configuration guide
 - 📚 Comprehensive README update
+- 📚 **Diagnostic logging documentation**
+- 📚 **Troubleshooting guide with diagnostics**
 
 ### Version 1.0.0
 
