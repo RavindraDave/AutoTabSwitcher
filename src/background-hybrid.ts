@@ -13,6 +13,7 @@ import { MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED } fr
 import { initializeStorage, getSettings } from './core/storage';
 import { setupActivityListeners } from './core/activity-tracker';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid';
+import { updateBadge } from './core/badge-manager';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_MS = isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;
@@ -94,6 +95,80 @@ chrome.windows.onCreated.addListener(async () => {
     }
   } catch (error) {
     console.error('Error in window creation handler:', error);
+  }
+});
+
+/**
+ * Handle window focus changes - update badge for current-window mode
+ * When user switches between windows, update badge to show correct status
+ */
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  // windowId is -1 (WINDOW_ID_NONE) when all Chrome windows lose focus
+  if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    return;
+  }
+
+  try {
+    const data = await getSettings(['windowMode']);
+    const windowMode = data.windowMode ?? 'global';
+
+    // Only update badge if in current-window mode
+    if (windowMode === 'current-window') {
+      // Force badge update by re-toggling
+      await toggleTabSwitcher();
+    }
+  } catch (error) {
+    console.error('Error in window focus change handler:', error);
+  }
+});
+
+/**
+ * Handle tab creation - set badge for new tabs
+ */
+chrome.tabs.onCreated.addListener(async (tab) => {
+  try {
+    if (tab.id === undefined) return;
+
+    const data = await getSettings(['enabled']);
+    const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+    // Update badge for the newly created tab
+    await updateBadge(enabled, false, tab.id);
+  } catch (error) {
+    console.error('Error in tab creation handler:', error);
+  }
+});
+
+/**
+ * Handle tab updates - ensure badge stays correct when pages reload
+ */
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, _tab) => {
+  try {
+    // Only update badge when tab is loading or complete (page refresh)
+    if (changeInfo.status === 'loading' || changeInfo.status === 'complete') {
+      const data = await getSettings(['enabled']);
+      const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+      // Update badge for this tab
+      await updateBadge(enabled, false, tabId);
+    }
+  } catch (error) {
+    console.error('Error in tab update handler:', error);
+  }
+});
+
+/**
+ * Handle tab being moved between windows - update badge for the moved tab
+ */
+chrome.tabs.onAttached.addListener(async (tabId, _attachInfo) => {
+  try {
+    const data = await getSettings(['enabled']);
+    const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+    // Update badge for the tab in its new window
+    await updateBadge(enabled, false, tabId);
+  } catch (error) {
+    console.error('Error in tab attach handler:', error);
   }
 });
 
