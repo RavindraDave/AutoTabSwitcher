@@ -64,7 +64,7 @@ async function initializePopup(): Promise<void> {
   await updateUI();
 
   // Start countdown timer
-  startCountdownTimer();
+  await startCountdownTimer();
 }
 
 /**
@@ -201,14 +201,54 @@ function openSettings(): void {
 /**
  * Start countdown timer that updates every second
  */
-function startCountdownTimer(): void {
+async function startCountdownTimer(): Promise<void> {
   // Clear any existing interval
   if (countdownInterval) {
     clearInterval(countdownInterval);
   }
 
-  // Estimate next switch time (approximate)
-  nextSwitchTime = Date.now() + switchIntervalMs;
+  // Get window mode and determine which window's timing to show
+  const data = await chrome.storage.local.get([
+    'windowMode',
+    'selectedWindowId',
+    'lastSwitchTimes',
+    'lastSwitchTime', // deprecated fallback
+  ]) as StorageData;
+
+  const windowMode = data.windowMode ?? 'global';
+  let targetWindowId: number | undefined;
+
+  if (windowMode === 'current-window') {
+    // In current-window mode, show timing for the selected window
+    targetWindowId = data.selectedWindowId;
+  } else {
+    // In global mode, show timing for the current window
+    const currentWindow = await chrome.windows.getCurrent();
+    targetWindowId = currentWindow.id;
+  }
+
+  let lastSwitchTime: number | undefined;
+
+  if (targetWindowId !== undefined && data.lastSwitchTimes) {
+    // Get per-window last switch time
+    lastSwitchTime = data.lastSwitchTimes[targetWindowId];
+  } else if (data.lastSwitchTime) {
+    // Fallback to deprecated global lastSwitchTime
+    lastSwitchTime = data.lastSwitchTime;
+  }
+
+  if (lastSwitchTime) {
+    // Calculate when the next switch should happen based on the last switch
+    nextSwitchTime = lastSwitchTime + switchIntervalMs;
+
+    // If we're already past the next switch time, use current time + interval
+    if (nextSwitchTime < Date.now()) {
+      nextSwitchTime = Date.now() + switchIntervalMs;
+    }
+  } else {
+    // No previous switch recorded, estimate based on current time
+    nextSwitchTime = Date.now() + switchIntervalMs;
+  }
 
   // Update countdown every second
   countdownInterval = setInterval(() => {
@@ -224,7 +264,13 @@ function startCountdownTimer(): void {
  */
 async function updateCountdown(): Promise<void> {
   try {
-    const data = await chrome.storage.local.get(['enabled']) as StorageData;
+    const data = await chrome.storage.local.get([
+      'enabled',
+      'windowMode',
+      'selectedWindowId',
+      'lastSwitchTimes',
+      'lastSwitchTime', // deprecated fallback
+    ]) as StorageData;
     const enabled = data.enabled ?? false;
 
     if (!enabled) {
@@ -232,11 +278,47 @@ async function updateCountdown(): Promise<void> {
       return;
     }
 
-    // Calculate time remaining (approximate)
+    // Determine which window's timing to show
+    const windowMode = data.windowMode ?? 'global';
+    let targetWindowId: number | undefined;
+
+    if (windowMode === 'current-window') {
+      // In current-window mode, show timing for the selected window
+      targetWindowId = data.selectedWindowId;
+    } else {
+      // In global mode, show timing for the current window
+      const currentWindow = await chrome.windows.getCurrent();
+      targetWindowId = currentWindow.id;
+    }
+
     const now = Date.now();
+
+    // Get per-window last switch time
+    let lastSwitchTime: number | undefined;
+
+    if (targetWindowId !== undefined && data.lastSwitchTimes) {
+      lastSwitchTime = data.lastSwitchTimes[targetWindowId];
+    } else if (data.lastSwitchTime) {
+      // Fallback to deprecated global lastSwitchTime
+      lastSwitchTime = data.lastSwitchTime;
+    }
+
+    // Recalculate next switch time if we have a lastSwitchTime
+    // This ensures accuracy when tabs are switched in background
+    if (lastSwitchTime) {
+      const calculatedNextSwitch = lastSwitchTime + switchIntervalMs;
+
+      // If our stored nextSwitchTime differs significantly, update it
+      if (Math.abs(nextSwitchTime - calculatedNextSwitch) > 2000) {
+        nextSwitchTime = calculatedNextSwitch;
+      }
+    }
+
+    // Calculate time remaining
     let remaining = Math.max(0, Math.ceil((nextSwitchTime - now) / 1000));
 
-    // If we've passed the switch time, reset
+    // If we've passed the switch time, the tab should have switched
+    // Update nextSwitchTime for the next cycle
     if (remaining === 0) {
       nextSwitchTime = now + switchIntervalMs;
       remaining = Math.ceil(switchIntervalMs / 1000);
