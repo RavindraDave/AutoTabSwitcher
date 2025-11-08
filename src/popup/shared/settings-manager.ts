@@ -5,7 +5,7 @@
 import { StorageData } from '../../core/types.js';
 import { DEFAULT_PAUSE_DURATION_SECONDS } from '../../core/constants.js';
 import { validateDelayTime, validatePauseDuration } from './validation.js';
-import { showError, updateWindowInfo, handlePauseOnActivityChange } from './ui-helpers.js';
+import { showError, updateWindowInfo, handlePauseOnActivityChange, showWindowModeWarning } from './ui-helpers.js';
 
 /**
  * Load and display current settings from storage
@@ -54,6 +54,13 @@ export async function loadSettings(
     // Show window info if in current-window mode
     if (windowMode === 'current-window' && data.selectedWindowId) {
       await updateWindowInfo(data.selectedWindowId);
+
+      // Check if we're viewing popup from the selected window
+      const currentWindow = await chrome.windows.getCurrent();
+      if (currentWindow.id !== data.selectedWindowId) {
+        // Show warning that auto-switching is active in a different window
+        showWindowModeWarning(data.selectedWindowId, currentWindow.id);
+      }
     }
 
     // Set pause on activity settings
