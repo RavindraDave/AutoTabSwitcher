@@ -13,7 +13,8 @@ export interface StorageData {
   selectedWindowId?: number;
   pauseOnActivity?: boolean;
   pauseDuration?: number; // in milliseconds
-  lastSwitchTime?: number; // timestamp of last tab switch
+  lastSwitchTime?: number; // timestamp of last tab switch (deprecated, use per-window)
+  lastSwitchTimes?: { [windowId: number]: number }; // per-window last switch timestamps
 }
 
 /**

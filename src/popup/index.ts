@@ -207,9 +207,35 @@ async function startCountdownTimer(): Promise<void> {
     clearInterval(countdownInterval);
   }
 
-  // Get last switch time from storage to calculate accurate remaining time
-  const data = await chrome.storage.local.get(['lastSwitchTime']) as StorageData;
-  const lastSwitchTime = data.lastSwitchTime;
+  // Get window mode and determine which window's timing to show
+  const data = await chrome.storage.local.get([
+    'windowMode',
+    'selectedWindowId',
+    'lastSwitchTimes',
+    'lastSwitchTime', // deprecated fallback
+  ]) as StorageData;
+
+  const windowMode = data.windowMode ?? 'global';
+  let targetWindowId: number | undefined;
+
+  if (windowMode === 'current-window') {
+    // In current-window mode, show timing for the selected window
+    targetWindowId = data.selectedWindowId;
+  } else {
+    // In global mode, show timing for the current window
+    const currentWindow = await chrome.windows.getCurrent();
+    targetWindowId = currentWindow.id;
+  }
+
+  let lastSwitchTime: number | undefined;
+
+  if (targetWindowId !== undefined && data.lastSwitchTimes) {
+    // Get per-window last switch time
+    lastSwitchTime = data.lastSwitchTimes[targetWindowId];
+  } else if (data.lastSwitchTime) {
+    // Fallback to deprecated global lastSwitchTime
+    lastSwitchTime = data.lastSwitchTime;
+  }
 
   if (lastSwitchTime) {
     // Calculate when the next switch should happen based on the last switch
@@ -238,7 +264,13 @@ async function startCountdownTimer(): Promise<void> {
  */
 async function updateCountdown(): Promise<void> {
   try {
-    const data = await chrome.storage.local.get(['enabled', 'lastSwitchTime']) as StorageData;
+    const data = await chrome.storage.local.get([
+      'enabled',
+      'windowMode',
+      'selectedWindowId',
+      'lastSwitchTimes',
+      'lastSwitchTime', // deprecated fallback
+    ]) as StorageData;
     const enabled = data.enabled ?? false;
 
     if (!enabled) {
@@ -246,12 +278,35 @@ async function updateCountdown(): Promise<void> {
       return;
     }
 
+    // Determine which window's timing to show
+    const windowMode = data.windowMode ?? 'global';
+    let targetWindowId: number | undefined;
+
+    if (windowMode === 'current-window') {
+      // In current-window mode, show timing for the selected window
+      targetWindowId = data.selectedWindowId;
+    } else {
+      // In global mode, show timing for the current window
+      const currentWindow = await chrome.windows.getCurrent();
+      targetWindowId = currentWindow.id;
+    }
+
     const now = Date.now();
+
+    // Get per-window last switch time
+    let lastSwitchTime: number | undefined;
+
+    if (targetWindowId !== undefined && data.lastSwitchTimes) {
+      lastSwitchTime = data.lastSwitchTimes[targetWindowId];
+    } else if (data.lastSwitchTime) {
+      // Fallback to deprecated global lastSwitchTime
+      lastSwitchTime = data.lastSwitchTime;
+    }
 
     // Recalculate next switch time if we have a lastSwitchTime
     // This ensures accuracy when tabs are switched in background
-    if (data.lastSwitchTime) {
-      const calculatedNextSwitch = data.lastSwitchTime + switchIntervalMs;
+    if (lastSwitchTime) {
+      const calculatedNextSwitch = lastSwitchTime + switchIntervalMs;
 
       // If our stored nextSwitchTime differs significantly, update it
       if (Math.abs(nextSwitchTime - calculatedNextSwitch) > 2000) {
