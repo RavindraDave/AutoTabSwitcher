@@ -5,9 +5,10 @@
  * Advanced settings are available in the options page.
  */
 
-import { MIN_DELAY_SECONDS, MAX_DELAY_SECONDS } from '../core/constants.js';
-import { loadSettings, saveSettings, handleEnabledChange } from './shared/settings-manager.js';
-import { handleWindowModeChange, handlePauseOnActivityChange } from './shared/ui-helpers.js';
+import { MIN_DELAY_SECONDS, MAX_DELAY_SECONDS, MIN_DELAY_MS_PRODUCTION } from '../core/constants.js';
+import { StorageData } from '../core/types.js';
+import { isPacked } from '../utils/environment.js';
+import { validateDelayTime } from './shared/validation.js';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_SECONDS_ENV = isPacked()
