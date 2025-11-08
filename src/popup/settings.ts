@@ -201,6 +201,30 @@ async function saveSettings(): Promise<void> {
     // Get window mode
     const windowMode = radioGlobal.classList.contains('selected') ? 'global' : 'current-window';
 
+    // Check if switching from current-window to global mode
+    const currentData = await chrome.storage.local.get(['windowMode', 'selectedWindowId', 'enabled']) as StorageData;
+    const currentWindowMode = currentData.windowMode ?? 'global';
+    const currentSelectedWindowId = currentData.selectedWindowId;
+    const isCurrentlyEnabled = currentData.enabled ?? false;
+
+    // Warn if switching from current-window to global with an active window
+    if (
+      currentWindowMode === 'current-window' &&
+      windowMode === 'global' &&
+      currentSelectedWindowId !== undefined &&
+      isCurrentlyEnabled
+    ) {
+      const confirmed = confirm(
+        `⚠️ Warning: Switching to Global mode\n\n` +
+        `This will override the current window-only mode (Window ${currentSelectedWindowId}) and apply auto-switching to ALL windows.\n\n` +
+        `Do you want to continue?`
+      );
+
+      if (!confirmed) {
+        return; // User cancelled, don't save
+      }
+    }
+
     // Get current window ID if current-window mode
     let selectedWindowId: number | undefined;
     if (windowMode === 'current-window') {
