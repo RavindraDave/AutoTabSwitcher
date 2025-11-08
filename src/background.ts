@@ -11,6 +11,7 @@ import { MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED } fr
 import { initializeStorage, getSettings } from './core/storage.js';
 import { setupActivityListeners } from './core/activity-tracker.js';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
+import { updateBadge } from './core/badge-manager.js';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_MS = isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;
@@ -108,6 +109,56 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
     }
   } catch (error) {
     console.error('Error in window focus change handler:', error);
+  }
+});
+
+/**
+ * Handle tab creation - set badge for new tabs
+ */
+chrome.tabs.onCreated.addListener(async (tab) => {
+  try {
+    if (tab.id === undefined) return;
+
+    const data = await getSettings(['enabled']);
+    const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+    // Update badge for the newly created tab
+    await updateBadge(enabled, false, tab.id);
+  } catch (error) {
+    console.error('Error in tab creation handler:', error);
+  }
+});
+
+/**
+ * Handle tab updates - ensure badge stays correct when pages reload
+ */
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, _tab) => {
+  try {
+    // Only update badge when tab is loading or complete (page refresh)
+    if (changeInfo.status === 'loading' || changeInfo.status === 'complete') {
+      const data = await getSettings(['enabled']);
+      const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+      // Update badge for this tab
+      await updateBadge(enabled, false, tabId);
+    }
+  } catch (error) {
+    console.error('Error in tab update handler:', error);
+  }
+});
+
+/**
+ * Handle tab being moved between windows - update badge for the moved tab
+ */
+chrome.tabs.onAttached.addListener(async (tabId, _attachInfo) => {
+  try {
+    const data = await getSettings(['enabled']);
+    const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+    // Update badge for the tab in its new window
+    await updateBadge(enabled, false, tabId);
+  } catch (error) {
+    console.error('Error in tab attach handler:', error);
   }
 });
 
