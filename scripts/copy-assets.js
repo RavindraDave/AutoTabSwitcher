@@ -30,16 +30,20 @@ icons.forEach(icon => {
 });
 
 // Copy popup directory
-console.log('Copying popup HTML...');
+console.log('Copying popup HTML files...');
 const popupDistDir = path.join(distDir, 'popup');
 if (!fs.existsSync(popupDistDir)) {
   fs.mkdirSync(popupDistDir, { recursive: true });
 }
 
-fs.copyFileSync(
-  path.join(srcDir, 'popup', 'popup.html'),
-  path.join(popupDistDir, 'popup.html')
-);
+// Copy all HTML files from popup directory
+const htmlFiles = ['index.html', 'settings.html'];
+htmlFiles.forEach(file => {
+  const srcPath = path.join(srcDir, 'popup', file);
+  if (fs.existsSync(srcPath)) {
+    fs.copyFileSync(srcPath, path.join(popupDistDir, file));
+  }
+});
 
 // Copy CSS directory
 console.log('Copying CSS files...');

@@ -16,7 +16,7 @@
     "windows"
   ],
   "action": {
-    "default_popup": "popup/popup.html",
+    "default_popup": "popup/index.html",
     "default_icon": "icon.png"
   },
   "background": {
