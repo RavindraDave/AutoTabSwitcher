@@ -322,6 +322,26 @@ This TypeScript rewrite fixed critical issues from the JavaScript version:
 
 ## 🔧 Troubleshooting
 
+### Service worker registration failed (Status code: 3)
+
+This error occurs when trying to load the unpacked extension before building it.
+
+**Solution:**
+1. Make sure you've built the project: `npm run build`
+2. Load the `dist/` folder in Chrome (NOT the `src/` folder)
+3. If the error persists:
+   ```bash
+   npm run clean
+   npm run build
+   ```
+4. Reload the extension in `chrome://extensions/`
+
+**Why this happens:**
+- The extension is written in TypeScript (`.ts` files)
+- Chrome needs JavaScript (`.js` files)
+- The build process compiles TypeScript to JavaScript
+- The `dist/` folder contains the compiled extension
+
 ### Extension not switching tabs
 
 1. Check badge shows "ON" (green)
