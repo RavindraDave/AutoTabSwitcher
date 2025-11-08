@@ -52,10 +52,13 @@ if (!fs.existsSync(optionsDistDir)) {
   fs.mkdirSync(optionsDistDir, { recursive: true });
 }
 
-fs.copyFileSync(
-  path.join(srcDir, 'options', 'options.html'),
-  path.join(optionsDistDir, 'options.html')
-);
+const optionsHtmlFiles = ['options.html', 'diagnostics.html'];
+optionsHtmlFiles.forEach(file => {
+  const srcPath = path.join(srcDir, 'options', file);
+  if (fs.existsSync(srcPath)) {
+    fs.copyFileSync(srcPath, path.join(optionsDistDir, file));
+  }
+});
 
 // Copy CSS directory
 console.log('Copying CSS files...');

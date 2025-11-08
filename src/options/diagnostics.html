@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostics - Auto Tab Switcher</title>
+    <link rel="stylesheet" href="../css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .summary-item {
+            margin-bottom: 8px;
+        }
+        .summary-item strong {
+            min-width: 150px;
+            display: inline-block;
+        }
+        .action-buttons {
+            margin-bottom: 20px;
+        }
+        .action-buttons button {
+            margin-right: 10px;
+        }
+        .log-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            background: #f8f9fa;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-header {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .log-timestamp {
+            color: #6c757d;
+        }
+        .log-level {
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+        .log-level.INFO {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .log-level.WARN {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .log-level.ERROR {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .log-level.DEBUG {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        .log-category {
+            background: #e7f3ff;
+            color: #004085;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+        .log-message {
+            margin-bottom: 5px;
+        }
+        .log-data {
+            background: white;
+            padding: 8px;
+            border-radius: 3px;
+            border-left: 3px solid #dee2e6;
+            font-size: 11px;
+            overflow-x: auto;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .alert {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnostics</h1>
+        <p class="subtitle">View and export diagnostic logs for troubleshooting</p>
+
+        <div class="summary-card" id="summaryCard">
+            <h5>Log Summary</h5>
+            <div class="summary-item"><strong>Total Entries:</strong> <span id="totalEntries">0</span></div>
+            <div class="summary-item"><strong>Errors:</strong> <span id="errorCount">0</span></div>
+            <div class="summary-item"><strong>Warnings:</strong> <span id="warningCount">0</span></div>
+            <div class="summary-item"><strong>Time Range:</strong> <span id="timeRange">-</span></div>
+            <div class="summary-item"><strong>Categories:</strong> <span id="categories">-</span></div>
+        </div>
+
+        <div class="action-buttons">
+            <button id="refreshBtn" class="btn btn-primary">🔄 Refresh</button>
+            <button id="exportTextBtn" class="btn btn-success">📄 Export as Text</button>
+            <button id="exportJsonBtn" class="btn btn-info">📋 Export as JSON</button>
+            <button id="copyToClipboardBtn" class="btn btn-secondary">📋 Copy to Clipboard</button>
+            <button id="clearLogsBtn" class="btn btn-danger">🗑️ Clear Logs</button>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <h5>Log Entries (Last 30 minutes)</h5>
+        <div class="log-container" id="logContainer">
+            <div class="empty-state">Loading logs...</div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <a href="options.html" class="btn btn-link">← Back to Settings</a>
+        </div>
+    </div>
+
+    <script src="diagnostics.js" type="module"></script>
+</body>
+</html>

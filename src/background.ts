@@ -12,6 +12,7 @@ import { initializeStorage, getSettings } from './core/storage.js';
 import { setupActivityListeners } from './core/activity-tracker.js';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
 import { updateBadge } from './core/badge-manager.js';
+import { logger } from './core/logger.js';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_MS = isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;
@@ -23,14 +24,24 @@ const DEFAULT_DELAY_TIME = MIN_DELAY_MS;
 async function toggleTabSwitcher(): Promise<void> {
   try {
     // Get current settings from storage
-    const data = await getSettings(['enabled', 'delayTime']);
+    const data = await getSettings(['enabled', 'delayTime', 'windowMode', 'selectedWindowId']);
     const enabled = data.enabled ?? DEFAULT_ENABLED;
     const delayTime = data.delayTime ?? DEFAULT_DELAY_TIME;
+
+    await logger.info('TabSwitcher', 'Toggle tab switcher', {
+      enabled,
+      delayTimeMs: delayTime,
+      windowMode: data.windowMode,
+      selectedWindowId: data.selectedWindowId,
+    });
 
     // Delegate to hybrid timer implementation
     await toggleHybridTimer(enabled, delayTime, MIN_DELAY_MS);
   } catch (error) {
     console.error('Error toggling tab switcher:', error);
+    await logger.error('TabSwitcher', 'Failed to toggle tab switcher', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -47,6 +58,19 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
   if (relevantChanges) {
     console.log('Settings changed, restarting tab switcher');
+
+    // Log setting changes
+    const changedSettings: Record<string, any> = {};
+    for (const [key, change] of Object.entries(changes)) {
+      if (relevantChanges) {
+        changedSettings[key] = {
+          old: change.oldValue,
+          new: change.newValue,
+        };
+      }
+    }
+
+    logger.info('Settings', 'Settings changed', changedSettings);
     toggleTabSwitcher();
   }
 });
@@ -56,6 +80,10 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
  */
 chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('Extension installed/updated:', details.reason);
+  await logger.info('Lifecycle', 'Extension installed/updated', {
+    reason: details.reason,
+    version: chrome.runtime.getManifest().version,
+  });
 
   if (details.reason === 'install') {
     await initializeStorage(DEFAULT_DELAY_TIME);
@@ -70,6 +98,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
  */
 chrome.runtime.onStartup.addListener(async () => {
   console.log('Service worker started, restoring state');
+  await logger.info('Lifecycle', 'Service worker started');
   await toggleTabSwitcher();
 });
 
@@ -81,10 +110,14 @@ chrome.windows.onCreated.addListener(async () => {
     const data = await getSettings(['enabled']);
     if (data.enabled) {
       console.log('New window created, ensuring switcher is active');
+      await logger.info('Window', 'New window created, ensuring switcher active');
       await toggleTabSwitcher();
     }
   } catch (error) {
     console.error('Error in window creation handler:', error);
+    await logger.error('Window', 'Error in window creation handler', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
