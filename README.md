@@ -103,19 +103,19 @@ The extension uses a clean, modular architecture with shared core modules:
 ```plaintext
 AutoTabSwitcher/
 ├── src/
-│   ├── background.ts              # Service worker coordinator
-│   ├── background-hybrid.ts       # Hybrid timing version
+│   ├── background.ts              # Service worker (environment-aware)
 │   ├── core/                      # Shared business logic
 │   │   ├── constants.ts           # Configuration constants
 │   │   ├── types.ts               # TypeScript interfaces
 │   │   ├── storage.ts             # Storage helpers
-│   │   ├── badge-manager.ts       # Badge state management
+│   │   ├── badge-manager.ts       # Per-window badge management
 │   │   ├── tab-switcher.ts        # Tab switching logic
 │   │   ├── activity-tracker.ts    # Activity detection
 │   │   └── timing-hybrid.ts       # Hybrid timing (alarms + intervals)
 │   ├── popup/
-│   │   ├── popup.ts               # Popup controller
-│   │   ├── popup-hybrid.ts        # Hybrid popup version
+│   │   ├── popup.ts               # Popup controller (environment-aware)
+│   │   ├── index.ts               # Main popup interface
+│   │   ├── settings.ts            # Full settings page
 │   │   ├── popup.html             # Popup UI
 │   │   └── shared/                # Shared UI modules
 │   │       ├── validation.ts      # Input validation
@@ -123,23 +123,17 @@ AutoTabSwitcher/
 │   │       ├── settings-manager.ts # Settings CRUD
 │   │       └── environment-info.ts # Environment display
 │   ├── utils/
-│   │   └── environment.ts         # Environment detection
+│   │   └── environment.ts         # Runtime environment detection
 │   ├── css/
 │   │   └── bootstrap.min.css
 │   ├── icons/                     # Extension icons
 │   └── manifest.json
-├── dist/                          # Compiled output
+├── dist/                          # Compiled output (load this in Chrome)
 ├── scripts/
 │   └── copy-assets.js             # Build automation
-├── docs/                          # Documentation
-│   ├── claude.md                  # Development timeline
-│   ├── REFACTORING.md             # Refactoring documentation
-│   ├── SECURITY_REVIEW.md         # Security analysis
-│   └── TYPESCRIPT_CONFIG.md       # TypeScript setup guide
 ├── package.json
 ├── tsconfig.json                  # Main TypeScript config
-├── tsconfig.build.json            # Build configuration
-└── tsconfig.hybrid.json           # Hybrid file type checking
+└── tsconfig.build.json            # Build configuration
 ```
 
 ### Manifest V3 Service Worker
@@ -154,11 +148,12 @@ Following Chrome Extension best practices:
 
 ### Hybrid Timing Implementation
 
-For production deployments supporting sub-30-second delays:
+Supports sub-30-second delays with automatic environment detection:
 
 - **Delays ≥ 30s**: Uses `chrome.alarms` (most efficient)
 - **Delays < 30s**: Uses `setInterval` (may be interrupted)
-- **Smart switching**: Automatically selects best mechanism
+- **Smart switching**: Automatically selects best mechanism at runtime
+- **Environment detection**: 5s minimum for production, 60s for development
 - **Service worker handling**: Restores interval timers after suspension
 
 ## 🛠️ Development
@@ -171,43 +166,40 @@ For production deployments supporting sub-30-second delays:
 
 ### Build Commands
 
-#### Development
 ```bash
 npm run build          # Full build (clean + compile + copy assets)
 npm run watch          # Watch mode for development
 npm run clean          # Remove dist/ directory
-npm run typecheck      # Type check all files (standard + hybrid)
+npm run typecheck      # Type check all files
 npm run build:ts       # Compile TypeScript only
 npm run build:assets   # Copy static assets only
+npm run dev            # Build and watch
+npm run test           # Run tests
 ```
 
-#### Type Checking
+**For Chrome Web Store deployment:**
 ```bash
-npm run typecheck              # Check all files
-npm run typecheck:standard     # Check standard files only
-npm run typecheck:hybrid       # Check hybrid files only
+npm run build          # Same build works for both dev and production!
+cd dist
+zip -r ../auto-tab-switcher.zip . -x "*.map" "*.DS_Store"
 ```
 
-#### Production (Chrome Web Store)
-```bash
-npm run build:prod     # Production build with hybrid timing
-```
+The extension automatically detects the environment at runtime:
+- **Unpacked (dev)**: 60-second minimum delay
+- **Chrome Web Store**: 5-second minimum delay
 
 ### TypeScript Configuration
 
-The project uses multiple TypeScript configurations:
+The project uses two TypeScript configurations:
 
 - **`tsconfig.json`**: Main IDE configuration (includes all files, no emit)
-- **`tsconfig.build.json`**: Build configuration (excludes hybrid files)
-- **`tsconfig.hybrid.json`**: Hybrid file type checking
+- **`tsconfig.build.json`**: Build configuration for compilation
 
 This ensures:
 - ✅ Full IDE support for all files
 - ✅ Correct compilation output
 - ✅ No type checking conflicts
-- ✅ Separate validation of standard vs hybrid implementations
-
-See `docs/TYPESCRIPT_CONFIG.md` for detailed explanation.
+- ✅ Strict type safety throughout
 
 ### Development Workflow
 
@@ -269,13 +261,15 @@ See `docs/SECURITY_REVIEW.md` for complete analysis.
 
 | Metric | Before Refactoring | After Refactoring | Improvement |
 |--------|-------------------|-------------------|-------------|
-| background.ts | 300 lines | 130 lines | 57% ↓ |
-| background-hybrid.ts | 398 lines | 113 lines | 72% ↓ |
-| popup.ts | 396 lines | 75 lines | 81% ↓ |
-| popup-hybrid.ts | 442 lines | 92 lines | 79% ↓ |
-| **Total** | **1,536 lines** | **410 lines** | **73% ↓** |
+| Main files | 1,536 lines | 300 lines | 80% ↓ |
+| Shared modules | 0 lines | 800 lines | Reusable |
+| Code duplication | ~90% | ~0% | 90% ↓ |
 
-New shared modules: 12 files, ~800 lines of reusable code
+**Code organization:**
+- Core modules: 7 files (badge, storage, timing, activity, tab-switcher, types, constants)
+- UI modules: 5 files (validation, ui-helpers, settings-manager, environment-info, main UI)
+- Utilities: 1 file (environment detection)
+- Total: 13 reusable modules + main entry points
 
 ## 🐛 Bugs Fixed
 
@@ -378,13 +372,14 @@ This error occurs when trying to load the unpacked extension before building it.
 
 ## 📚 Documentation
 
-Comprehensive documentation available in `docs/`:
+Comprehensive documentation available:
 
-- **`claude.md`**: Complete development timeline (6+ sessions)
+- **`claude.md`**: Complete development timeline
 - **`REFACTORING.md`**: Architecture and refactoring guide
 - **`SECURITY_REVIEW.md`**: Security analysis and recommendations
 - **`TYPESCRIPT_CONFIG.md`**: TypeScript configuration explained
-- **`PRODUCTION-SETUP.md`**: Chrome Web Store deployment guide
+- **`CONTRIBUTING.md`**: Contribution guidelines
+- **`TEST_SUMMARY.md`**: Testing documentation
 
 ## 🧪 Testing
 
