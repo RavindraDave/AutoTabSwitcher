@@ -12,7 +12,8 @@
     "tabs",
     "activeTab",
     "storage",
-    "alarms"
+    "alarms",
+    "windows"
   ],
   "action": {
     "default_popup": "popup/popup.html",
