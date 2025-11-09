@@ -4,7 +4,7 @@
  * Handles the extension options page interface for configuring all settings.
  */
 
-import { isPacked } from '../utils/environment';
+import { isPacked } from '../utils/environment.js';
 import {
   MIN_DELAY_SECONDS,
   MAX_DELAY_SECONDS,
@@ -12,9 +12,9 @@ import {
   MAX_PAUSE_DURATION_SECONDS,
   DEFAULT_PAUSE_DURATION_SECONDS,
   MIN_DELAY_MS_PRODUCTION,
-} from '../core/constants';
-import { StorageData } from '../core/types';
-import { validateDelayTime, validatePauseDuration } from '../popup/shared/validation';
+} from '../core/constants.js';
+import { StorageData } from '../core/types.js';
+import { validateDelayTime, validatePauseDuration } from '../popup/shared/validation.js';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_SECONDS_ENV = isPacked()
