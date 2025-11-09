@@ -193,9 +193,7 @@ async function handleToggle(): Promise<void> {
  * Open settings page
  */
 function openSettings(): void {
-  chrome.tabs.create({
-    url: chrome.runtime.getURL('popup/settings.html')
-  });
+  chrome.runtime.openOptionsPage();
 }
 
 /**
