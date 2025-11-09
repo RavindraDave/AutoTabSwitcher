@@ -2,8 +2,9 @@
  * Shared constants used across the extension
  */
 
-// Alarm name for chrome.alarms API
+// Alarm names for chrome.alarms API
 export const ALARM_NAME = 'tabSwitcher';
+export const KEEPALIVE_ALARM_NAME = 'keepAlive';
 
 // Timing constants
 export const MIN_ALARM_DELAY_MS = 30000; // 30 seconds - Chrome alarms API minimum for packed extensions
