@@ -13,6 +13,7 @@ export const MIN_DELAY_MS_PRODUCTION = 5000; // 5 seconds for packed (Chrome Web
 
 // Feature defaults
 export const DEFAULT_ENABLED = false;
+export const DEFAULT_ENABLE_ON_STARTUP = false;
 export const DEFAULT_WINDOW_MODE = 'global' as const;
 export const DEFAULT_PAUSE_ON_ACTIVITY = false;
 export const DEFAULT_PAUSE_DURATION = 30000; // 30 seconds

@@ -94,12 +94,44 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 /**
- * Handle service worker startup - restore state from storage
+ * Handle browser startup - check if auto-start is enabled
+ * This fires when the browser starts (not when service worker wakes)
  */
 chrome.runtime.onStartup.addListener(async () => {
-  console.log('Service worker started, restoring state');
-  await logger.info('Lifecycle', 'Service worker started');
-  await toggleTabSwitcher();
+  console.log('Browser started, checking auto-start setting');
+  await logger.info('Lifecycle', 'Browser started');
+
+  try {
+    // Check if auto-start on browser startup is enabled
+    const data = await getSettings(['enableOnStartup', 'enabled']);
+    const enableOnStartup = data.enableOnStartup ?? false;
+
+    if (enableOnStartup) {
+      console.log('Auto-start enabled, enabling tab switching');
+      await logger.info('Lifecycle', 'Auto-start enabled, activating tab switching');
+
+      // Enable tab switching
+      await chrome.storage.local.set({ enabled: true });
+
+      // The storage change listener will automatically call toggleTabSwitcher()
+    } else {
+      console.log('Auto-start disabled, restoring previous state');
+      await logger.info('Lifecycle', 'Auto-start disabled, restoring previous state', {
+        previouslyEnabled: data.enabled ?? false
+      });
+
+      // Just restore the previous state
+      await toggleTabSwitcher();
+    }
+  } catch (error) {
+    console.error('Error in startup handler:', error);
+    await logger.error('Lifecycle', 'Error in startup handler', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    // Fallback: restore state anyway
+    await toggleTabSwitcher();
+  }
 });
 
 /**
