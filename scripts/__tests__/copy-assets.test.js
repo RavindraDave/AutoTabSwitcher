@@ -148,9 +148,9 @@ describe('Copy Assets Build Script', () => {
       expect(fs.copyFileSync).not.toHaveBeenCalled();
     });
 
-    it('should copy popup.html to popup subdirectory', () => {
-      const srcPath = '/test/src/popup/popup.html';
-      const distPath = '/test/dist/popup/popup.html';
+    it('should copy index.html to popup subdirectory', () => {
+      const srcPath = '/test/src/popup/index.html';
+      const distPath = '/test/dist/popup/index.html';
 
       fs.copyFileSync(srcPath, distPath);
 
@@ -277,10 +277,10 @@ describe('Copy Assets Build Script', () => {
     it('should construct file paths correctly', () => {
       const srcDir = '/test/src';
       const manifestPath = path.join(srcDir, 'manifest.json');
-      const popupHtmlPath = path.join(srcDir, 'popup', 'popup.html');
+      const popupHtmlPath = path.join(srcDir, 'popup', 'index.html');
 
       expect(manifestPath).toBe('/test/src/manifest.json');
-      expect(popupHtmlPath).toBe('/test/src/popup/popup.html');
+      expect(popupHtmlPath).toBe('/test/src/popup/index.html');
     });
   });
 
