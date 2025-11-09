@@ -2,8 +2,9 @@
  * Shared constants used across the extension
  */
 
-// Alarm name for chrome.alarms API
+// Alarm names for chrome.alarms API
 export const ALARM_NAME = 'tabSwitcher';
+export const KEEPALIVE_ALARM_NAME = 'keepAlive';
 
 // Timing constants
 export const MIN_ALARM_DELAY_MS = 30000; // 30 seconds - Chrome alarms API minimum for packed extensions
@@ -12,6 +13,7 @@ export const MIN_DELAY_MS_PRODUCTION = 5000; // 5 seconds for packed (Chrome Web
 
 // Feature defaults
 export const DEFAULT_ENABLED = false;
+export const DEFAULT_ENABLE_ON_STARTUP = false;
 export const DEFAULT_WINDOW_MODE = 'global' as const;
 export const DEFAULT_PAUSE_ON_ACTIVITY = false;
 export const DEFAULT_PAUSE_DURATION = 30000; // 30 seconds

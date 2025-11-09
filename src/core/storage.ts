@@ -5,6 +5,7 @@
 import { StorageData } from './types.js';
 import {
   DEFAULT_ENABLED,
+  DEFAULT_ENABLE_ON_STARTUP,
   DEFAULT_WINDOW_MODE,
   DEFAULT_PAUSE_ON_ACTIVITY,
   DEFAULT_PAUSE_DURATION,
@@ -18,6 +19,7 @@ import {
 export async function initializeStorage(defaultDelayTime: number): Promise<void> {
   await chrome.storage.local.set({
     enabled: DEFAULT_ENABLED,
+    enableOnStartup: DEFAULT_ENABLE_ON_STARTUP,
     delayTime: defaultDelayTime,
     windowMode: DEFAULT_WINDOW_MODE,
     selectedWindowId: undefined,

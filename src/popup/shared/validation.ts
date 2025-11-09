@@ -23,20 +23,20 @@ export interface ValidationResult {
  */
 export function validateDelayTime(value: number, minDelay: number = MIN_DELAY_SECONDS): ValidationResult {
   if (isNaN(value)) {
-    return { valid: false, error: 'Please enter a valid number' };
+    return { valid: false, error: 'Please enter a valid number for delay time' };
   }
 
   if (value < minDelay) {
     return {
       valid: false,
-      error: `Delay must be at least ${minDelay} seconds`,
+      error: `Delay must be at least ${minDelay} seconds (valid range: ${minDelay}-${MAX_DELAY_SECONDS})`,
     };
   }
 
   if (value > MAX_DELAY_SECONDS) {
     return {
       valid: false,
-      error: `Delay must be at most ${MAX_DELAY_SECONDS} seconds`,
+      error: `Delay must be at most ${MAX_DELAY_SECONDS} seconds (valid range: ${minDelay}-${MAX_DELAY_SECONDS})`,
     };
   }
 

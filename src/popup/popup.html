@@ -24,9 +24,11 @@
               class="form-control"
               id="delayTimeInput"
               placeholder="Enter delay time in seconds"
+              min="5"
+              max="3600"
             />
-            <small class="form-text text-muted">
-              Time between tab switches
+            <small class="form-text text-muted" id="delayHelpText">
+              Time between tab switches (Range: <span id="minDelayDisplay">5</span>-3600 seconds)
             </small>
           </div>
 
@@ -39,15 +41,18 @@
               </label>
             </div>
             <small class="form-text text-muted">
-              Turn automatic tab switching on/off
+              Turn automatic tab switching on/off (changes save immediately)
             </small>
           </div>
 
           <!-- Environment Info (if available) -->
           <div id="environmentInfo"></div>
 
+          <!-- Success Message -->
+          <div id="successMessage" class="alert alert-success" role="alert" style="display: none;"></div>
+
           <!-- Error Message -->
-          <div id="errorMessage" class="alert alert-danger" role="alert"></div>
+          <div id="errorMessage" class="alert alert-danger" role="alert" style="display: none;"></div>
 
           <!-- Save Button -->
           <button type="button" class="btn btn-primary btn-block" id="saveButton">

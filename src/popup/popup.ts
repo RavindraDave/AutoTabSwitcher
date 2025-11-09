@@ -17,10 +17,12 @@ const MIN_DELAY_SECONDS_ENV = isPacked()
 const DEFAULT_DELAY_SECONDS = MIN_DELAY_SECONDS_ENV;
 
 /**
- * Show environment information
+ * Show environment information and update min delay display
  */
 function showEnvironmentInfo(): void {
   const infoEl = document.getElementById('environmentInfo');
+  const minDelayDisplay = document.getElementById('minDelayDisplay');
+
   if (infoEl) {
     const environment = isPacked() ? 'Production' : 'Development';
 
@@ -31,6 +33,27 @@ function showEnvironmentInfo(): void {
       Minimum delay: ${MIN_DELAY_SECONDS_ENV} seconds
       ${!isPacked() ? '<br><small>Production version allows 5-second minimum</small>' : ''}
     `;
+  }
+
+  // Update the minimum delay display in help text
+  if (minDelayDisplay) {
+    minDelayDisplay.textContent = String(MIN_DELAY_SECONDS_ENV);
+  }
+}
+
+/**
+ * Show success message inline
+ */
+function showSuccess(message: string): void {
+  const successEl = document.getElementById('successMessage');
+  if (successEl) {
+    successEl.textContent = message;
+    successEl.style.display = 'block';
+
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      successEl.style.display = 'none';
+    }, 3000);
   }
 }
 
@@ -159,14 +182,22 @@ function initializePopup(): void {
     saveSettings();
   });
 
-  // Enabled checkbox change handler - save immediately
+  // Enabled checkbox change handler - save immediately with feedback
   enabledCheckbox.addEventListener('change', async (event: Event) => {
     const target = event.target as HTMLInputElement;
     try {
       await chrome.storage.local.set({ enabled: target.checked });
       console.log('Enabled status updated:', target.checked);
+
+      // Show success feedback
+      const status = target.checked ? 'enabled' : 'disabled';
+      showSuccess(`Auto-switching ${status} successfully!`);
     } catch (error) {
       console.error('Error updating enabled status:', error);
+      showError('Failed to update auto-switching status. Please try again.');
+
+      // Revert checkbox state on error
+      target.checked = !target.checked;
     }
   });
 
