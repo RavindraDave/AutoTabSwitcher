@@ -115,16 +115,16 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
     if ('operatingMode' in changes) {
       const { logModeChange } = await import('./core/logger.js');
       await logModeChange({
-        previousMode: changes.operatingMode.oldValue || 'global',
-        newMode: changes.operatingMode.newValue || 'global',
+        previousMode: changes['operatingMode'].oldValue || 'global',
+        newMode: changes['operatingMode'].newValue || 'global',
       });
     }
 
     // Enhanced logging for window state changes
     if ('windowStates' in changes) {
       const { logWindowToggle } = await import('./core/logger.js');
-      const oldStates = changes.windowStates.oldValue || {};
-      const newStates = changes.windowStates.newValue || {};
+      const oldStates = changes['windowStates'].oldValue || {};
+      const newStates = changes['windowStates'].newValue || {};
 
       // Find which window(s) changed
       const allWindowIds = new Set([...Object.keys(oldStates), ...Object.keys(newStates)]);
@@ -148,12 +148,12 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
     if ('enabled' in changes) {
       const { logWindowToggle } = await import('./core/logger.js');
       const data = await chrome.storage.local.get(['operatingMode']);
-      const mode = data.operatingMode || 'global';
+      const mode = data['operatingMode'] || 'global';
 
       if (mode === 'global') {
         await logWindowToggle({
           windowId: 0, // 0 indicates global
-          enabled: changes.enabled.newValue ?? false,
+          enabled: changes['enabled'].newValue ?? false,
           mode: 'global',
         });
       }

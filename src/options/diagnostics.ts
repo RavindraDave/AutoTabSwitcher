@@ -104,12 +104,12 @@ function renderLogEntry(entry: LogEntry): string {
   let windowIndicator = '';
 
   if (entry.data) {
-    if (entry.data.mode) {
-      const modeClass = entry.data.mode === 'global' ? 'mode-global' : 'mode-window';
-      modeIndicator = `<span class="log-mode ${modeClass}">${entry.data.mode === 'global' ? '🌐 Global' : '🪟 Window'}</span>`;
+    if (entry.data['mode']) {
+      const modeClass = entry.data['mode'] === 'global' ? 'mode-global' : 'mode-window';
+      modeIndicator = `<span class="log-mode ${modeClass}">${entry.data['mode'] === 'global' ? '🌐 Global' : '🪟 Window'}</span>`;
     }
-    if (entry.data.windowId !== undefined) {
-      windowIndicator = `<span class="log-window">Window ${entry.data.windowId}</span>`;
+    if (entry.data['windowId'] !== undefined) {
+      windowIndicator = `<span class="log-window">Window ${entry.data['windowId']}</span>`;
     }
   }
 

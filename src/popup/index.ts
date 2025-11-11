@@ -25,9 +25,6 @@ let enableWindowButton: HTMLButtonElement;
 let modeValue: HTMLElement;
 let intervalValue: HTMLElement;
 let settingsButton: HTMLButtonElement;
-let windowInfoAlert: HTMLElement;
-let windowInfoText: HTMLElement;
-let monitoredWindowInfo: HTMLElement;
 
 // State
 let countdownInterval: number | undefined;
@@ -55,9 +52,6 @@ async function initializePopup(): Promise<void> {
   modeValue = document.getElementById('modeValue')!;
   intervalValue = document.getElementById('intervalValue')!;
   settingsButton = document.getElementById('settingsButton') as HTMLButtonElement;
-  windowInfoAlert = document.getElementById('windowInfoAlert')!;
-  windowInfoText = document.getElementById('windowInfoText')!;
-  monitoredWindowInfo = document.getElementById('monitoredWindowInfo')!
 
   // Set up event listeners
   toggleButton.addEventListener('click', handleToggle);
@@ -126,10 +120,10 @@ async function updateUI(): Promise<void> {
     updateInfoRows(operatingMode, delayTime);
 
     // Update toggle button
-    updateToggleButton(isCurrentWindowEnabled, operatingMode, currentWindowId);
+    updateToggleButton(isCurrentWindowEnabled, operatingMode);
 
     // Update "Enable for This Window" button visibility
-    await updateEnableWindowButton(isCurrentWindowEnabled, operatingMode, currentWindowId, data);
+    await updateEnableWindowButton(isCurrentWindowEnabled, operatingMode);
   } catch (error) {
     console.error('Error updating UI:', error);
   }
@@ -197,8 +191,7 @@ function updateInfoRows(operatingMode: string, delayTime: number): void {
  */
 function updateToggleButton(
   isCurrentWindowEnabled: boolean,
-  operatingMode: string,
-  currentWindowId: number
+  operatingMode: string
 ): void {
   toggleButton.classList.remove('enable', 'disable');
 
@@ -225,9 +218,7 @@ function updateToggleButton(
  */
 async function updateEnableWindowButton(
   isCurrentWindowEnabled: boolean,
-  operatingMode: string,
-  currentWindowId: number,
-  data: StorageData
+  operatingMode: string
 ): Promise<void> {
   try {
     let shouldShowButton = false;
