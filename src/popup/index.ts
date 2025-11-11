@@ -20,6 +20,8 @@ let countdownLabel: HTMLElement;
 let pulse: HTMLElement;
 let statusText: HTMLElement;
 let toggleButton: HTMLButtonElement;
+let enableWindowSection: HTMLElement;
+let enableWindowButton: HTMLButtonElement;
 let modeValue: HTMLElement;
 let intervalValue: HTMLElement;
 let settingsButton: HTMLButtonElement;
@@ -48,6 +50,8 @@ async function initializePopup(): Promise<void> {
   pulse = document.getElementById('pulse')!;
   statusText = document.getElementById('statusText')!;
   toggleButton = document.getElementById('toggleButton') as HTMLButtonElement;
+  enableWindowSection = document.getElementById('enableWindowSection')!;
+  enableWindowButton = document.getElementById('enableWindowButton') as HTMLButtonElement;
   modeValue = document.getElementById('modeValue')!;
   intervalValue = document.getElementById('intervalValue')!;
   settingsButton = document.getElementById('settingsButton') as HTMLButtonElement;
@@ -57,6 +61,7 @@ async function initializePopup(): Promise<void> {
 
   // Set up event listeners
   toggleButton.addEventListener('click', handleToggle);
+  enableWindowButton.addEventListener('click', handleEnableForThisWindow);
   settingsButton.addEventListener('click', openSettings);
 
   // Listen for storage changes
@@ -105,6 +110,9 @@ async function updateUI(): Promise<void> {
 
     // Update toggle button
     updateToggleButton(enabled, windowMode, data.selectedWindowId);
+
+    // Update "Enable for This Window" button visibility
+    await updateEnableWindowButton(enabled, windowMode, data.selectedWindowId);
   } catch (error) {
     console.error('Error updating UI:', error);
   }
@@ -212,7 +220,7 @@ async function updateWindowInfoAlert(
 function updateInfoRows(windowMode: string, delayTime: number): void {
   // Update mode
   if (windowMode === 'current-window') {
-    modeValue.textContent = 'Current Window';
+    modeValue.textContent = 'Selected Window';
   } else {
     modeValue.textContent = 'Global';
   }
@@ -253,6 +261,77 @@ async function updateToggleButton(
   } else {
     toggleButton.textContent = 'Enable Auto-Switch';
     toggleButton.classList.add('enable');
+  }
+}
+
+/**
+ * Update "Enable for This Window" button visibility
+ * Show when:
+ * - Extension is disabled, OR
+ * - Extension is enabled in Global mode, OR
+ * - Extension is enabled in Selected Window mode but a different window is selected
+ */
+async function updateEnableWindowButton(
+  enabled: boolean,
+  windowMode: string,
+  selectedWindowId: number | undefined
+): Promise<void> {
+  try {
+    const currentWindow = await chrome.windows.getCurrent();
+    const currentWindowId = currentWindow.id;
+
+    let shouldShowButton = false;
+
+    if (!enabled) {
+      // Show when extension is disabled
+      shouldShowButton = true;
+    } else if (windowMode === 'global') {
+      // Show when in global mode, allowing user to switch to window-specific mode
+      shouldShowButton = true;
+    } else if (windowMode === 'current-window') {
+      // Show if a different window is selected or no window is selected
+      if (selectedWindowId === undefined || currentWindowId !== selectedWindowId) {
+        shouldShowButton = true;
+      }
+    }
+
+    if (shouldShowButton) {
+      enableWindowSection.classList.remove('hidden');
+    } else {
+      enableWindowSection.classList.add('hidden');
+    }
+  } catch (error) {
+    console.error('Error updating enable window button:', error);
+    enableWindowSection.classList.add('hidden');
+  }
+}
+
+/**
+ * Handle "Enable for This Window" button click
+ * Sets the extension to Selected Window mode for the current window
+ */
+async function handleEnableForThisWindow(): Promise<void> {
+  try {
+    const currentWindow = await chrome.windows.getCurrent();
+    const currentWindowId = currentWindow.id;
+
+    if (currentWindowId === undefined) {
+      console.error('Could not get current window ID');
+      return;
+    }
+
+    // Set extension to Selected Window mode with current window
+    await chrome.storage.local.set({
+      enabled: true,
+      windowMode: 'current-window',
+      selectedWindowId: currentWindowId,
+    });
+
+    console.log('Enabled for window:', currentWindowId);
+
+    // UI will update via storage change listener
+  } catch (error) {
+    console.error('Error enabling for this window:', error);
   }
 }
 
