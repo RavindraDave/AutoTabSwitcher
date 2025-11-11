@@ -136,12 +136,27 @@ body {
   font-size: 15px;
   transition: all 0.3s ease;
   font-family: inherit;
+  background-color: white;
+  color: #2d3748;
 }
 
 .form-control:focus {
   outline: none;
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Ensure select dropdown has proper styling */
+select.form-control {
+  cursor: pointer;
+  background-color: white;
+  color: #2d3748;
+}
+
+select.form-control option {
+  background-color: white;
+  color: #2d3748;
+  padding: 8px;
 }
 
 .form-text {

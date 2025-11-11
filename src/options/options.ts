@@ -82,28 +82,59 @@ function showEnvironmentInfo(): void {
  */
 async function loadWindows(): Promise<void> {
   try {
-    const windows = await chrome.windows.getAll({ populate: false });
+    const windows = await chrome.windows.getAll({ populate: true });
     const windowSelect = document.getElementById('windowSelect') as HTMLSelectElement;
 
     if (!windowSelect) {
       return;
     }
 
+    // Get current window ID
+    let currentWindowId: number | undefined;
+    try {
+      const currentWindow = await chrome.windows.getCurrent();
+      currentWindowId = currentWindow.id;
+    } catch (error) {
+      console.warn('Could not get current window:', error);
+    }
+
     // Clear existing options
     windowSelect.innerHTML = '';
 
-    // Add windows to dropdown
+    // Add windows to dropdown with enhanced labels
     windows.forEach((window, index) => {
       const option = document.createElement('option');
       option.value = String(window.id);
-      option.textContent = `Window ${index + 1} (ID: ${window.id})`;
+
+      // Get tab count
+      const tabCount = window.tabs?.length || 0;
+
+      // Get active tab title
+      const activeTab = window.tabs?.find(tab => tab.active);
+      const activeTabTitle = activeTab?.title || 'No active tab';
+
+      // Truncate title if too long
+      const truncatedTitle = activeTabTitle.length > 40
+        ? activeTabTitle.substring(0, 37) + '...'
+        : activeTabTitle;
+
+      // Check if this is the current window
+      const isCurrentWindow = window.id === currentWindowId;
+      const currentIndicator = isCurrentWindow ? ' ⭐ Current' : '';
+
+      // Format: "Window 1 - 5 tabs - GitHub · Pull Requests ⭐ Current"
+      option.textContent = `Window ${index + 1} - ${tabCount} tab${tabCount !== 1 ? 's' : ''} - ${truncatedTitle}${currentIndicator}`;
+
       windowSelect.appendChild(option);
     });
 
-    // Get currently selected window
+    // Get previously selected window or default to current window
     const data = (await chrome.storage.local.get(['selectedWindowId'])) as StorageData;
     if (data.selectedWindowId) {
       windowSelect.value = String(data.selectedWindowId);
+    } else if (currentWindowId) {
+      // Default to current window if no previous selection
+      windowSelect.value = String(currentWindowId);
     }
   } catch (error) {
     console.error('Error loading windows:', error);
