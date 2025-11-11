@@ -89,6 +89,11 @@ export async function switchTab(specificWindowId?: number): Promise<void> {
     const nextTab = tabs[nextTabIndex];
 
     if (nextTab && nextTab.id && targetWindowId !== undefined) {
+      // Get tab information before switching
+      const previousTabTitle = currentTab?.title || 'Unknown';
+      const newTabTitle = nextTab.title || 'Unknown';
+      const previousTabId = currentTab?.id;
+
       await chrome.tabs.update(nextTab.id, { active: true });
       console.log(`Switched to next tab in window ${targetWindowId} (mode: ${windowMode})`);
 
@@ -98,12 +103,15 @@ export async function switchTab(specificWindowId?: number): Promise<void> {
       lastSwitchTimes[targetWindowId] = Date.now();
       await chrome.storage.local.set({ lastSwitchTimes });
 
-      await logger.info('TabSwitcher', 'Tab switched', {
+      // Enhanced logging with tab information
+      const { logTabSwitch } = await import('./logger.js');
+      await logTabSwitch({
         windowId: targetWindowId,
-        windowMode,
-        fromTabIndex: currentTabIndex,
-        toTabIndex: nextTabIndex,
-        totalTabs: tabs.length,
+        mode: windowMode === 'global' ? 'global' : 'window',
+        previousTabId,
+        newTabId: nextTab.id,
+        previousTabTitle,
+        newTabTitle,
       });
     }
   } catch (error) {

@@ -78,83 +78,12 @@ function showEnvironmentInfo(): void {
 }
 
 /**
- * Load all windows and populate the window select dropdown
+ * Handle operating mode radio change
  */
-async function loadWindows(): Promise<void> {
-  try {
-    const windows = await chrome.windows.getAll({ populate: true });
-    const windowSelect = document.getElementById('windowSelect') as HTMLSelectElement;
-
-    if (!windowSelect) {
-      return;
-    }
-
-    // Get current window ID
-    let currentWindowId: number | undefined;
-    try {
-      const currentWindow = await chrome.windows.getCurrent();
-      currentWindowId = currentWindow.id;
-    } catch (error) {
-      console.warn('Could not get current window:', error);
-    }
-
-    // Clear existing options
-    windowSelect.innerHTML = '';
-
-    // Add windows to dropdown with enhanced labels
-    windows.forEach((window, index) => {
-      const option = document.createElement('option');
-      option.value = String(window.id);
-
-      // Get tab count
-      const tabCount = window.tabs?.length || 0;
-
-      // Get active tab title
-      const activeTab = window.tabs?.find(tab => tab.active);
-      const activeTabTitle = activeTab?.title || 'No active tab';
-
-      // Truncate title if too long
-      const truncatedTitle = activeTabTitle.length > 40
-        ? activeTabTitle.substring(0, 37) + '...'
-        : activeTabTitle;
-
-      // Check if this is the current window
-      const isCurrentWindow = window.id === currentWindowId;
-      const currentIndicator = isCurrentWindow ? ' ⭐ Current' : '';
-
-      // Format: "Window 1 - 5 tabs - GitHub · Pull Requests ⭐ Current"
-      option.textContent = `Window ${index + 1} - ${tabCount} tab${tabCount !== 1 ? 's' : ''} - ${truncatedTitle}${currentIndicator}`;
-
-      windowSelect.appendChild(option);
-    });
-
-    // Get previously selected window or default to current window
-    const data = (await chrome.storage.local.get(['selectedWindowId'])) as StorageData;
-    if (data.selectedWindowId) {
-      windowSelect.value = String(data.selectedWindowId);
-    } else if (currentWindowId) {
-      // Default to current window if no previous selection
-      windowSelect.value = String(currentWindowId);
-    }
-  } catch (error) {
-    console.error('Error loading windows:', error);
-  }
-}
-
-/**
- * Handle window mode radio change
- */
-function handleWindowModeChange(mode: 'global' | 'current-window'): void {
-  const windowSelectContainer = document.getElementById('windowSelectContainer');
-
-  if (windowSelectContainer) {
-    if (mode === 'current-window') {
-      windowSelectContainer.style.display = 'block';
-      loadWindows();
-    } else {
-      windowSelectContainer.style.display = 'none';
-    }
-  }
+function handleOperatingModeChange(mode: 'global' | 'window'): void {
+  // Currently no UI changes needed when mode changes
+  // In the future, could show mode-specific settings here
+  console.log('Operating mode changed to:', mode);
 }
 
 /**
@@ -176,8 +105,8 @@ async function loadSettings(): Promise<void> {
     const data = (await chrome.storage.local.get([
       'delayTime',
       'enabled',
-      'windowMode',
-      'selectedWindowId',
+      'operatingMode',
+      'windowMode', // Legacy fallback
       'pauseOnActivity',
       'pauseDuration',
       'enableOnStartup',
@@ -202,22 +131,21 @@ async function loadSettings(): Promise<void> {
       enableOnStartupCheckbox.checked = data.enableOnStartup ?? false;
     }
 
-    // Window mode
-    const windowMode = data.windowMode ?? 'global';
-    const windowModeGlobal = document.getElementById('windowModeGlobal') as HTMLInputElement;
-    const windowModeCurrentWindow = document.getElementById(
-      'windowModeCurrentWindow'
-    ) as HTMLInputElement;
+    // Operating mode (with legacy fallback)
+    let operatingMode = data.operatingMode ?? 'global';
 
-    if (windowMode === 'global' && windowModeGlobal) {
-      windowModeGlobal.checked = true;
-    } else if (windowMode === 'current-window' && windowModeCurrentWindow) {
-      windowModeCurrentWindow.checked = true;
-      await loadWindows();
-      const windowSelectContainer = document.getElementById('windowSelectContainer');
-      if (windowSelectContainer) {
-        windowSelectContainer.style.display = 'block';
-      }
+    // Legacy migration: if no operatingMode but has windowMode
+    if (!data.operatingMode && data.windowMode) {
+      operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
+    }
+
+    const operatingModeGlobal = document.getElementById('operatingModeGlobal') as HTMLInputElement;
+    const operatingModeWindow = document.getElementById('operatingModeWindow') as HTMLInputElement;
+
+    if (operatingMode === 'global' && operatingModeGlobal) {
+      operatingModeGlobal.checked = true;
+    } else if (operatingMode === 'window' && operatingModeWindow) {
+      operatingModeWindow.checked = true;
     }
 
     // Pause on activity
@@ -260,7 +188,6 @@ async function saveSettings(): Promise<void> {
       'pauseOnActivityCheckbox'
     ) as HTMLInputElement;
     const pauseDurationInput = document.getElementById('pauseDurationInput') as HTMLInputElement;
-    const windowSelect = document.getElementById('windowSelect') as HTMLSelectElement;
 
     if (!defaultDelayInput || !enableOnStartupCheckbox || !pauseOnActivityCheckbox || !pauseDurationInput) {
       showError('Required form elements not found');
@@ -289,27 +216,17 @@ async function saveSettings(): Promise<void> {
       pauseDuration = pauseDurationInSeconds * 1000; // Convert to milliseconds
     }
 
-    // Get window mode selection
+    // Get operating mode selection
     const checkedRadio = document.querySelector(
-      'input[name="windowMode"]:checked'
+      'input[name="operatingMode"]:checked'
     ) as HTMLInputElement | null;
-    const windowMode = (checkedRadio?.value as 'global' | 'current-window') ?? 'global';
-
-    // Get selected window ID if in current-window mode
-    let selectedWindowId: number | undefined;
-    if (windowMode === 'current-window' && windowSelect) {
-      const selectedValue = windowSelect.value;
-      if (selectedValue) {
-        selectedWindowId = parseInt(selectedValue, 10);
-      }
-    }
+    const operatingMode = (checkedRadio?.value as 'global' | 'window') ?? 'global';
 
     // Prepare settings object
     const settings: Partial<StorageData> = {
       delayTime: delayInSeconds * 1000, // Convert to milliseconds
       enableOnStartup: enableOnStartupCheckbox.checked,
-      windowMode,
-      selectedWindowId,
+      operatingMode,
       pauseOnActivity,
       pauseDuration,
     };
@@ -338,8 +255,7 @@ async function resetToDefaults(): Promise<void> {
       delayTime: DEFAULT_DELAY_SECONDS * 1000,
       enabled: false,
       enableOnStartup: false,
-      windowMode: 'global',
-      selectedWindowId: undefined,
+      operatingMode: 'global',
       pauseOnActivity: false,
       pauseDuration: DEFAULT_PAUSE_DURATION_SECONDS * 1000,
     };
@@ -368,7 +284,7 @@ function initializeOptionsPage(): void {
   // Set up event listeners
   const saveButton = document.getElementById('saveButton');
   const resetButton = document.getElementById('resetButton');
-  const windowModeRadios = document.getElementsByName('windowMode') as NodeListOf<HTMLInputElement>;
+  const operatingModeRadios = document.getElementsByName('operatingMode') as NodeListOf<HTMLInputElement>;
   const pauseOnActivityCheckbox = document.getElementById(
     'pauseOnActivityCheckbox'
   ) as HTMLInputElement;
@@ -387,12 +303,12 @@ function initializeOptionsPage(): void {
     });
   }
 
-  if (windowModeRadios) {
-    windowModeRadios.forEach((radio) => {
+  if (operatingModeRadios) {
+    operatingModeRadios.forEach((radio) => {
       radio.addEventListener('change', (event: Event) => {
         const target = event.target as HTMLInputElement;
         if (target.checked) {
-          handleWindowModeChange(target.value as 'global' | 'current-window');
+          handleOperatingModeChange(target.value as 'global' | 'window');
         }
       });
     });

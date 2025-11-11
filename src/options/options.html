@@ -60,45 +60,37 @@
         </div>
       </div>
 
-      <!-- Window Mode -->
+      <!-- Operating Mode -->
       <div class="settings-section">
-        <h2 class="section-title">Window Mode</h2>
-        <p class="section-description">Choose whether to switch tabs globally or in a specific window</p>
+        <h2 class="section-title">Operating Mode</h2>
+        <p class="section-description">Choose how the extension operates across your browser windows</p>
 
         <div class="setting-item">
           <div class="custom-control custom-radio">
-            <input type="radio" id="windowModeGlobal" name="windowMode" value="global" class="custom-control-input" checked>
-            <label class="custom-control-label" for="windowModeGlobal">
-              <strong>All Windows (Global)</strong>
+            <input type="radio" id="operatingModeGlobal" name="operatingMode" value="global" class="custom-control-input" checked>
+            <label class="custom-control-label" for="operatingModeGlobal">
+              <strong>Global Mode</strong>
             </label>
           </div>
           <small class="form-text text-muted radio-description">
-            Switch tabs across all browser windows regardless of which is focused
+            Enable/disable affects all browser windows simultaneously. When enabled, all windows switch tabs together at the same interval.
           </small>
         </div>
 
         <div class="setting-item">
           <div class="custom-control custom-radio">
-            <input type="radio" id="windowModeCurrentWindow" name="windowMode" value="current-window" class="custom-control-input">
-            <label class="custom-control-label" for="windowModeCurrentWindow">
-              <strong>Selected Window</strong>
+            <input type="radio" id="operatingModeWindow" name="operatingMode" value="window" class="custom-control-input">
+            <label class="custom-control-label" for="operatingModeWindow">
+              <strong>Window Mode</strong>
             </label>
           </div>
           <small class="form-text text-muted radio-description">
-            Switch tabs only in a selected window
+            Control each window independently. Use the popup to enable/disable specific windows. Each enabled window maintains its own timer.
           </small>
+        </div>
 
-          <div id="windowSelectContainer">
-            <label for="windowSelect" class="form-label mt-2">
-              <strong>Select Window:</strong>
-            </label>
-            <select class="form-control" id="windowSelect">
-              <option value="">Loading windows...</option>
-            </select>
-            <small class="form-text text-muted">
-              Choose which window to monitor for tab switching
-            </small>
-          </div>
+        <div class="alert alert-info mt-3" style="font-size: 0.9rem;">
+          <strong>💡 Tip:</strong> In Window Mode, open the extension popup in any window to enable/disable auto-switching for that specific window.
         </div>
       </div>
 
