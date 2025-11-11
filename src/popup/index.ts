@@ -23,6 +23,9 @@ let toggleButton: HTMLButtonElement;
 let modeValue: HTMLElement;
 let intervalValue: HTMLElement;
 let settingsButton: HTMLButtonElement;
+let windowInfoAlert: HTMLElement;
+let windowInfoText: HTMLElement;
+let monitoredWindowInfo: HTMLElement;
 
 // State
 let countdownInterval: number | undefined;
@@ -48,6 +51,9 @@ async function initializePopup(): Promise<void> {
   modeValue = document.getElementById('modeValue')!;
   intervalValue = document.getElementById('intervalValue')!;
   settingsButton = document.getElementById('settingsButton') as HTMLButtonElement;
+  windowInfoAlert = document.getElementById('windowInfoAlert')!;
+  windowInfoText = document.getElementById('windowInfoText')!;
+  monitoredWindowInfo = document.getElementById('monitoredWindowInfo')!
 
   // Set up event listeners
   toggleButton.addEventListener('click', handleToggle);
@@ -75,6 +81,7 @@ async function updateUI(): Promise<void> {
     const data = await chrome.storage.local.get([
       'enabled',
       'windowMode',
+      'selectedWindowId',
       'delayTime',
       'pauseOnActivity',
     ]) as StorageData;
@@ -87,6 +94,9 @@ async function updateUI(): Promise<void> {
     // Check if paused
     const paused = enabled && (await isPaused());
 
+    // Check if popup is opened on the monitored window
+    await updateWindowInfoAlert(windowMode, data.selectedWindowId, enabled);
+
     // Update state classes and content
     updateState(enabled, paused);
 
@@ -94,7 +104,7 @@ async function updateUI(): Promise<void> {
     updateInfoRows(windowMode, delayTime);
 
     // Update toggle button
-    updateToggleButton(enabled);
+    updateToggleButton(enabled, windowMode, data.selectedWindowId);
   } catch (error) {
     console.error('Error updating UI:', error);
   }
@@ -142,6 +152,61 @@ function updateState(enabled: boolean, paused: boolean): void {
 }
 
 /**
+ * Update window info alert when popup is opened on non-monitored window
+ */
+async function updateWindowInfoAlert(
+  windowMode: string,
+  selectedWindowId: number | undefined,
+  enabled: boolean
+): Promise<void> {
+  try {
+    const currentWindow = await chrome.windows.getCurrent();
+    const currentWindowId = currentWindow.id;
+
+    // Only show alert in Current-Window mode when popup is NOT on the selected window
+    if (
+      windowMode === 'current-window' &&
+      enabled &&
+      selectedWindowId !== undefined &&
+      currentWindowId !== selectedWindowId
+    ) {
+      // Get information about the monitored window
+      try {
+        const monitoredWindow = await chrome.windows.get(selectedWindowId, { populate: true });
+        const tabs = monitoredWindow.tabs || [];
+        const tabCount = tabs.length;
+        const activeTab = tabs.find(tab => tab.active);
+        const activeTabTitle = activeTab?.title || 'No active tab';
+
+        // Truncate title
+        const truncatedTitle = activeTabTitle.length > 30
+          ? activeTabTitle.substring(0, 27) + '...'
+          : activeTabTitle;
+
+        // Find window index
+        const allWindows = await chrome.windows.getAll();
+        const windowIndex = allWindows.findIndex(w => w.id === selectedWindowId) + 1;
+
+        monitoredWindowInfo.textContent = `Window ${windowIndex} - ${tabCount} tab${tabCount !== 1 ? 's' : ''} - ${truncatedTitle}`;
+        windowInfoText.textContent = 'Auto-switching is active in the window shown below:';
+        windowInfoAlert.classList.add('show');
+      } catch (error) {
+        // Monitored window might have been closed
+        monitoredWindowInfo.textContent = 'Selected window no longer exists';
+        windowInfoText.textContent = 'The monitored window may have been closed.';
+        windowInfoAlert.classList.add('show');
+      }
+    } else {
+      // Hide alert for global mode or when on the monitored window
+      windowInfoAlert.classList.remove('show');
+    }
+  } catch (error) {
+    console.error('Error updating window info alert:', error);
+    windowInfoAlert.classList.remove('show');
+  }
+}
+
+/**
  * Update info rows (mode and interval)
  */
 function updateInfoRows(windowMode: string, delayTime: number): void {
@@ -160,11 +225,30 @@ function updateInfoRows(windowMode: string, delayTime: number): void {
 /**
  * Update toggle button text and style
  */
-function updateToggleButton(enabled: boolean): void {
+async function updateToggleButton(
+  enabled: boolean,
+  windowMode: string,
+  selectedWindowId: number | undefined
+): Promise<void> {
   toggleButton.classList.remove('enable', 'disable');
 
+  // Check if we're on a non-monitored window in current-window mode
+  let isNonMonitoredWindow = false;
+  if (windowMode === 'current-window' && selectedWindowId !== undefined) {
+    try {
+      const currentWindow = await chrome.windows.getCurrent();
+      isNonMonitoredWindow = currentWindow.id !== selectedWindowId;
+    } catch (error) {
+      console.error('Error checking window:', error);
+    }
+  }
+
   if (enabled) {
-    toggleButton.textContent = 'Disable Auto-Switch';
+    if (isNonMonitoredWindow) {
+      toggleButton.textContent = 'Disable Globally';
+    } else {
+      toggleButton.textContent = 'Disable Auto-Switch';
+    }
     toggleButton.classList.add('disable');
   } else {
     toggleButton.textContent = 'Enable Auto-Switch';
