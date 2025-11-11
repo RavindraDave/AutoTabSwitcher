@@ -85,34 +85,51 @@ async function updateUI(): Promise<void> {
   try {
     const data = await chrome.storage.local.get([
       'enabled',
-      'windowMode',
-      'selectedWindowId',
+      'operatingMode',
+      'windowMode', // Legacy fallback
+      'windowStates',
       'delayTime',
       'pauseOnActivity',
     ]) as StorageData;
 
-    const enabled = data.enabled ?? false;
-    const windowMode = data.windowMode ?? 'global';
+    // Determine operating mode (with legacy fallback)
+    let operatingMode = data.operatingMode ?? 'global';
+    if (!data.operatingMode && data.windowMode) {
+      operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
+    }
+
     const delayTime = data.delayTime ?? 60000;
     switchIntervalMs = delayTime;
 
-    // Check if paused
-    const paused = enabled && (await isPaused());
+    // Get current window
+    const currentWindow = await chrome.windows.getCurrent();
+    const currentWindowId = currentWindow.id!;
 
-    // Check if popup is opened on the monitored window
-    await updateWindowInfoAlert(windowMode, data.selectedWindowId, enabled);
+    // Determine if current window is enabled
+    let isCurrentWindowEnabled = false;
+    if (operatingMode === 'global') {
+      // In global mode, use the global enabled state
+      isCurrentWindowEnabled = data.enabled ?? false;
+    } else {
+      // In window mode, check if current window is enabled
+      const windowStates = data.windowStates ?? {};
+      isCurrentWindowEnabled = windowStates[currentWindowId]?.enabled ?? false;
+    }
+
+    // Check if paused
+    const paused = isCurrentWindowEnabled && (await isPaused());
 
     // Update state classes and content
-    updateState(enabled, paused);
+    updateState(isCurrentWindowEnabled, paused);
 
     // Update info rows
-    updateInfoRows(windowMode, delayTime);
+    updateInfoRows(operatingMode, delayTime);
 
     // Update toggle button
-    updateToggleButton(enabled, windowMode, data.selectedWindowId);
+    updateToggleButton(isCurrentWindowEnabled, operatingMode, currentWindowId);
 
     // Update "Enable for This Window" button visibility
-    await updateEnableWindowButton(enabled, windowMode, data.selectedWindowId);
+    await updateEnableWindowButton(isCurrentWindowEnabled, operatingMode, currentWindowId, data);
   } catch (error) {
     console.error('Error updating UI:', error);
   }
@@ -160,69 +177,14 @@ function updateState(enabled: boolean, paused: boolean): void {
 }
 
 /**
- * Update window info alert when popup is opened on non-monitored window
- */
-async function updateWindowInfoAlert(
-  windowMode: string,
-  selectedWindowId: number | undefined,
-  enabled: boolean
-): Promise<void> {
-  try {
-    const currentWindow = await chrome.windows.getCurrent();
-    const currentWindowId = currentWindow.id;
-
-    // Only show alert in Current-Window mode when popup is NOT on the selected window
-    if (
-      windowMode === 'current-window' &&
-      enabled &&
-      selectedWindowId !== undefined &&
-      currentWindowId !== selectedWindowId
-    ) {
-      // Get information about the monitored window
-      try {
-        const monitoredWindow = await chrome.windows.get(selectedWindowId, { populate: true });
-        const tabs = monitoredWindow.tabs || [];
-        const tabCount = tabs.length;
-        const activeTab = tabs.find(tab => tab.active);
-        const activeTabTitle = activeTab?.title || 'No active tab';
-
-        // Truncate title
-        const truncatedTitle = activeTabTitle.length > 30
-          ? activeTabTitle.substring(0, 27) + '...'
-          : activeTabTitle;
-
-        // Find window index
-        const allWindows = await chrome.windows.getAll();
-        const windowIndex = allWindows.findIndex(w => w.id === selectedWindowId) + 1;
-
-        monitoredWindowInfo.textContent = `Window ${windowIndex} - ${tabCount} tab${tabCount !== 1 ? 's' : ''} - ${truncatedTitle}`;
-        windowInfoText.textContent = 'Auto-switching is active in the window shown below:';
-        windowInfoAlert.classList.add('show');
-      } catch (error) {
-        // Monitored window might have been closed
-        monitoredWindowInfo.textContent = 'Selected window no longer exists';
-        windowInfoText.textContent = 'The monitored window may have been closed.';
-        windowInfoAlert.classList.add('show');
-      }
-    } else {
-      // Hide alert for global mode or when on the monitored window
-      windowInfoAlert.classList.remove('show');
-    }
-  } catch (error) {
-    console.error('Error updating window info alert:', error);
-    windowInfoAlert.classList.remove('show');
-  }
-}
-
-/**
  * Update info rows (mode and interval)
  */
-function updateInfoRows(windowMode: string, delayTime: number): void {
+function updateInfoRows(operatingMode: string, delayTime: number): void {
   // Update mode
-  if (windowMode === 'current-window') {
-    modeValue.textContent = 'Selected Window';
+  if (operatingMode === 'window') {
+    modeValue.textContent = 'Window Mode';
   } else {
-    modeValue.textContent = 'Global';
+    modeValue.textContent = 'Global Mode';
   }
 
   // Update interval
@@ -233,69 +195,56 @@ function updateInfoRows(windowMode: string, delayTime: number): void {
 /**
  * Update toggle button text and style
  */
-async function updateToggleButton(
-  enabled: boolean,
-  windowMode: string,
-  selectedWindowId: number | undefined
-): Promise<void> {
+function updateToggleButton(
+  isCurrentWindowEnabled: boolean,
+  operatingMode: string,
+  currentWindowId: number
+): void {
   toggleButton.classList.remove('enable', 'disable');
 
-  // Check if we're on a non-monitored window in current-window mode
-  let isNonMonitoredWindow = false;
-  if (windowMode === 'current-window' && selectedWindowId !== undefined) {
-    try {
-      const currentWindow = await chrome.windows.getCurrent();
-      isNonMonitoredWindow = currentWindow.id !== selectedWindowId;
-    } catch (error) {
-      console.error('Error checking window:', error);
-    }
-  }
-
-  if (enabled) {
-    if (isNonMonitoredWindow) {
-      toggleButton.textContent = 'Disable Globally';
+  if (isCurrentWindowEnabled) {
+    if (operatingMode === 'window') {
+      toggleButton.textContent = 'Disable This Window';
     } else {
-      toggleButton.textContent = 'Disable Auto-Switch';
+      toggleButton.textContent = 'Disable All Windows';
     }
     toggleButton.classList.add('disable');
   } else {
-    toggleButton.textContent = 'Enable Auto-Switch';
+    if (operatingMode === 'window') {
+      toggleButton.textContent = 'Enable This Window';
+    } else {
+      toggleButton.textContent = 'Enable All Windows';
+    }
     toggleButton.classList.add('enable');
   }
 }
 
 /**
- * Update "Enable for This Window" button visibility
- * Show when:
- * - Extension is disabled, OR
- * - Extension is enabled in Global mode, OR
- * - Extension is enabled in Selected Window mode but a different window is selected
+ * Update "Enable for This Window" button visibility and text
+ * Show when in Global Mode to allow switching to Window Mode for this window
  */
 async function updateEnableWindowButton(
-  enabled: boolean,
-  windowMode: string,
-  selectedWindowId: number | undefined
+  isCurrentWindowEnabled: boolean,
+  operatingMode: string,
+  currentWindowId: number,
+  data: StorageData
 ): Promise<void> {
   try {
-    const currentWindow = await chrome.windows.getCurrent();
-    const currentWindowId = currentWindow.id;
-
     let shouldShowButton = false;
+    let buttonText = '🪟 Enable for This Window';
 
-    if (!enabled) {
-      // Show when extension is disabled
+    if (operatingMode === 'global') {
+      // In global mode, show button to allow enabling just this window
       shouldShowButton = true;
-    } else if (windowMode === 'global') {
-      // Show when in global mode, allowing user to switch to window-specific mode
+      buttonText = '🪟 Switch to Window Mode';
+    } else if (operatingMode === 'window' && !isCurrentWindowEnabled) {
+      // In window mode, show button if this window is not enabled
       shouldShowButton = true;
-    } else if (windowMode === 'current-window') {
-      // Show if a different window is selected or no window is selected
-      if (selectedWindowId === undefined || currentWindowId !== selectedWindowId) {
-        shouldShowButton = true;
-      }
+      buttonText = '🪟 Enable This Window Only';
     }
 
     if (shouldShowButton) {
+      enableWindowButton.textContent = buttonText;
       enableWindowSection.classList.remove('hidden');
     } else {
       enableWindowSection.classList.add('hidden');
@@ -308,7 +257,7 @@ async function updateEnableWindowButton(
 
 /**
  * Handle "Enable for This Window" button click
- * Sets the extension to Selected Window mode for the current window
+ * Switches to Window Mode and enables the current window
  */
 async function handleEnableForThisWindow(): Promise<void> {
   try {
@@ -320,14 +269,24 @@ async function handleEnableForThisWindow(): Promise<void> {
       return;
     }
 
-    // Set extension to Selected Window mode with current window
-    await chrome.storage.local.set({
+    // Get current window states
+    const data = await chrome.storage.local.get(['windowStates']) as StorageData;
+    const windowStates = data.windowStates ?? {};
+
+    // Enable the current window
+    windowStates[currentWindowId] = {
       enabled: true,
-      windowMode: 'current-window',
-      selectedWindowId: currentWindowId,
+      enabledTimestamp: Date.now(),
+      lastSwitchTime: Date.now(),
+    };
+
+    // Switch to Window Mode and enable this window
+    await chrome.storage.local.set({
+      operatingMode: 'window',
+      windowStates,
     });
 
-    console.log('Enabled for window:', currentWindowId);
+    console.log('Enabled window mode for window:', currentWindowId);
 
     // UI will update via storage change listener
   } catch (error) {
@@ -337,14 +296,45 @@ async function handleEnableForThisWindow(): Promise<void> {
 
 /**
  * Handle toggle button click
+ * In Global Mode: toggles global enabled state
+ * In Window Mode: toggles current window's enabled state
  */
 async function handleToggle(): Promise<void> {
   try {
-    const data = await chrome.storage.local.get(['enabled']) as StorageData;
-    const currentlyEnabled = data.enabled ?? false;
+    const data = await chrome.storage.local.get([
+      'operatingMode',
+      'windowMode', // Legacy fallback
+      'enabled',
+      'windowStates',
+    ]) as StorageData;
 
-    // Toggle the enabled state
-    await chrome.storage.local.set({ enabled: !currentlyEnabled });
+    // Determine operating mode
+    let operatingMode = data.operatingMode ?? 'global';
+    if (!data.operatingMode && data.windowMode) {
+      operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
+    }
+
+    const currentWindow = await chrome.windows.getCurrent();
+    const currentWindowId = currentWindow.id!;
+
+    if (operatingMode === 'global') {
+      // Global mode: toggle global enabled state
+      const currentlyEnabled = data.enabled ?? false;
+      await chrome.storage.local.set({ enabled: !currentlyEnabled });
+    } else {
+      // Window mode: toggle current window's state
+      const windowStates = data.windowStates ?? {};
+      const currentWindowState = windowStates[currentWindowId];
+      const isCurrentlyEnabled = currentWindowState?.enabled ?? false;
+
+      windowStates[currentWindowId] = {
+        enabled: !isCurrentlyEnabled,
+        enabledTimestamp: !isCurrentlyEnabled ? Date.now() : undefined,
+        lastSwitchTime: currentWindowState?.lastSwitchTime ?? Date.now(),
+      };
+
+      await chrome.storage.local.set({ windowStates });
+    }
 
     // UI will update via storage change listener
   } catch (error) {
@@ -368,34 +358,38 @@ async function startCountdownTimer(): Promise<void> {
     clearInterval(countdownInterval);
   }
 
-  // Get window mode and determine which window's timing to show
+  // Get operating mode and determine which window's timing to show
   const data = await chrome.storage.local.get([
-    'windowMode',
-    'selectedWindowId',
+    'operatingMode',
+    'windowMode', // Legacy fallback
+    'windowStates',
     'lastSwitchTimes',
     'lastSwitchTime', // deprecated fallback
   ]) as StorageData;
 
-  const windowMode = data.windowMode ?? 'global';
-  let targetWindowId: number | undefined;
-
-  if (windowMode === 'current-window') {
-    // In current-window mode, show timing for the selected window
-    targetWindowId = data.selectedWindowId;
-  } else {
-    // In global mode, show timing for the current window
-    const currentWindow = await chrome.windows.getCurrent();
-    targetWindowId = currentWindow.id;
+  // Determine operating mode
+  let operatingMode = data.operatingMode ?? 'global';
+  if (!data.operatingMode && data.windowMode) {
+    operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
   }
+
+  // Always show timing for the current window
+  const currentWindow = await chrome.windows.getCurrent();
+  const targetWindowId = currentWindow.id!;
 
   let lastSwitchTime: number | undefined;
 
-  if (targetWindowId !== undefined && data.lastSwitchTimes) {
-    // Get per-window last switch time
-    lastSwitchTime = data.lastSwitchTimes[targetWindowId];
-  } else if (data.lastSwitchTime) {
-    // Fallback to deprecated global lastSwitchTime
-    lastSwitchTime = data.lastSwitchTime;
+  if (operatingMode === 'window') {
+    // In window mode, get this window's last switch time from windowStates
+    const windowStates = data.windowStates ?? {};
+    lastSwitchTime = windowStates[targetWindowId]?.lastSwitchTime;
+  } else {
+    // In global mode, use per-window or global last switch time
+    if (targetWindowId !== undefined && data.lastSwitchTimes) {
+      lastSwitchTime = data.lastSwitchTimes[targetWindowId];
+    } else if (data.lastSwitchTime) {
+      lastSwitchTime = data.lastSwitchTime;
+    }
   }
 
   if (lastSwitchTime) {
@@ -427,41 +421,50 @@ async function updateCountdown(): Promise<void> {
   try {
     const data = await chrome.storage.local.get([
       'enabled',
-      'windowMode',
-      'selectedWindowId',
+      'operatingMode',
+      'windowMode', // Legacy fallback
+      'windowStates',
       'lastSwitchTimes',
       'lastSwitchTime', // deprecated fallback
     ]) as StorageData;
-    const enabled = data.enabled ?? false;
 
-    if (!enabled) {
+    // Determine operating mode
+    let operatingMode = data.operatingMode ?? 'global';
+    if (!data.operatingMode && data.windowMode) {
+      operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
+    }
+
+    const currentWindow = await chrome.windows.getCurrent();
+    const currentWindowId = currentWindow.id!;
+
+    // Check if current window is enabled
+    let isEnabled = false;
+    if (operatingMode === 'global') {
+      isEnabled = data.enabled ?? false;
+    } else {
+      const windowStates = data.windowStates ?? {};
+      isEnabled = windowStates[currentWindowId]?.enabled ?? false;
+    }
+
+    if (!isEnabled) {
       countdownNumber.textContent = '--';
       return;
     }
 
-    // Determine which window's timing to show
-    const windowMode = data.windowMode ?? 'global';
-    let targetWindowId: number | undefined;
-
-    if (windowMode === 'current-window') {
-      // In current-window mode, show timing for the selected window
-      targetWindowId = data.selectedWindowId;
-    } else {
-      // In global mode, show timing for the current window
-      const currentWindow = await chrome.windows.getCurrent();
-      targetWindowId = currentWindow.id;
-    }
-
     const now = Date.now();
 
-    // Get per-window last switch time
+    // Get last switch time
     let lastSwitchTime: number | undefined;
 
-    if (targetWindowId !== undefined && data.lastSwitchTimes) {
-      lastSwitchTime = data.lastSwitchTimes[targetWindowId];
-    } else if (data.lastSwitchTime) {
-      // Fallback to deprecated global lastSwitchTime
-      lastSwitchTime = data.lastSwitchTime;
+    if (operatingMode === 'window') {
+      const windowStates = data.windowStates ?? {};
+      lastSwitchTime = windowStates[currentWindowId]?.lastSwitchTime;
+    } else {
+      if (data.lastSwitchTimes) {
+        lastSwitchTime = data.lastSwitchTimes[currentWindowId];
+      } else if (data.lastSwitchTime) {
+        lastSwitchTime = data.lastSwitchTime;
+      }
     }
 
     // Recalculate next switch time if we have a lastSwitchTime
