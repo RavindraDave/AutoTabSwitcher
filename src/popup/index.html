@@ -274,6 +274,46 @@
         .hidden {
             display: none !important;
         }
+
+        .window-info-alert {
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            border-left: 4px solid #2196F3;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .window-info-alert.show {
+            display: block;
+        }
+
+        .window-info-alert .alert-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0d47a1;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .window-info-alert .alert-text {
+            font-size: 13px;
+            color: #1976D2;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .window-info-alert .monitored-window {
+            font-size: 12px;
+            color: #0d47a1;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -283,6 +323,18 @@
             <div class="status-badge" id="statusBadge">LOADING...</div>
         </div>
         <div class="content">
+            <!-- Window Info Alert (shown when popup opened on non-monitored window) -->
+            <div class="window-info-alert" id="windowInfoAlert">
+                <div class="alert-title">
+                    <span>ℹ️</span>
+                    <span>This Window Is Not Being Monitored</span>
+                </div>
+                <div class="alert-text" id="windowInfoText">
+                    Auto-switching is active in a different window.
+                </div>
+                <div class="monitored-window" id="monitoredWindowInfo"></div>
+            </div>
+
             <div class="status-card" id="statusCard">
                 <div class="status-icon" id="statusIcon">🔄</div>
 
