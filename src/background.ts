@@ -7,36 +7,56 @@
  */
 
 import { isPacked } from './utils/environment.js';
-import { MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED } from './core/constants.js';
-import { initializeStorage, getSettings } from './core/storage.js';
-import { setupActivityListeners } from './core/activity-tracker.js';
+import { MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED, DEFAULT_OPERATING_MODE } from './core/constants.js';
+import { initializeStorage, getSettings, migrateToOperatingMode } from './core/storage.js';
+import { setupActivityListeners, isPaused } from './core/activity-tracker.js';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
 import { updateBadge } from './core/badge-manager.js';
+import { switchTab } from './core/tab-switcher.js';
 import { logger } from './core/logger.js';
+import { WindowTimerManager } from './core/window-timer-manager.js';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_MS = isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;
 const DEFAULT_DELAY_TIME = MIN_DELAY_MS;
 
+// Initialize Window Timer Manager for per-window timers (Window Mode only)
+const windowTimerManager = new WindowTimerManager();
+
 /**
  * Start or stop the tab switcher using hybrid timing mechanism
+ * ENHANCED: Now supports both Global Mode (existing behavior) and Window Mode (new)
+ * NON-BREAKING: Global Mode uses exact same code path as before
  */
 async function toggleTabSwitcher(): Promise<void> {
   try {
-    // Get current settings from storage
-    const data = await getSettings(['enabled', 'delayTime', 'windowMode', 'selectedWindowId']);
+    // Get current settings from storage - include new operatingMode field
+    const data = await getSettings([
+      'enabled', 'delayTime', 'windowMode', 'selectedWindowId',
+      'operatingMode', 'windowStates'
+    ]);
     const enabled = data.enabled ?? DEFAULT_ENABLED;
     const delayTime = data.delayTime ?? DEFAULT_DELAY_TIME;
+    const operatingMode = data.operatingMode ?? DEFAULT_OPERATING_MODE;
 
     await logger.info('TabSwitcher', 'Toggle tab switcher', {
       enabled,
       delayTimeMs: delayTime,
-      windowMode: data.windowMode,
+      windowMode: data.windowMode, // Legacy field
+      operatingMode, // New mode field
       selectedWindowId: data.selectedWindowId,
     });
 
-    // Delegate to hybrid timer implementation
-    await toggleHybridTimer(enabled, delayTime, MIN_DELAY_MS);
+    // Route based on operating mode
+    if (operatingMode === 'global') {
+      // GLOBAL MODE: Use existing code path - NO CHANGES to behavior
+      // This is the current behavior and remains 100% unchanged
+      await toggleHybridTimer(enabled, delayTime, MIN_DELAY_MS);
+    } else {
+      // WINDOW MODE: New feature - per-window control
+      // This is a NEW code path, isolated from existing logic
+      await handleWindowModeToggle(data.windowStates || {}, delayTime);
+    }
   } catch (error) {
     console.error('Error toggling tab switcher:', error);
     await logger.error('TabSwitcher', 'Failed to toggle tab switcher', {
@@ -46,7 +66,38 @@ async function toggleTabSwitcher(): Promise<void> {
 }
 
 /**
+ * Handle Window Mode toggle - NEW function for per-window control
+ * This is isolated from existing global mode logic
+ */
+async function handleWindowModeToggle(
+  windowStates: { [windowId: number]: { enabled: boolean; enabledTimestamp?: number; lastSwitchTime?: number } },
+  delayTime: number
+): Promise<void> {
+  try {
+    // Stop all existing window timers first
+    await windowTimerManager.stopAllTimers();
+
+    // Start timers for enabled windows
+    for (const [windowIdStr, state] of Object.entries(windowStates)) {
+      const windowId = parseInt(windowIdStr);
+      if (isNaN(windowId)) continue;
+
+      if (state.enabled) {
+        await windowTimerManager.startTimer(windowId, delayTime);
+        await logger.info('WindowMode', 'Started timer for window', { windowId, delayTime });
+      }
+    }
+  } catch (error) {
+    console.error('Error in handleWindowModeToggle:', error);
+    await logger.error('WindowMode', 'Error in handleWindowModeToggle', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
  * Handle storage changes - restart alarm if settings changed
+ * ENHANCED: Now includes operatingMode and windowStates
  */
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace !== 'local') {
@@ -54,7 +105,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   }
 
   const relevantChanges = 'enabled' in changes || 'delayTime' in changes ||
-                          'windowMode' in changes || 'selectedWindowId' in changes;
+                          'windowMode' in changes || 'selectedWindowId' in changes ||
+                          'operatingMode' in changes || 'windowStates' in changes;
 
   if (relevantChanges) {
     console.log('Settings changed, restarting tab switcher');
@@ -77,6 +129,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
 /**
  * Set default values when extension is first installed
+ * ENHANCED: Now includes migration for existing users
  */
 chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('Extension installed/updated:', details.reason);
@@ -87,6 +140,10 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
   if (details.reason === 'install') {
     await initializeStorage(DEFAULT_DELAY_TIME);
+  } else if (details.reason === 'update') {
+    // Migrate existing users to new operating mode system
+    // NON-BREAKING: Defaults to 'global' mode to preserve existing behavior
+    await migrateToOperatingMode();
   }
 
   // Always update badge and restart switcher on install/update
@@ -178,6 +235,37 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
 });
 
 /**
+ * Handle window removal - cleanup window states (Window Mode)
+ * NEW: Cleanup per-window state when window is closed
+ */
+chrome.windows.onRemoved.addListener(async (windowId) => {
+  try {
+    const data = await getSettings(['operatingMode', 'windowStates']);
+    const operatingMode = data.operatingMode ?? DEFAULT_OPERATING_MODE;
+
+    // Only cleanup if in Window Mode
+    if (operatingMode === 'window' && data.windowStates) {
+      // Stop timer for this window
+      await windowTimerManager.stopTimer(windowId);
+
+      // Remove window state from storage
+      const windowStates = { ...data.windowStates };
+      delete windowStates[windowId];
+      await chrome.storage.local.set({ windowStates });
+
+      await logger.info('Window', 'Window closed, cleaned up state', { windowId });
+      console.log(`Window ${windowId} closed, cleaned up state`);
+    }
+  } catch (error) {
+    console.error('Error in window removal handler:', error);
+    await logger.error('Window', 'Error in window removal handler', {
+      error: error instanceof Error ? error.message : String(error),
+      windowId,
+    });
+  }
+});
+
+/**
  * Handle tab creation - set badge for new tabs
  */
 chrome.tabs.onCreated.addListener(async (tab) => {
@@ -230,8 +318,46 @@ chrome.tabs.onAttached.addListener(async (tabId, _attachInfo) => {
 // Set up alarm listener (for hybrid timing)
 setupAlarmListener();
 
+// Set up additional alarm listener for window-specific timers (Window Mode)
+// NEW: This is additive and doesn't interfere with existing alarm handling
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  // Check if this is a window-specific alarm
+  const windowId = WindowTimerManager.getWindowIdFromAlarm(alarm.name);
+  if (windowId !== null) {
+    try {
+      const data = await getSettings(['operatingMode', 'windowStates', 'delayTime']);
+      const operatingMode = data.operatingMode ?? DEFAULT_OPERATING_MODE;
+
+      // Only process if in Window Mode
+      if (operatingMode === 'window' && data.windowStates && data.windowStates[windowId]) {
+        const windowState = data.windowStates[windowId];
+
+        if (windowState.enabled) {
+          // Check if switching is paused due to user activity
+          const paused = await isPaused();
+
+          if (!paused) {
+            // Perform tab switch for this window
+            await switchTab(windowId);
+            await logger.info('WindowMode', 'Tab switched for window', { windowId });
+          } else {
+            console.log(`Auto-switching paused for window ${windowId} due to recent user activity`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error handling window timer alarm for window ${windowId}:`, error);
+      await logger.error('WindowMode', 'Error in window timer alarm handler', {
+        error: error instanceof Error ? error.message : String(error),
+        windowId,
+      });
+    }
+  }
+});
+
 // Set up activity detection listeners
 setupActivityListeners();
 
 // Initialize on script load (when service worker starts)
-toggleTabSwitcher();
+// Run migration first to ensure operatingMode is set
+migrateToOperatingMode().then(() => toggleTabSwitcher());

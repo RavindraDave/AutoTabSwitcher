@@ -15,40 +15,59 @@ import { logger } from './logger.js';
  * - 'current-window': Switches tabs only in the pre-selected window
  *
  * If the selected window no longer exists, disables auto-switching.
+ *
+ * @param specificWindowId - Optional. If provided, switches tabs in this specific window (for Window Mode)
  */
-export async function switchTab(): Promise<void> {
+export async function switchTab(specificWindowId?: number): Promise<void> {
   try {
-    // Get settings to determine which window(s) to switch
-    const data = await chrome.storage.local.get(['windowMode', 'selectedWindowId']) as StorageData;
-    const windowMode = data.windowMode ?? DEFAULT_WINDOW_MODE;
-    const selectedWindowId = data.selectedWindowId;
-
     let targetWindowId: number | undefined;
+    let windowMode: string | undefined;
 
-    if (windowMode === 'current-window') {
-      // Use the specific selected window
-      if (!selectedWindowId) {
-        console.warn('Current-window mode but no window selected');
-        return;
-      }
-
+    // NEW: If a specific window ID is provided (Window Mode), use it directly
+    if (specificWindowId !== undefined) {
       // Verify the window still exists
       try {
-        await chrome.windows.get(selectedWindowId);
-        targetWindowId = selectedWindowId;
+        await chrome.windows.get(specificWindowId);
+        targetWindowId = specificWindowId;
+        windowMode = 'window'; // Mark as Window Mode
       } catch (error) {
-        console.warn('Selected window no longer exists, disabling auto-switching');
-        await logger.warn('TabSwitcher', 'Selected window no longer exists, disabling', {
-          selectedWindowId,
+        console.warn(`Window ${specificWindowId} no longer exists, cannot switch tabs`);
+        await logger.warn('TabSwitcher', 'Specified window no longer exists', {
+          windowId: specificWindowId,
         });
-        await chrome.storage.local.set({ enabled: false });
-        await updateBadge(false);
         return;
       }
     } else {
-      // Global mode: switch in the currently focused window
-      const currentWindow = await chrome.windows.getCurrent();
-      targetWindowId = currentWindow.id;
+      // EXISTING BEHAVIOR: Use legacy windowMode logic
+      const data = await chrome.storage.local.get(['windowMode', 'selectedWindowId']) as StorageData;
+      windowMode = data.windowMode ?? DEFAULT_WINDOW_MODE;
+      const selectedWindowId = data.selectedWindowId;
+
+      if (windowMode === 'current-window') {
+        // Use the specific selected window
+        if (!selectedWindowId) {
+          console.warn('Current-window mode but no window selected');
+          return;
+        }
+
+        // Verify the window still exists
+        try {
+          await chrome.windows.get(selectedWindowId);
+          targetWindowId = selectedWindowId;
+        } catch (error) {
+          console.warn('Selected window no longer exists, disabling auto-switching');
+          await logger.warn('TabSwitcher', 'Selected window no longer exists, disabling', {
+            selectedWindowId,
+          });
+          await chrome.storage.local.set({ enabled: false });
+          await updateBadge(false);
+          return;
+        }
+      } else {
+        // Global mode: switch in the currently focused window
+        const currentWindow = await chrome.windows.getCurrent();
+        targetWindowId = currentWindow.id;
+      }
     }
 
     // Query tabs in the target window
