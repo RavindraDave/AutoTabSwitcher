@@ -6,28 +6,35 @@ A powerful Chrome extension that automatically cycles through open tabs at confi
 
 ### Core Functionality
 - 🔄 **Automatic tab cycling** - Cycles through tabs in sequential order
-- 🪟 **Per-window mode** - Switch tabs globally or in specific window
+- 🪟 **Dual operating modes** - Global Mode (all windows) or Window Mode (per-window control)
 - ⏱️ **Configurable delays** - 5 seconds to 1 hour (environment-aware)
 - ⏸️ **Pause on activity** - Automatically pause when user is active
 - 🎚️ **Easy toggle** - Enable/disable with a single click
 - 💾 **Persistent settings** - All settings saved across browser sessions
-- ⚠️ **Mode change protection** - Confirmation dialog when switching to global mode
-- 🔍 **Diagnostic logging** - 30-minute rolling log for troubleshooting
+- 🔍 **Enhanced diagnostics** - Mode-aware logging with window context
+- 🔄 **Backward compatible** - Automatic migration from previous versions
+
+### Operating Modes
+- 🌐 **Global Mode** - Enable/disable all windows simultaneously (default)
+- 🪟 **Window Mode** - Independent per-window control with separate timers
+- ⚡ **Quick switching** - Change modes instantly from Options page
+- 🎯 **Context-aware UI** - Buttons and labels adapt to current mode
 
 ### Visual Indicators
-- 📊 **Per-window smart badges** - Each window shows its own status:
-  - 🟢 **ON** (green) - Auto-switching active in this window
+- 📊 **Smart badges** - Per-window status indicators:
+  - 🟢 **ON** (green) - Auto-switching active
   - 🟠 **⏸** (orange) - Paused due to user activity
-  - ⚫ **OFF** (gray) - Disabled or not the selected window
-- 🏷️ **Environment labels** - Shows "Production" or "Development" mode
-- 🪟 **Window-aware badges** - In current-window mode, only selected window shows active badge
+  - ⚫ **OFF** (gray) - Disabled
+- 🏷️ **Mode indicators** - Clear display of Global Mode or Window Mode
+- 🪟 **Window ID tracking** - See which window is active in diagnostics
+- 🌐 **Mode badges** - Visual indicators (🌐 Global / 🪟 Window) in logs
 
 ### Debugging & Support
-- 📋 **Diagnostic logs** - Last 30 minutes of activity tracked
+- 📋 **Diagnostic logs** - Last 30 minutes with mode and window context
 - 📤 **Export capabilities** - Download logs as text or JSON
 - 📋 **Copy to clipboard** - Easy sharing for support
-- 🔒 **Privacy-focused** - No sensitive data (URLs, titles) logged
-- 🧪 **Testing aid** - Track extension behavior during testing
+- 🔒 **Privacy-conscious** - Tab titles included for debugging (local only)
+- 🧪 **Enhanced tracking** - Mode changes, window toggles, tab switches
 
 ### Technical Excellence
 - 🔧 **TypeScript** - Full type safety and modern code
@@ -67,37 +74,58 @@ A powerful Chrome extension that automatically cycles through open tabs at confi
 1. **Click the extension icon** to open the popup
 2. **Configure your settings**:
    - **Delay Time**: 60-3600 seconds (5-3600 for production)
-   - **Enabled**: Toggle auto-switching on/off
-   - **Window Mode**: Choose global or current-window switching
+   - **Operating Mode**: Choose Global Mode or Window Mode
    - **Pause on Activity**: Automatically pause when you're active
 3. **Click Save** to apply changes
 
-### Window Modes
+### Operating Modes
 
-#### Global Mode (Default)
-- Switches through all tabs across all windows
+#### 🌐 Global Mode (Default)
+**All windows controlled together**
+
+- Single enable/disable affects all windows simultaneously
+- All windows switch tabs at the same interval
 - Best for monitoring multiple displays
 - Works regardless of which window is focused
 - All windows show the same badge status
 
-#### Current Window Mode
-- Only switches tabs in the selected window
-- Choose which window to monitor
-- Selected window shows active badge (ON/⏸)
-- Other windows show OFF badge
-- Automatically disables if selected window is closed
-- **Protection**: Confirmation dialog when switching back to global mode
+**How to use:**
+1. Go to Options → Select "Global Mode"
+2. Open popup in any window
+3. Click "Enable All Windows" or "Disable All Windows"
+4. All windows start/stop switching together
+
+#### 🪟 Window Mode
+**Independent per-window control**
+
+- Each window can be enabled/disabled separately
+- Each enabled window maintains its own timer
+- Perfect for selective monitoring
+- Quick toggle from any window's popup
+
+**How to use:**
+1. Go to Options → Select "Window Mode"
+2. Open popup in window you want to control
+3. Click "Enable This Window" or "Disable This Window"
+4. Repeat for other windows as needed
+5. Each window switches independently
+
+**Quick Tip:** In Global Mode, click "🪟 Switch to Window Mode" button in popup to quickly enable just the current window!
 
 ### Badge Behavior
 
-The extension uses **per-window badges** to show accurate status:
+The extension uses **per-window smart badges** to show accurate status:
 
-| Window Mode | Selected Window | Other Windows |
-|-------------|----------------|---------------|
-| **Global** | ON/⏸/OFF (same everywhere) | ON/⏸/OFF (same everywhere) |
-| **Current-Window** | ON/⏸ (active switching) | OFF (not switching here) |
+| Operating Mode | Enabled Windows | Disabled Windows |
+|----------------|-----------------|------------------|
+| **Global Mode** | All show ON/⏸ (synchronized) | All show OFF (synchronized) |
+| **Window Mode** | Each shows ON/⏸ (independent) | Each shows OFF (independent) |
 
-This helps you instantly see which windows are affected by auto-switching.
+- 🟢 **ON** (green) - Auto-switching active in this window
+- 🟠 **⏸** (orange) - Paused due to user activity
+- ⚫ **OFF** (gray) - Disabled in this window
+
+This helps you instantly see which windows are actively switching tabs.
 
 ### Pause on Activity
 
@@ -118,35 +146,113 @@ The extension adapts minimum delays based on environment:
 | **Development** (unpacked) | 60 seconds | "Development Mode" in popup |
 | **Production** (Chrome Web Store) | 5 seconds | "Production Mode" in popup |
 
-### Diagnostic Logging
+### Enhanced Diagnostic Logging
 
-Access diagnostic logs for troubleshooting production issues:
+Access detailed diagnostic logs with mode and window context:
 
 **How to Access**:
 1. Click extension icon
 2. Click "🔍 View Diagnostics" link at bottom
-3. View logs, export, or share with support
+3. View logs with mode indicators, export, or share with support
 
 **Features**:
 - 📊 **30-minute rolling buffer** - Automatically keeps recent activity
 - 📋 **Multiple export formats** - Text, JSON, or clipboard
-- 🔒 **Privacy-focused** - URLs, titles, and sensitive data automatically redacted
-- 🏷️ **Categorized logs** - Filter by category (Settings, TabSwitcher, Window, etc.)
+- 🌐 **Mode indicators** - Each log shows 🌐 Global or 🪟 Window badge
+- 🪟 **Window ID tracking** - See which window triggered each event
+- 🏷️ **Categorized logs** - Filter by category (Settings, TabSwitcher, WindowToggle, ModeChange, etc.)
 - ⚠️ **Error tracking** - All errors captured with context
 - 🧪 **Testing aid** - Track behavior during QA
 
 **What Gets Logged**:
 - ✅ Extension lifecycle events (install, startup)
 - ✅ Settings changes (with before/after values)
-- ✅ Tab switching events (window ID, tab indexes, mode)
+- ✅ **Tab switching events** (window ID, mode, tab titles for debugging)
+- ✅ **Mode changes** (Global ↔ Window transitions)
+- ✅ **Window toggles** (enable/disable per window or globally)
 - ✅ Window events (created, focused, closed)
 - ✅ Errors and warnings with details
-- ❌ NOT logged: Page URLs, tab titles, user content, auth tokens
+
+**Privacy Note**: Tab titles are now included in logs for debugging purposes but stored locally only (never transmitted).
+
+**Example Log Entry**:
+```
+[2025-11-11 12:30:45] [INFO] [TabSwitch] [🪟 Window] [Window 2]
+Tab switched
+{
+  "windowId": 2,
+  "mode": "window",
+  "tabInfo": "Gmail → Google Calendar"
+}
+```
 
 **Example Use Cases**:
-- User reports issue → export logs → send to support
-- QA testing → verify expected behavior from logs
-- Production debugging → understand what happened before error
+- User reports issue → export logs → see which mode and window had the problem
+- QA testing → verify mode switching behavior from logs
+- Production debugging → understand window-specific vs global issues
+
+## 🔄 Migration Guide
+
+### Upgrading from Previous Versions
+
+**Good News**: The new Operating Mode feature is 100% backward compatible! Your existing settings are automatically migrated.
+
+#### What's Changed
+
+**Old System** (v1.x):
+- "Window Mode" with two options:
+  - All Windows (Global)
+  - Selected Window (pick one specific window)
+
+**New System** (v2.0+):
+- "Operating Mode" with two enhanced modes:
+  - 🌐 **Global Mode**: All windows controlled together (same as old "All Windows")
+  - 🪟 **Window Mode**: Each window independently controlled (more powerful than old "Selected Window")
+
+#### Automatic Migration
+
+When you update to v2.0+:
+
+1. **If you were using "All Windows"**:
+   - ✅ Automatically migrated to **Global Mode**
+   - ✅ No change in behavior
+   - ✅ All existing settings preserved
+
+2. **If you were using "Selected Window"**:
+   - ✅ Automatically migrated to **Window Mode**
+   - ✅ Your selected window remains enabled
+   - ✅ You can now enable additional windows too!
+
+#### What You Need to Do
+
+**Nothing!** The extension handles migration automatically. However, you might want to explore the new features:
+
+**Explore Window Mode** (if you're in Global Mode):
+1. Open Options page
+2. Select "Window Mode"
+3. Use popup in each window to enable/disable independently
+4. Each window gets its own timer!
+
+**Try Global Mode** (if you migrated from Selected Window):
+1. Open Options page
+2. Select "Global Mode"
+3. Use popup to enable/disable all windows at once
+4. All windows sync together
+
+#### Key Improvements
+
+- ✨ **More Control**: Window Mode lets you enable multiple windows, not just one
+- ⏱️ **Independent Timers**: Each window in Window Mode has its own countdown
+- 🎯 **Quick Switching**: "Switch to Window Mode" button in popup for fast access
+- 📊 **Better Diagnostics**: See which mode and window for every event
+- 🔄 **Backward Compatible**: No breaking changes, seamless upgrade
+
+#### Need Help?
+
+If you experience any issues after upgrading:
+1. Open Diagnostics page (click 🔍 View Diagnostics in popup)
+2. Export your logs
+3. Report an issue on GitHub with the logs attached
 
 ## 🏗️ Architecture
 
