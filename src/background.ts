@@ -99,7 +99,7 @@ async function handleWindowModeToggle(
  * Handle storage changes - restart alarm if settings changed
  * ENHANCED: Now includes operatingMode and windowStates
  */
-chrome.storage.onChanged.addListener((changes, namespace) => {
+chrome.storage.onChanged.addListener(async (changes, namespace) => {
   if (namespace !== 'local') {
     return;
   }
@@ -110,6 +110,54 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
   if (relevantChanges) {
     console.log('Settings changed, restarting tab switcher');
+
+    // Enhanced logging for operating mode changes
+    if ('operatingMode' in changes) {
+      const { logModeChange } = await import('./core/logger.js');
+      await logModeChange({
+        previousMode: changes.operatingMode.oldValue || 'global',
+        newMode: changes.operatingMode.newValue || 'global',
+      });
+    }
+
+    // Enhanced logging for window state changes
+    if ('windowStates' in changes) {
+      const { logWindowToggle } = await import('./core/logger.js');
+      const oldStates = changes.windowStates.oldValue || {};
+      const newStates = changes.windowStates.newValue || {};
+
+      // Find which window(s) changed
+      const allWindowIds = new Set([...Object.keys(oldStates), ...Object.keys(newStates)]);
+
+      for (const windowIdStr of allWindowIds) {
+        const windowId = Number(windowIdStr);
+        const oldEnabled = oldStates[windowId]?.enabled ?? false;
+        const newEnabled = newStates[windowId]?.enabled ?? false;
+
+        if (oldEnabled !== newEnabled) {
+          await logWindowToggle({
+            windowId,
+            enabled: newEnabled,
+            mode: 'window',
+          });
+        }
+      }
+    }
+
+    // Enhanced logging for global enabled changes
+    if ('enabled' in changes) {
+      const { logWindowToggle } = await import('./core/logger.js');
+      const data = await chrome.storage.local.get(['operatingMode']);
+      const mode = data.operatingMode || 'global';
+
+      if (mode === 'global') {
+        await logWindowToggle({
+          windowId: 0, // 0 indicates global
+          enabled: changes.enabled.newValue ?? false,
+          mode: 'global',
+        });
+      }
+    }
 
     // Log setting changes
     const changedSettings: Record<string, any> = {};

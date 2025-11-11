@@ -99,6 +99,20 @@ async function loadLogs(): Promise<void> {
 function renderLogEntry(entry: LogEntry): string {
   const timestamp = new Date(entry.timestamp).toLocaleString();
 
+  // Extract mode and window info from data for enhanced display
+  let modeIndicator = '';
+  let windowIndicator = '';
+
+  if (entry.data) {
+    if (entry.data.mode) {
+      const modeClass = entry.data.mode === 'global' ? 'mode-global' : 'mode-window';
+      modeIndicator = `<span class="log-mode ${modeClass}">${entry.data.mode === 'global' ? '🌐 Global' : '🪟 Window'}</span>`;
+    }
+    if (entry.data.windowId !== undefined) {
+      windowIndicator = `<span class="log-window">Window ${entry.data.windowId}</span>`;
+    }
+  }
+
   let dataHtml = '';
   if (entry.data) {
     dataHtml = `<div class="log-data">${JSON.stringify(entry.data, null, 2)}</div>`;
@@ -110,6 +124,8 @@ function renderLogEntry(entry: LogEntry): string {
         <span class="log-timestamp">${timestamp}</span>
         <span class="log-level ${entry.level}">${entry.level}</span>
         <span class="log-category">${entry.category}</span>
+        ${modeIndicator}
+        ${windowIndicator}
       </div>
       <div class="log-message">${escapeHtml(entry.message)}</div>
       ${dataHtml}

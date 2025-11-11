@@ -223,3 +223,55 @@ export async function getDiagnosticSummary(): Promise<{
 
   return summary;
 }
+
+/**
+ * Log tab switch event with enhanced details
+ * Captures window ID, mode, and tab information for diagnostics
+ */
+export async function logTabSwitch(data: {
+  windowId: number;
+  mode: 'global' | 'window';
+  previousTabId?: number;
+  newTabId?: number;
+  previousTabTitle?: string;
+  newTabTitle?: string;
+}): Promise<void> {
+  await log('INFO', 'TabSwitch', 'Tab switched', {
+    windowId: data.windowId,
+    mode: data.mode,
+    previousTabId: data.previousTabId,
+    newTabId: data.newTabId,
+    tabInfo: `${data.previousTabTitle || 'Unknown'} → ${data.newTabTitle || 'Unknown'}`,
+  });
+}
+
+/**
+ * Log mode change event
+ */
+export async function logModeChange(data: {
+  previousMode: 'global' | 'window';
+  newMode: 'global' | 'window';
+}): Promise<void> {
+  await log('INFO', 'ModeChange', `Operating mode changed from ${data.previousMode} to ${data.newMode}`, {
+    previousMode: data.previousMode,
+    newMode: data.newMode,
+  });
+}
+
+/**
+ * Log window enable/disable event
+ */
+export async function logWindowToggle(data: {
+  windowId: number;
+  enabled: boolean;
+  mode: 'global' | 'window';
+}): Promise<void> {
+  const action = data.enabled ? 'enabled' : 'disabled';
+  const scope = data.mode === 'global' ? 'all windows' : `window ${data.windowId}`;
+
+  await log('INFO', 'WindowToggle', `Auto-switching ${action} for ${scope}`, {
+    windowId: data.windowId,
+    enabled: data.enabled,
+    mode: data.mode,
+  });
+}
