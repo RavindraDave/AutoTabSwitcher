@@ -22,6 +22,18 @@ This PRD outlines the enhancement of AutoTabSwitcher to support two distinct ope
 - Ensure full Chrome extension compliance
 - Implement comprehensive testing
 
+### 1.3 **BACKWARD COMPATIBILITY GUARANTEE**
+
+**⚠️ CRITICAL: These are NON-BREAKING enhancements only**
+
+- ✅ **All existing functionality preserved** - No changes to core tab switching logic
+- ✅ **Default behavior unchanged** - New users and existing users default to Global Mode (current behavior)
+- ✅ **Zero impact on basic features** - Enable/disable, timer, activity pause, badge management all work as before
+- ✅ **Additive only** - New features are additions, not replacements
+- ✅ **Existing users protected** - Automatic migration preserves all current settings
+- ✅ **Optional enhancement** - Window Mode is opt-in, not forced
+- ✅ **No UI disruption** - Existing popup and options continue to work identically in Global Mode
+
 ---
 
 ## 2. Current State Analysis
@@ -43,6 +55,52 @@ AutoTabSwitcher (Current)
 3. **Unified timer**: Cannot have different timings per window
 4. **Limited logging**: Window titles not captured in diagnostics
 5. **Mode selection**: Window mode buried in options, not prominent
+
+---
+
+## 2.3 Non-Breaking Enhancement Strategy
+
+### 2.3.1 What Will NOT Change
+**Core tab switching functionality:**
+- ✅ Sequential tab switching algorithm (unchanged)
+- ✅ Hybrid timer mechanism (chrome.alarms + setInterval) (unchanged)
+- ✅ Activity-based pausing (unchanged)
+- ✅ Badge management system (enhanced, not replaced)
+- ✅ Storage mechanism (extended, not replaced)
+- ✅ Options page existing settings (preserved)
+- ✅ Popup existing controls (preserved)
+
+**User experience:**
+- ✅ Default behavior identical to current version
+- ✅ Existing keyboard shortcuts (if any) work
+- ✅ Extension icon and branding unchanged
+- ✅ Settings location and format preserved
+
+### 2.3.2 What Will Change (Additive Only)
+**New features added:**
+- ➕ Mode selector in Options (new UI element)
+- ➕ Window Mode as optional alternative (opt-in)
+- ➕ Per-window state tracking (new data structure)
+- ➕ Enhanced logging with window titles (additional data)
+- ➕ Window-specific timer management (new code path)
+
+**Improved features:**
+- 🔧 Popup shows current mode (additional info display)
+- 🔧 Diagnostics include more context (enhanced logging)
+- 🔧 Badge reflects per-window state in Window Mode (conditional behavior)
+
+### 2.3.3 Migration Strategy
+**For existing users:**
+1. On first load after update, check for `operatingMode` setting
+2. If missing, set to `'global'` (preserves current behavior exactly)
+3. Copy existing `enabled` state to global mode
+4. No user action required
+5. User can opt-in to Window Mode later from Options
+
+**For new users:**
+1. Default to Global Mode
+2. Can discover Window Mode in Options
+3. Clear help text explains both modes
 
 ---
 
@@ -100,37 +158,49 @@ interface Settings {
 
 ### 3.2 Feature #2: Global Mode Enable/Disable
 
+**⚠️ NOTE: This is the CURRENT behavior - no changes to existing functionality**
+
 #### 3.2.1 Functional Requirements
 - **FR-2.1**: Single toggle affects all windows
   - Popup toggle button enables/disables switching on ALL windows
   - All windows start/stop switching simultaneously
+  - **IDENTICAL to current implementation - NO CHANGES**
 
 - **FR-2.2**: Unified status
   - All window badges show the same state (ON/OFF/PAUSED)
   - No per-window state tracking needed
+  - **IDENTICAL to current implementation - NO CHANGES**
 
 - **FR-2.3**: Behavior consistency
-  - Maintains current behavior (backward compatible)
+  - **100% maintains current behavior (backward compatible)**
   - Activity tracking pauses all windows
+  - **Existing code paths used - NO MODIFICATIONS to core logic**
 
 #### 3.2.2 Technical Specifications
 ```typescript
 // In background.ts
+// NOTE: This wraps EXISTING logic - no changes to core implementation
 async function handleGlobalModeToggle(enabled: boolean): Promise<void> {
-  // Update all windows' badges
+  // Uses EXISTING badge management code
   const windows = await chrome.windows.getAll();
   for (const window of windows) {
     await updateBadgeForWindow(window.id, enabled ? 'ON' : 'OFF');
   }
 
-  // Start/stop global timer
+  // Uses EXISTING hybrid timer mechanism - no changes
   await toggleHybridTimer(enabled, delayMs, minDelayMs);
 }
 ```
 
+**Implementation Approach:**
+- ✅ Reuse all existing functions (toggleHybridTimer, updateBadgeForWindow, etc.)
+- ✅ No modifications to core tab-switcher.ts logic
+- ✅ Simple conditional routing: if global mode → use existing code
+- ✅ Existing tests remain valid
+
 #### 3.2.3 Storage Changes
-- `enabled`: boolean (global state)
-- Clear `windowStates` when in Global Mode
+- `enabled`: boolean (global state) - **EXISTING field, unchanged**
+- `windowStates`: optional, empty/undefined in Global Mode - **NEW field, ignored in Global Mode**
 
 ---
 
@@ -725,29 +795,50 @@ jobs:
 
 ## 4. Implementation Plan
 
+### 4.0 Implementation Principles (MANDATORY)
+
+**Golden Rules for Implementation:**
+1. 🚫 **DO NOT modify existing core functions** (switchToNextTab, toggleHybridTimer, updateBadgeForWindow, etc.)
+2. ✅ **DO wrap/route to existing functions** based on mode
+3. 🚫 **DO NOT change existing storage fields** (only add new ones)
+4. ✅ **DO add conditional logic** at the top level (background.ts)
+5. 🚫 **DO NOT refactor working code** as part of this PR
+6. ✅ **DO reuse existing utilities** and helpers
+7. 🚫 **DO NOT change default behavior** (global mode = current behavior)
+8. ✅ **DO add new functions** for Window Mode features only
+
+**Code Review Checklist:**
+- [ ] No modifications to core/tab-switcher.ts core logic?
+- [ ] No changes to existing timer implementation?
+- [ ] No changes to badge color logic?
+- [ ] No changes to activity tracking?
+- [ ] All changes are additive (new functions/fields)?
+- [ ] Global Mode uses exact same code paths as before?
+- [ ] Existing tests pass without modification?
+
 ### 4.1 Phase 1: Core Infrastructure (Days 1-2)
-1. Update type definitions (types.ts)
-2. Add operatingMode and windowStates to storage
-3. Create WindowTimerManager class
-4. Update constants
+1. Update type definitions (types.ts) - **ADD new types only**
+2. Add operatingMode and windowStates to storage - **EXTEND Settings interface**
+3. Create WindowTimerManager class - **NEW class, doesn't touch existing timer**
+4. Update constants - **ADD new constants**
 
 ### 4.2 Phase 2: Background Logic (Days 3-4)
-5. Implement mode switching logic
-6. Add per-window timer management
-7. Update tab-switcher for mode awareness
-8. Handle window lifecycle events
-9. Implement state migration
+5. Implement mode switching logic - **NEW routing function, wraps existing**
+6. Add per-window timer management - **NEW WindowTimerManager class**
+7. Add mode parameter to tab-switcher calls - **MINIMAL change: add parameter, no logic changes**
+8. Handle window lifecycle events - **NEW listeners for cleanup**
+9. Implement state migration - **NEW function for first-run**
 
 ### 4.3 Phase 3: UI Updates (Days 5-6)
-10. Update Options page with mode selector
-11. Update Popup for mode-aware display
-12. Update badge manager for per-window states
-13. Add window-specific controls
+10. Update Options page with mode selector - **ADD new section to existing page**
+11. Update Popup for mode-aware display - **ADD mode indicator, existing controls unchanged**
+12. Add window-specific controls - **NEW button in popup (conditional display)**
+13. Update badge manager to accept mode parameter - **EXTEND function signature only**
 
 ### 4.4 Phase 4: Logging & Diagnostics (Day 7)
-14. Enhance logger for window titles
-15. Update diagnostics page display
-16. Add mode indicators throughout
+14. Enhance logger for window titles - **EXTEND log entry interface**
+15. Update diagnostics page display - **ADD new columns to existing page**
+16. Add mode indicators throughout - **DISPLAY only, no logic changes**
 
 ### 4.5 Phase 5: Testing (Days 8-9)
 17. Write unit tests for new features
@@ -765,28 +856,40 @@ jobs:
 
 ## 5. Success Criteria
 
-### 5.1 Functional Success
+### 5.1 Backward Compatibility (CRITICAL)
+- ✅ **Existing users experience ZERO behavior changes** after update
+- ✅ **All existing unit tests pass** without modification
+- ✅ **Global Mode = current behavior** exactly (validated by comparison testing)
+- ✅ **No settings lost** during migration
+- ✅ **Existing popup/options work identically** in Global Mode
+- ✅ **Core tab switching logic untouched** (no modifications to sequential algorithm)
+- ✅ **No regressions** in existing features (enable/disable, timer, activity pause, badges)
+
+### 5.2 Functional Success (New Features)
 - ✅ Users can select Global or Window Mode from Options
 - ✅ Global Mode enables/disables all windows simultaneously
-- ✅ Window Mode allows per-window control
+- ✅ Window Mode allows per-window control (opt-in)
 - ✅ Timers work independently per window in Window Mode
-- ✅ Diagnostic logs include window titles
+- ✅ Diagnostic logs include window titles (enhanced, not replaced)
 - ✅ All existing features continue to work
 
-### 5.2 Technical Success
-- ✅ 85%+ code coverage
-- ✅ All tests passing
+### 5.3 Technical Success
+- ✅ 85%+ code coverage (including new code)
+- ✅ All existing tests passing (no modifications needed)
+- ✅ New tests for Window Mode features passing
 - ✅ No console errors
 - ✅ No manifest violations
 - ✅ Service worker handles suspension gracefully
 - ✅ No memory leaks
+- ✅ Performance unchanged in Global Mode
 
-### 5.3 User Experience Success
+### 5.4 User Experience Success
 - ✅ Clear mode distinction in UI
 - ✅ Intuitive toggle behavior
 - ✅ Accurate countdown display
 - ✅ Helpful error messages
 - ✅ Settings persist correctly
+- ✅ No confusion for existing users (default mode is familiar)
 
 ---
 
@@ -800,7 +903,8 @@ jobs:
 | Window ID collisions after reuse | Low | Medium | Clean up on onRemoved, validate window existence |
 | Race conditions on rapid toggle | Medium | Medium | Debounce toggle actions, use async/await properly |
 | Storage quota exceeded with many windows | Low | Low | Limit windowStates size, cleanup stale entries |
-| Breaking changes for existing users | Low | High | Implement migration logic, default to global mode |
+| Accidental modification of core logic | Low | High | **MITIGATED**: Wrap existing code, don't modify. Code review process. Regression tests. |
+| New code breaks existing features | Low | Medium | **MITIGATED**: Conditional routing. If global mode → existing code path exactly. Comprehensive regression testing. |
 
 ### 6.2 UX Risks
 
@@ -833,19 +937,47 @@ jobs:
 
 ## 8. Appendix
 
-### 8.1 Terminology
-- **Global Mode**: Extension operates on all browser windows simultaneously
-- **Window Mode**: Extension operates independently per browser window
-- **Window State**: Per-window enable/disable state and metadata
-- **Operating Mode**: Current mode selection (global or window)
+### 8.1 Summary: Non-Breaking Enhancement Guarantee
 
-### 8.2 References
+**This PRD describes ENHANCEMENTS ONLY, not replacements:**
+
+✅ **What stays exactly the same:**
+- Core tab switching algorithm (sequential, wrap-around)
+- Hybrid timer mechanism (alarms + interval)
+- Activity-based pausing logic
+- Badge color system (OFF/ON/PAUSED)
+- Storage mechanism (chrome.storage.local)
+- Manifest permissions (no new permissions needed)
+- Default user experience (Global Mode = current behavior)
+- All existing tests (no modifications required)
+
+➕ **What gets added:**
+- Mode selector in Options page (new UI)
+- Window Mode as opt-in feature (new mode)
+- Per-window state tracking (new data structure)
+- Enhanced logging (additional fields)
+- Window-specific controls (new popup button)
+
+**Implementation guarantee:**
+- Global Mode code path = existing code path exactly
+- Window Mode code path = new code path, isolated
+- No modifications to existing core functions
+- All changes are additive or conditional routing
+- Existing users see zero changes unless they opt-in to Window Mode
+
+### 8.2 Terminology
+- **Global Mode**: Extension operates on all browser windows simultaneously (CURRENT DEFAULT BEHAVIOR)
+- **Window Mode**: Extension operates independently per browser window (NEW OPT-IN FEATURE)
+- **Window State**: Per-window enable/disable state and metadata (NEW DATA STRUCTURE)
+- **Operating Mode**: Current mode selection (global or window) (NEW SETTING)
+
+### 8.3 References
 - [Chrome Extension Manifest V3 Documentation](https://developer.chrome.com/docs/extensions/mv3/)
 - [Chrome Alarms API](https://developer.chrome.com/docs/extensions/reference/alarms/)
 - [Chrome Windows API](https://developer.chrome.com/docs/extensions/reference/windows/)
 - [Chrome Storage API](https://developer.chrome.com/docs/extensions/reference/storage/)
 
-### 8.3 Related Documents
+### 8.4 Related Documents
 - README.md - User documentation
 - ARCHITECTURE.md - Technical architecture (to be created)
 - CHANGELOG.md - Version history
