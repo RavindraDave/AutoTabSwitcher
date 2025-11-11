@@ -112,16 +112,30 @@ function cleanLogs(logs: LogEntry[]): LogEntry[] {
 
 /**
  * Sanitize data to remove sensitive information
+ * SECURITY: More specific pattern matching to avoid over-redaction
  */
 function sanitizeData(data: Record<string, any>): Record<string, any> {
   const sanitized: Record<string, any> = {};
 
+  // SECURITY: Specific sensitive field patterns (more precise than includes())
+  const sensitivePatterns = [
+    /^url$/i,           // Exact match: url, URL, Url
+    /Url$/i,            // Ends with: pageUrl, requestUrl, etc.
+    /^title$/i,         // Exact match: title
+    /Title$/i,          // Ends with: tabTitle, windowTitle
+    /token/i,           // Contains: token, authToken, apiToken
+    /password/i,        // Contains: password, userPassword
+    /secret/i,          // Contains: secret, apiSecret
+    /key$/i,            // Ends with: apiKey, privateKey (but not "key" alone)
+    /credential/i,      // Contains: credential, credentials
+    /auth$/i,           // Ends with: basicAuth, bearerAuth
+  ];
+
   for (const [key, value] of Object.entries(data)) {
-    // Skip sensitive fields
-    if (key.toLowerCase().includes('url') ||
-        key.toLowerCase().includes('title') ||
-        key.toLowerCase().includes('token') ||
-        key.toLowerCase().includes('password')) {
+    // SECURITY: Check if key matches any sensitive pattern
+    const isSensitive = sensitivePatterns.some(pattern => pattern.test(key));
+
+    if (isSensitive) {
       sanitized[key] = '[REDACTED]';
       continue;
     }

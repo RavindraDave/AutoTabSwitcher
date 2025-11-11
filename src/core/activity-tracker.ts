@@ -7,9 +7,22 @@ import { DEFAULT_PAUSE_ON_ACTIVITY, DEFAULT_PAUSE_DURATION } from './constants.j
 
 /**
  * Track last user activity timestamp
- * This is intentionally module-level for performance (avoid storage reads on every activity)
+ * SECURITY: Hybrid approach - module variable for performance, storage for service worker resilience
  */
 let lastUserActivityTime: number = 0;
+let activityInitialized: boolean = false;
+
+/**
+ * Initialize activity tracker by loading last activity time from storage
+ * SECURITY: Ensures service worker resilience by loading persisted state
+ */
+async function initializeActivityTracker(): Promise<void> {
+  if (!activityInitialized) {
+    const data = await chrome.storage.local.get(['lastUserActivityTime']);
+    lastUserActivityTime = (data['lastUserActivityTime'] as number) || 0;
+    activityInitialized = true;
+  }
+}
 
 /**
  * Check if auto-switching is currently paused due to recent user activity
@@ -17,6 +30,9 @@ let lastUserActivityTime: number = 0;
  * @returns true if paused, false otherwise
  */
 export async function isPaused(): Promise<boolean> {
+  // SECURITY: Initialize from storage if needed (service worker wake)
+  await initializeActivityTracker();
+
   const data = await chrome.storage.local.get(['pauseOnActivity', 'pauseDuration']) as StorageData;
   const pauseOnActivity = data.pauseOnActivity ?? DEFAULT_PAUSE_ON_ACTIVITY;
 
@@ -33,10 +49,16 @@ export async function isPaused(): Promise<boolean> {
 
 /**
  * Record that user activity has occurred
- * Updates the last activity timestamp
+ * Updates the last activity timestamp both in memory and storage
+ * SECURITY: Persists to storage for service worker resilience
  */
 export function recordUserActivity(): void {
   lastUserActivityTime = Date.now();
+  // SECURITY: Persist to storage for service worker resilience
+  // Use non-blocking call to avoid performance impact
+  chrome.storage.local.set({ lastUserActivityTime }).catch(err => {
+    console.error('Failed to persist activity time:', err);
+  });
   console.log('User activity detected, updating timestamp');
 }
 

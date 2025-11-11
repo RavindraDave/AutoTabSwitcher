@@ -33,14 +33,21 @@ export class WindowTimerManager {
 
   /**
    * Stop a timer for a specific window
+   * SECURITY: Verifies alarm was successfully cleared
    * @param windowId - The window ID
+   * @returns true if timer was stopped, false if it wasn't running
    */
-  async stopTimer(windowId: number): Promise<void> {
+  async stopTimer(windowId: number): Promise<boolean> {
     const alarmName = this.getAlarmName(windowId);
-    await chrome.alarms.clear(alarmName);
-    this.windowTimers.delete(windowId);
+    const wasCleared = await chrome.alarms.clear(alarmName);
 
-    console.log(`[WindowTimerManager] Stopped timer for window ${windowId}`);
+    if (wasCleared || this.windowTimers.has(windowId)) {
+      this.windowTimers.delete(windowId);
+      console.log(`[WindowTimerManager] Stopped timer for window ${windowId}`);
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -126,5 +133,37 @@ export class WindowTimerManager {
     }
 
     console.log('[WindowTimerManager] Restored timers for enabled windows');
+  }
+
+  /**
+   * Cleanup stale window timers for windows that no longer exist
+   * SECURITY: Prevents memory leaks from closed windows
+   * @returns Number of stale timers removed
+   */
+  async cleanupStaleTimers(): Promise<number> {
+    try {
+      const allWindows = await chrome.windows.getAll();
+      const validWindowIds = new Set(allWindows.map(w => w.id).filter((id): id is number => id !== undefined));
+
+      let cleanedCount = 0;
+      for (const windowId of this.windowTimers.keys()) {
+        if (!validWindowIds.has(windowId)) {
+          const stopped = await this.stopTimer(windowId);
+          if (stopped) {
+            cleanedCount++;
+            console.log(`[WindowTimerManager] Cleaned up stale timer for closed window ${windowId}`);
+          }
+        }
+      }
+
+      if (cleanedCount > 0) {
+        console.log(`[WindowTimerManager] Cleaned up ${cleanedCount} stale window timer(s)`);
+      }
+
+      return cleanedCount;
+    } catch (error) {
+      console.error('[WindowTimerManager] Error during cleanup:', error);
+      return 0;
+    }
   }
 }

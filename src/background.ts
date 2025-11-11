@@ -7,8 +7,8 @@
  */
 
 import { isPacked } from './utils/environment.js';
-import { MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED, DEFAULT_OPERATING_MODE } from './core/constants.js';
-import { initializeStorage, getSettings, migrateToOperatingMode } from './core/storage.js';
+import { MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED } from './core/constants.js';
+import { initializeStorage, getSettings, migrateToOperatingMode, validateOperatingMode, isValidWindowId, windowExists } from './core/storage.js';
 import { setupActivityListeners, isPaused } from './core/activity-tracker.js';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
 import { updateBadge } from './core/badge-manager.js';
@@ -24,6 +24,11 @@ const DEFAULT_DELAY_TIME = MIN_DELAY_MS;
 const windowTimerManager = new WindowTimerManager();
 
 /**
+ * Debounce timer for storage changes to prevent race conditions
+ */
+let storageChangeTimeout: number | undefined;
+
+/**
  * Start or stop the tab switcher using hybrid timing mechanism
  * ENHANCED: Now supports both Global Mode (existing behavior) and Window Mode (new)
  * NON-BREAKING: Global Mode uses exact same code path as before
@@ -37,7 +42,8 @@ async function toggleTabSwitcher(): Promise<void> {
     ]);
     const enabled = data.enabled ?? DEFAULT_ENABLED;
     const delayTime = data.delayTime ?? DEFAULT_DELAY_TIME;
-    const operatingMode = data.operatingMode ?? DEFAULT_OPERATING_MODE;
+    // SECURITY: Validate operating mode to prevent invalid values
+    const operatingMode = validateOperatingMode(data.operatingMode);
 
     await logger.info('TabSwitcher', 'Toggle tab switcher', {
       enabled,
@@ -80,11 +86,21 @@ async function handleWindowModeToggle(
     // Start timers for enabled windows
     for (const [windowIdStr, state] of Object.entries(windowStates)) {
       const windowId = parseInt(windowIdStr);
-      if (isNaN(windowId)) continue;
+      // SECURITY: Validate windowId before operations
+      if (!isValidWindowId(windowId)) {
+        console.warn(`Invalid windowId in windowStates: ${windowIdStr}`);
+        continue;
+      }
 
+      // SECURITY: Verify window still exists before starting timer
       if (state.enabled) {
-        await windowTimerManager.startTimer(windowId, delayTime);
-        await logger.info('WindowMode', 'Started timer for window', { windowId, delayTime });
+        const exists = await windowExists(windowId);
+        if (exists) {
+          await windowTimerManager.startTimer(windowId, delayTime);
+          await logger.info('WindowMode', 'Started timer for window', { windowId, delayTime });
+        } else {
+          console.warn(`Window ${windowId} no longer exists, skipping timer start`);
+        }
       }
     }
   } catch (error) {
@@ -98,6 +114,7 @@ async function handleWindowModeToggle(
 /**
  * Handle storage changes - restart alarm if settings changed
  * ENHANCED: Now includes operatingMode and windowStates
+ * SECURITY: Debounced to prevent race conditions from simultaneous storage changes
  */
 chrome.storage.onChanged.addListener(async (changes, namespace) => {
   if (namespace !== 'local') {
@@ -109,7 +126,16 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
                           'operatingMode' in changes || 'windowStates' in changes;
 
   if (relevantChanges) {
-    console.log('Settings changed, restarting tab switcher');
+    console.log('Settings changed, restarting tab switcher (debounced)');
+
+    // Clear any existing timeout to debounce rapid changes
+    if (storageChangeTimeout !== undefined) {
+      clearTimeout(storageChangeTimeout);
+    }
+
+    // Debounce for 100ms to prevent race conditions
+    storageChangeTimeout = setTimeout(async () => {
+      storageChangeTimeout = undefined;
 
     // Enhanced logging for operating mode changes
     if ('operatingMode' in changes) {
@@ -148,7 +174,8 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
     if ('enabled' in changes) {
       const { logWindowToggle } = await import('./core/logger.js');
       const data = await chrome.storage.local.get(['operatingMode']);
-      const mode = data['operatingMode'] || 'global';
+      // SECURITY: Validate operating mode
+      const mode = validateOperatingMode(data['operatingMode']);
 
       if (mode === 'global') {
         await logWindowToggle({
@@ -170,8 +197,9 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
       }
     }
 
-    logger.info('Settings', 'Settings changed', changedSettings);
-    toggleTabSwitcher();
+      logger.info('Settings', 'Settings changed', changedSettings);
+      await toggleTabSwitcher();
+    }, 100) as unknown as number;
   }
 });
 
@@ -288,8 +316,15 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
  */
 chrome.windows.onRemoved.addListener(async (windowId) => {
   try {
+    // SECURITY: Validate windowId
+    if (!isValidWindowId(windowId)) {
+      console.warn(`Invalid windowId in onRemoved handler: ${windowId}`);
+      return;
+    }
+
     const data = await getSettings(['operatingMode', 'windowStates']);
-    const operatingMode = data.operatingMode ?? DEFAULT_OPERATING_MODE;
+    // SECURITY: Validate operating mode
+    const operatingMode = validateOperatingMode(data.operatingMode);
 
     // Only cleanup if in Window Mode
     if (operatingMode === 'window' && data.windowStates) {
@@ -373,8 +408,15 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   const windowId = WindowTimerManager.getWindowIdFromAlarm(alarm.name);
   if (windowId !== null) {
     try {
+      // SECURITY: Validate windowId
+      if (!isValidWindowId(windowId)) {
+        console.warn(`Invalid windowId from alarm: ${windowId}`);
+        return;
+      }
+
       const data = await getSettings(['operatingMode', 'windowStates', 'delayTime']);
-      const operatingMode = data.operatingMode ?? DEFAULT_OPERATING_MODE;
+      // SECURITY: Validate operating mode
+      const operatingMode = validateOperatingMode(data.operatingMode);
 
       // Only process if in Window Mode
       if (operatingMode === 'window' && data.windowStates && data.windowStates[windowId]) {
