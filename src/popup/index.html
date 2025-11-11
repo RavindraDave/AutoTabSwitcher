@@ -219,6 +219,34 @@
             transform: translateY(0);
         }
 
+        .enable-window-button {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #667eea;
+            background: white;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #667eea;
+        }
+
+        .enable-window-button:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .enable-window-button:active {
+            transform: translateY(0);
+        }
+
+        .form-text {
+            color: #718096;
+            font-size: 13px;
+        }
+
         .info-row {
             display: flex;
             justify-content: space-between;
@@ -364,6 +392,16 @@
 
             <div class="toggle-section">
                 <button class="toggle-button" id="toggleButton">Toggle</button>
+            </div>
+
+            <!-- Enable for This Window button (shown when appropriate) -->
+            <div id="enableWindowSection" class="toggle-section hidden">
+                <button class="enable-window-button" id="enableWindowButton">
+                    🪟 Enable for This Window
+                </button>
+                <small class="form-text text-muted" style="text-align: center; margin-top: 8px; display: block;">
+                    Auto-switch tabs only in this window
+                </small>
             </div>
 
             <div class="info-row">
