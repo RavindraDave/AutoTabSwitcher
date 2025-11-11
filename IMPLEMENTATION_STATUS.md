@@ -19,6 +19,23 @@
 - [x] Add alarm listener for window-specific timers
 - [x] Update storage change listener
 
+### **Phase 3: UI Updates** ✅ COMPLETE
+- [x] Update Options page HTML with new mode selector (operatingMode)
+- [x] Update Options page TypeScript to handle operatingMode and windowStates
+- [x] Update Popup HTML for mode-aware display
+- [x] Update Popup TypeScript to handle operatingMode and per-window states
+- [x] Add legacy fallback support for backward compatibility
+- [x] Context-aware button labels (Enable/Disable All Windows vs This Window)
+
+### **Phase 4: Enhanced Logging** ✅ COMPLETE
+- [x] Add logTabSwitch() function to capture window ID, mode, and tab titles
+- [x] Add logModeChange() function to track mode transitions
+- [x] Add logWindowToggle() function to log enable/disable events
+- [x] Update tab-switcher.ts to use enhanced logging
+- [x] Update background.ts storage listener with enhanced logging
+- [x] Update diagnostics page to display mode and window indicators
+- [x] Add visual indicators (🌐 Global / 🪟 Window) to diagnostics UI
+
 ---
 
 ## 🔨 BUILD STATUS
@@ -124,16 +141,6 @@ Cannot find module './utils/environment.js' from 'src/background.ts'
 
 ## 🚧 REMAINING WORK
 
-### **Phase 3: UI Updates** ⏳ PENDING
-- [ ] Update Options page with mode selector UI
-- [ ] Update Popup for mode-aware display
-- [ ] Add window-specific controls to popup
-
-### **Phase 4: Enhanced Logging** ⏳ PENDING
-- [ ] Enhance logger for window titles
-- [ ] Update diagnostics page display
-- [ ] Add mode indicators
-
 ### **Phase 5: Testing** ⏳ PENDING
 - [ ] Fix Jest configuration for ES modules
 - [ ] Verify all existing tests pass
@@ -234,7 +241,13 @@ $ npm run build
 
 ## 📞 SUMMARY FOR REVIEW
 
-**Status:** Core backend implementation (Phases 1-2) complete and functional
+**Status:** Core implementation complete (Phases 1-4) - Fully functional!
+
+**Completed:**
+- ✅ Phase 1: Core Infrastructure (types, storage, timer manager)
+- ✅ Phase 2: Background Logic (mode switching, window lifecycle)
+- ✅ Phase 3: UI Updates (Options page, Popup page with new Operating Mode)
+- ✅ Phase 4: Enhanced Logging (diagnostic logging with mode/window context)
 
 **Build:** ✅ SUCCESS - Zero TypeScript errors
 
@@ -244,7 +257,7 @@ $ npm run build
 
 **Confidence Level:** **HIGH** - Implementation follows strict non-breaking principles
 
-**Recommended Next Action:** Review completed phases, then proceed with UI updates
+**Recommended Next Action:** Testing phase, then documentation updates
 
 ---
 
@@ -255,12 +268,22 @@ $ npm run build
 - `src/core/window-timer-manager.ts` - Per-window timer manager
 - `IMPLEMENTATION_STATUS.md` - This file
 
-### Modified Files:
+### Modified Files (Phases 1-2):
 - `src/core/types.ts` - Extended type definitions
 - `src/core/constants.ts` - Added DEFAULT_OPERATING_MODE
 - `src/core/storage.ts` - Added migrateToOperatingMode()
-- `src/core/tab-switcher.ts` - Added optional windowId parameter
-- `src/background.ts` - Mode routing and window lifecycle handlers
+- `src/core/tab-switcher.ts` - Enhanced logging with tab titles
+- `src/background.ts` - Mode routing, window lifecycle, enhanced logging
+
+### Modified Files (Phase 3 - UI Updates):
+- `src/options/options.html` - New Operating Mode selector
+- `src/options/options.ts` - Handle operatingMode and windowStates
+- `src/popup/index.ts` - Mode-aware UI with per-window state handling
+
+### Modified Files (Phase 4 - Enhanced Logging):
+- `src/core/logger.ts` - Added logTabSwitch, logModeChange, logWindowToggle
+- `src/options/diagnostics.html` - Added mode/window indicator styles
+- `src/options/diagnostics.ts` - Display mode and window info in logs
 
 ### Build Output:
 - `dist/` - Successfully generated (not committed)
