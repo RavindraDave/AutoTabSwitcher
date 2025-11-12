@@ -24,6 +24,18 @@ const tabsMock = {
   create: jest.fn(),
   remove: jest.fn(),
   get: jest.fn(),
+  onCreated: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
+  onUpdated: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
+  onAttached: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
 };
 
 // Mock chrome.alarms API
@@ -67,8 +79,18 @@ const windowsMock = {
     addListener: jest.fn(),
     removeListener: jest.fn(),
   },
+  onFocusChanged: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
+  onRemoved: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
   getCurrent: jest.fn(),
   getAll: jest.fn(),
+  get: jest.fn(),
+  WINDOW_ID_NONE: -1,
 };
 
 // Create global chrome mock
