@@ -4,16 +4,16 @@
   "description": "Automatically switches to the next tab every few seconds",
   "scripts": {
     "clean": "rimraf dist",
-    "prebuild": "npm run clean",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "prebuild": "npm run clean && npm test",
     "typecheck": "tsc --project tsconfig.build.json --noEmit",
     "build:ts": "tsc --project tsconfig.build.json",
     "build:assets": "node scripts/copy-assets.js",
     "build": "npm run build:ts && npm run build:assets",
     "watch": "tsc --project tsconfig.build.json --watch",
-    "dev": "npm run build && npm run watch",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "dev": "npm run build && npm run watch"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",

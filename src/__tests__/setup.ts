@@ -55,6 +55,9 @@ const runtimeMock = {
     addListener: jest.fn(),
     removeListener: jest.fn(),
   },
+  getManifest: jest.fn().mockReturnValue({
+    update_url: undefined, // Simulates unpacked extension
+  }),
   lastError: undefined,
 };
 

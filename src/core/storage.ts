@@ -35,7 +35,7 @@ export function validateOperatingMode(value: any): OperatingMode {
  * @returns true if valid, false otherwise
  */
 export function isValidWindowId(windowId: any): windowId is number {
-  return typeof windowId === 'number' && !isNaN(windowId) && windowId > 0;
+  return typeof windowId === 'number' && !isNaN(windowId) && isFinite(windowId) && windowId > 0;
 }
 
 /**
