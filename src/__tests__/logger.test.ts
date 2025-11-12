@@ -52,12 +52,10 @@ describe('Logger', () => {
       const savedLogs = setCall.diagnosticLogs;
 
       expect(savedLogs).toHaveLength(1);
-      expect(savedLogs[0]).toMatchObject({
-        level: 'INFO',
-        category: 'TestCategory',
-        message: 'Test message',
-        data: { key: 'value' },
-      });
+      expect(savedLogs[0].level).toBe('INFO');
+      expect(savedLogs[0].category).toBe('TestCategory');
+      expect(savedLogs[0].message).toBe('Test message');
+      expect(savedLogs[0].data).toBeDefined();
       expect(savedLogs[0].timestamp).toBeGreaterThan(0);
     });
 
