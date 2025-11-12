@@ -36,6 +36,10 @@ const tabsMock = {
     addListener: jest.fn(),
     removeListener: jest.fn(),
   },
+  onActivated: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
 };
 
 // Mock chrome.alarms API
