@@ -123,7 +123,7 @@ async function updateUI(): Promise<void> {
     updateToggleButton(isCurrentWindowEnabled, operatingMode);
 
     // Update "Enable for This Window" button visibility
-    await updateEnableWindowButton(isCurrentWindowEnabled, operatingMode);
+    await updateEnableWindowButton(operatingMode);
   } catch (error) {
     console.error('Error updating UI:', error);
   }
@@ -214,25 +214,22 @@ function updateToggleButton(
 
 /**
  * Update "Enable for This Window" button visibility and text
- * Show when in Global Mode to allow switching to Window Mode for this window
+ * Only shown in Global Mode to allow switching to Window Mode
  */
 async function updateEnableWindowButton(
-  isCurrentWindowEnabled: boolean,
   operatingMode: string
 ): Promise<void> {
   try {
     let shouldShowButton = false;
-    let buttonText = '🪟 Enable for This Window';
+    let buttonText = '🪟 Enable Only This Window';
 
     if (operatingMode === 'global') {
-      // In global mode, show button to allow enabling just this window
+      // In global mode, show button to switch to Window Mode
+      // This will enable only the current window and disable all others
       shouldShowButton = true;
-      buttonText = '🪟 Switch to Window Mode';
-    } else if (operatingMode === 'window' && !isCurrentWindowEnabled) {
-      // In window mode, show button if this window is not enabled
-      shouldShowButton = true;
-      buttonText = '🪟 Enable This Window Only';
+      buttonText = '🪟 Enable Only This Window';
     }
+    // In Window Mode, don't show this button - use the main toggle instead
 
     if (shouldShowButton) {
       enableWindowButton.textContent = buttonText;
@@ -248,7 +245,7 @@ async function updateEnableWindowButton(
 
 /**
  * Handle "Enable for This Window" button click
- * Switches to Window Mode and enables the current window
+ * Switches to Window Mode and enables ONLY the current window (disables all others)
  */
 async function handleEnableForThisWindow(): Promise<void> {
   try {
@@ -264,20 +261,34 @@ async function handleEnableForThisWindow(): Promise<void> {
     const data = await chrome.storage.local.get(['windowStates']) as StorageData;
     const windowStates = data.windowStates ?? {};
 
-    // Enable the current window
+    // Get all windows to disable them
+    const allWindows = await chrome.windows.getAll();
+
+    // Disable ALL windows first
+    for (const window of allWindows) {
+      if (window.id !== undefined) {
+        windowStates[window.id] = {
+          enabled: false,
+          enabledTimestamp: undefined,
+          lastSwitchTime: windowStates[window.id]?.lastSwitchTime ?? Date.now(),
+        };
+      }
+    }
+
+    // Then enable ONLY the current window
     windowStates[currentWindowId] = {
       enabled: true,
       enabledTimestamp: Date.now(),
       lastSwitchTime: Date.now(),
     };
 
-    // Switch to Window Mode and enable this window
+    // Switch to Window Mode and save states
     await chrome.storage.local.set({
       operatingMode: 'window',
       windowStates,
     });
 
-    console.log('Enabled window mode for window:', currentWindowId);
+    console.log('Enabled window mode for ONLY this window:', currentWindowId);
 
     // UI will update via storage change listener
   } catch (error) {
