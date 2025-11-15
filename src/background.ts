@@ -437,8 +437,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
           if (!paused) {
             // Perform tab switch for this window
-            await switchTab(windowId);
-            await logger.info('WindowMode', 'Tab switched for window', { windowId });
+            const success = await switchTab(windowId);
+            if (success) {
+              await logger.info('WindowMode', 'Tab switched for window', { windowId });
+            }
           } else {
             console.log(`Auto-switching paused for window ${windowId} due to recent user activity`);
           }
