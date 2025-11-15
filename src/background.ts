@@ -13,7 +13,7 @@ import { setupActivityListeners, isPaused } from './core/activity-tracker.js';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
 import { updateBadge } from './core/badge-manager.js';
 import { switchTab } from './core/tab-switcher.js';
-import { logger } from './core/logger.js';
+import { logger, logModeChange, logWindowToggle } from './core/logger.js';
 import { WindowTimerManager } from './core/window-timer-manager.js';
 
 // Determine minimum delay based on environment
@@ -139,7 +139,6 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
 
     // Enhanced logging for operating mode changes
     if ('operatingMode' in changes) {
-      const { logModeChange } = await import('./core/logger.js');
       await logModeChange({
         previousMode: changes['operatingMode'].oldValue || 'global',
         newMode: changes['operatingMode'].newValue || 'global',
@@ -148,7 +147,6 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
 
     // Enhanced logging for window state changes
     if ('windowStates' in changes) {
-      const { logWindowToggle } = await import('./core/logger.js');
       const oldStates = changes['windowStates'].oldValue || {};
       const newStates = changes['windowStates'].newValue || {};
 
@@ -172,7 +170,6 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
 
     // Enhanced logging for global enabled changes
     if ('enabled' in changes) {
-      const { logWindowToggle } = await import('./core/logger.js');
       const data = await chrome.storage.local.get(['operatingMode']);
       // SECURITY: Validate operating mode
       const mode = validateOperatingMode(data['operatingMode']);
