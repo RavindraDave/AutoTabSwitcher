@@ -8,10 +8,12 @@ import { StorageData } from './types.js';
  * Determine badge state for a specific window
  *
  * @param windowId - The window ID to check
- * @param enabled - Whether auto-switching is enabled
+ * @param enabled - Whether auto-switching is enabled (global mode)
  * @param paused - Whether switching is temporarily paused
- * @param windowMode - Window mode setting ('global' or 'current-window')
- * @param selectedWindowId - The selected window ID (for current-window mode)
+ * @param windowMode - Legacy window mode setting ('global' or 'current-window')
+ * @param selectedWindowId - The selected window ID (for legacy current-window mode)
+ * @param operatingMode - New operating mode ('global' or 'window')
+ * @param windowStates - Per-window enable/disable states (for window mode)
  * @returns Badge text and color
  */
 function getBadgeForWindow(
@@ -19,9 +21,25 @@ function getBadgeForWindow(
   enabled: boolean,
   paused: boolean,
   windowMode: 'global' | 'current-window',
-  selectedWindowId?: number
+  selectedWindowId?: number,
+  operatingMode?: 'global' | 'window',
+  windowStates?: { [windowId: number]: { enabled: boolean } }
 ): { text: string; color: string } {
-  // In current-window mode, only show active state for the selected window
+  // Check new operating mode first (takes precedence over legacy windowMode)
+  if (operatingMode === 'window') {
+    // Window Mode: Each window has independent enable/disable state
+    const isWindowEnabled = windowStates?.[windowId]?.enabled ?? false;
+
+    if (!isWindowEnabled) {
+      return { text: 'OFF', color: '#9E9E9E' }; // Gray
+    } else if (paused) {
+      return { text: '⏸', color: '#FF9800' }; // Orange - Pause symbol
+    } else {
+      return { text: 'ON', color: '#4CAF50' }; // Green
+    }
+  }
+
+  // Legacy current-window mode
   if (windowMode === 'current-window') {
     if (windowId !== selectedWindowId) {
       // Other windows show OFF
@@ -29,7 +47,7 @@ function getBadgeForWindow(
     }
   }
 
-  // Determine badge state based on enabled/paused status
+  // Global mode or legacy mode: use global enabled state
   if (!enabled) {
     return { text: 'OFF', color: '#9E9E9E' }; // Gray
   } else if (paused) {
@@ -43,29 +61,46 @@ function getBadgeForWindow(
  * Update the extension badge to show current state
  *
  * Badge states:
- * - OFF (gray): Extension is disabled or current window is not the selected window
+ * - OFF (gray): Extension is disabled, window is disabled, or current window is not the selected window
  * - ⏸ (orange): Currently paused due to user activity
  * - ON (green): Active and switching tabs
  *
- * In current-window mode, the badge only shows ON/paused for the selected window.
- * All other windows show OFF.
+ * In window mode, each window's badge reflects its individual enabled state.
+ * In current-window mode (legacy), the badge only shows ON/paused for the selected window.
+ * In global mode, all windows show the same badge state.
  *
- * @param enabled - Whether auto-switching is enabled
+ * @param enabled - Whether auto-switching is enabled (used in global mode)
  * @param paused - Whether switching is temporarily paused
  * @param tabId - Optional specific tab ID to update (if not provided, updates all tabs)
  */
 export async function updateBadge(enabled: boolean, paused: boolean = false, tabId?: number): Promise<void> {
   try {
-    // Get window mode settings
-    const data = await chrome.storage.local.get(['windowMode', 'selectedWindowId']) as StorageData;
+    // Get both legacy and new mode settings
+    const data = await chrome.storage.local.get([
+      'windowMode',
+      'selectedWindowId',
+      'operatingMode',
+      'windowStates'
+    ]) as StorageData;
+
     const windowMode = data.windowMode ?? 'global';
     const selectedWindowId = data.selectedWindowId;
+    const operatingMode = data.operatingMode;
+    const windowStates = data.windowStates;
 
     // If specific tab requested, update only that tab
     if (tabId !== undefined) {
       const tab = await chrome.tabs.get(tabId);
       if (tab.windowId) {
-        const badge = getBadgeForWindow(tab.windowId, enabled, paused, windowMode, selectedWindowId);
+        const badge = getBadgeForWindow(
+          tab.windowId,
+          enabled,
+          paused,
+          windowMode,
+          selectedWindowId,
+          operatingMode,
+          windowStates
+        );
         await chrome.action.setBadgeText({ tabId, text: badge.text });
         await chrome.action.setBadgeBackgroundColor({ tabId, color: badge.color });
       }
@@ -78,7 +113,15 @@ export async function updateBadge(enabled: boolean, paused: boolean = false, tab
     for (const window of windows) {
       if (!window.id || !window.tabs) continue;
 
-      const badge = getBadgeForWindow(window.id, enabled, paused, windowMode, selectedWindowId);
+      const badge = getBadgeForWindow(
+        window.id,
+        enabled,
+        paused,
+        windowMode,
+        selectedWindowId,
+        operatingMode,
+        windowStates
+      );
 
       // Update badge for all tabs in this window
       for (const tab of window.tabs) {
