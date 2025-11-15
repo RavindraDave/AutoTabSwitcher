@@ -5,7 +5,7 @@
 import { StorageData } from './types.js';
 import { DEFAULT_WINDOW_MODE } from './constants.js';
 import { updateBadge } from './badge-manager.js';
-import { logger } from './logger.js';
+import { logger, logTabSwitch } from './logger.js';
 
 /**
  * Switch to the next tab based on window mode configuration
@@ -104,7 +104,6 @@ export async function switchTab(specificWindowId?: number): Promise<void> {
       await chrome.storage.local.set({ lastSwitchTimes });
 
       // Enhanced logging with tab information
-      const { logTabSwitch } = await import('./logger.js');
       await logTabSwitch({
         windowId: targetWindowId,
         mode: windowMode === 'global' ? 'global' : 'window',
