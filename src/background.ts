@@ -143,6 +143,10 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
         previousMode: changes['operatingMode'].oldValue || 'global',
         newMode: changes['operatingMode'].newValue || 'global',
       });
+
+      // Update badge when operating mode changes
+      const data = await chrome.storage.local.get(['enabled']);
+      await updateBadge(data.enabled ?? false, false);
     }
 
     // Enhanced logging for window state changes
@@ -165,6 +169,14 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
             mode: 'window',
           });
         }
+      }
+
+      // Update badge when window states change in Window mode
+      const data = await chrome.storage.local.get(['operatingMode']);
+      const mode = validateOperatingMode(data['operatingMode']);
+      if (mode === 'window') {
+        // Update all badges to reflect new window states
+        await updateBadge(false, false); // enabled param is ignored in window mode
       }
     }
 
