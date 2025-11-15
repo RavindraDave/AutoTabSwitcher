@@ -146,7 +146,7 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
 
       // Update badge when operating mode changes
       const data = await chrome.storage.local.get(['enabled']);
-      await updateBadge(data.enabled ?? false, false);
+      await updateBadge(data['enabled'] ?? false, false);
     }
 
     // Enhanced logging for window state changes
