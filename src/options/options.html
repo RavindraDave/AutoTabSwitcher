@@ -65,32 +65,59 @@
         <h2 class="section-title">Operating Mode</h2>
         <p class="section-description">Choose how the extension operates across your browser windows</p>
 
-        <div class="setting-item">
-          <div class="custom-control custom-radio">
-            <input type="radio" id="operatingModeGlobal" name="operatingMode" value="global" class="custom-control-input" checked>
-            <label class="custom-control-label" for="operatingModeGlobal">
-              <strong>Global Mode</strong>
-            </label>
+        <div class="mode-selection-container">
+          <!-- Global Mode Card -->
+          <div class="mode-card" id="globalModeCard">
+            <div class="custom-control custom-radio">
+              <input type="radio" id="operatingModeGlobal" name="operatingMode" value="global" class="custom-control-input" checked>
+              <label class="custom-control-label mode-card-label" for="operatingModeGlobal">
+                <div class="mode-icon">🌐</div>
+                <div class="mode-content">
+                  <div class="mode-title">Global Mode</div>
+                  <div class="mode-description">
+                    Simple and straightforward - one toggle controls all windows together.
+                  </div>
+                </div>
+              </label>
+            </div>
+            <div class="mode-details">
+              <strong>How it works:</strong>
+              <ul>
+                <li>Single enable/disable button affects all browser windows</li>
+                <li>All windows switch tabs at the same interval</li>
+                <li>Perfect for monitoring multiple windows simultaneously</li>
+              </ul>
+            </div>
           </div>
-          <small class="form-text text-muted radio-description">
-            Enable/disable affects all browser windows simultaneously. When enabled, all windows switch tabs together at the same interval.
-          </small>
-        </div>
 
-        <div class="setting-item">
-          <div class="custom-control custom-radio">
-            <input type="radio" id="operatingModeWindow" name="operatingMode" value="window" class="custom-control-input">
-            <label class="custom-control-label" for="operatingModeWindow">
-              <strong>Window Mode</strong>
-            </label>
+          <!-- Window Mode Card -->
+          <div class="mode-card" id="windowModeCard">
+            <div class="custom-control custom-radio">
+              <input type="radio" id="operatingModeWindow" name="operatingMode" value="window" class="custom-control-input">
+              <label class="custom-control-label mode-card-label" for="operatingModeWindow">
+                <div class="mode-icon">🪟</div>
+                <div class="mode-content">
+                  <div class="mode-title">Window Mode</div>
+                  <div class="mode-description">
+                    Advanced control - manage each window independently.
+                  </div>
+                </div>
+              </label>
+            </div>
+            <div class="mode-details">
+              <strong>How it works:</strong>
+              <ul>
+                <li>Control each browser window separately</li>
+                <li>Enable/disable specific windows using the popup</li>
+                <li>Each window maintains its own independent timer</li>
+                <li>Great for working in one window while monitoring others</li>
+              </ul>
+            </div>
           </div>
-          <small class="form-text text-muted radio-description">
-            Control each window independently. Use the popup to enable/disable specific windows. Each enabled window maintains its own timer.
-          </small>
         </div>
 
         <div class="alert alert-info mt-3" style="font-size: 0.9rem;">
-          <strong>💡 Tip:</strong> In Window Mode, open the extension popup in any window to enable/disable auto-switching for that specific window.
+          <strong>💡 Quick Tip:</strong> You can easily switch between modes using the extension popup. In Global Mode, look for "Advanced Options" to switch to Window Mode. In Window Mode, use "Back to Global Mode" to return.
         </div>
       </div>
 

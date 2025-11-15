@@ -219,32 +219,89 @@
             transform: translateY(0);
         }
 
-        .enable-window-button {
-            width: 100%;
-            padding: 16px;
-            border: 2px solid #667eea;
-            background: white;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: #667eea;
-        }
-
-        .enable-window-button:hover {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .enable-window-button:active {
-            transform: translateY(0);
-        }
-
         .form-text {
             color: #718096;
-            font-size: 13px;
+            font-size: 12px;
+            text-align: center;
+            display: block;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        /* Advanced Options Section */
+        .advanced-section {
+            margin: 20px 0;
+            padding-top: 16px;
+        }
+
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+            margin-bottom: 16px;
+        }
+
+        .advanced-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .mode-switch-button {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #4a5568;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-switch-button:hover {
+            background: #f7fafc;
+            border-color: #cbd5e0;
+            color: #2d3748;
+        }
+
+        .mode-switch-button:active {
+            transform: scale(0.98);
+        }
+
+        /* Back to Global Mode Section */
+        .back-section {
+            margin: 16px 0;
+        }
+
+        .back-button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #667eea;
+            text-align: left;
+        }
+
+        .back-button:hover {
+            background: #f7fafc;
+            color: #5568d3;
+        }
+
+        .back-button:active {
+            transform: scale(0.98);
         }
 
         .info-row {
@@ -394,13 +451,25 @@
                 <button class="toggle-button" id="toggleButton">Toggle</button>
             </div>
 
-            <!-- Enable for This Window button (shown when appropriate) -->
-            <div id="enableWindowSection" class="toggle-section hidden">
-                <button class="enable-window-button" id="enableWindowButton">
-                    🪟 Enable for This Window
+            <!-- Advanced Options Section (shown in Global Mode) -->
+            <div id="advancedOptionsSection" class="advanced-section hidden">
+                <div class="section-divider"></div>
+                <div class="advanced-label">Advanced Options</div>
+                <button class="mode-switch-button" id="switchToWindowModeButton">
+                    🪟 Switch to Window Mode
                 </button>
-                <small class="form-text text-muted" style="text-align: center; margin-top: 8px; display: block;">
-                    Auto-switch tabs only in this window
+                <small class="form-text">
+                    Control tab switching individually for each browser window
+                </small>
+            </div>
+
+            <!-- Back to Global Mode (shown in Window Mode) -->
+            <div id="backToGlobalSection" class="back-section hidden">
+                <button class="back-button" id="backToGlobalButton">
+                    ← Back to Global Mode
+                </button>
+                <small class="form-text">
+                    Control all windows together
                 </small>
             </div>
 

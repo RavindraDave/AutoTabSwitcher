@@ -20,8 +20,10 @@ let countdownLabel: HTMLElement;
 let pulse: HTMLElement;
 let statusText: HTMLElement;
 let toggleButton: HTMLButtonElement;
-let enableWindowSection: HTMLElement;
-let enableWindowButton: HTMLButtonElement;
+let advancedOptionsSection: HTMLElement;
+let switchToWindowModeButton: HTMLButtonElement;
+let backToGlobalSection: HTMLElement;
+let backToGlobalButton: HTMLButtonElement;
 let modeValue: HTMLElement;
 let intervalValue: HTMLElement;
 let settingsButton: HTMLButtonElement;
@@ -47,15 +49,18 @@ async function initializePopup(): Promise<void> {
   pulse = document.getElementById('pulse')!;
   statusText = document.getElementById('statusText')!;
   toggleButton = document.getElementById('toggleButton') as HTMLButtonElement;
-  enableWindowSection = document.getElementById('enableWindowSection')!;
-  enableWindowButton = document.getElementById('enableWindowButton') as HTMLButtonElement;
+  advancedOptionsSection = document.getElementById('advancedOptionsSection')!;
+  switchToWindowModeButton = document.getElementById('switchToWindowModeButton') as HTMLButtonElement;
+  backToGlobalSection = document.getElementById('backToGlobalSection')!;
+  backToGlobalButton = document.getElementById('backToGlobalButton') as HTMLButtonElement;
   modeValue = document.getElementById('modeValue')!;
   intervalValue = document.getElementById('intervalValue')!;
   settingsButton = document.getElementById('settingsButton') as HTMLButtonElement;
 
   // Set up event listeners
   toggleButton.addEventListener('click', handleToggle);
-  enableWindowButton.addEventListener('click', handleEnableForThisWindow);
+  switchToWindowModeButton.addEventListener('click', handleSwitchToWindowMode);
+  backToGlobalButton.addEventListener('click', handleBackToGlobal);
   settingsButton.addEventListener('click', openSettings);
 
   // Listen for storage changes
@@ -122,8 +127,8 @@ async function updateUI(): Promise<void> {
     // Update toggle button
     updateToggleButton(isCurrentWindowEnabled, operatingMode);
 
-    // Update "Enable for This Window" button visibility
-    await updateEnableWindowButton(operatingMode);
+    // Update mode-specific sections (Advanced Options or Back to Global)
+    updateModeSections(operatingMode);
   } catch (error) {
     console.error('Error updating UI:', error);
   }
@@ -213,41 +218,26 @@ function updateToggleButton(
 }
 
 /**
- * Update "Enable for This Window" button visibility and text
- * Only shown in Global Mode to allow switching to Window Mode
+ * Update mode-specific sections visibility
+ * Shows "Advanced Options" in Global Mode or "Back to Global" in Window Mode
  */
-async function updateEnableWindowButton(
-  operatingMode: string
-): Promise<void> {
-  try {
-    let shouldShowButton = false;
-    let buttonText = '🪟 Enable Only This Window';
-
-    if (operatingMode === 'global') {
-      // In global mode, show button to switch to Window Mode
-      // This will enable only the current window and disable all others
-      shouldShowButton = true;
-      buttonText = '🪟 Enable Only This Window';
-    }
-    // In Window Mode, don't show this button - use the main toggle instead
-
-    if (shouldShowButton) {
-      enableWindowButton.textContent = buttonText;
-      enableWindowSection.classList.remove('hidden');
-    } else {
-      enableWindowSection.classList.add('hidden');
-    }
-  } catch (error) {
-    console.error('Error updating enable window button:', error);
-    enableWindowSection.classList.add('hidden');
+function updateModeSections(operatingMode: string): void {
+  if (operatingMode === 'global') {
+    // Global Mode: Show advanced options to switch to Window Mode
+    advancedOptionsSection.classList.remove('hidden');
+    backToGlobalSection.classList.add('hidden');
+  } else {
+    // Window Mode: Show back button to return to Global Mode
+    advancedOptionsSection.classList.add('hidden');
+    backToGlobalSection.classList.remove('hidden');
   }
 }
 
 /**
- * Handle "Enable for This Window" button click
- * Switches to Window Mode and enables ONLY the current window (disables all others)
+ * Handle "Switch to Window Mode" button click
+ * Switches to Window Mode and enables ONLY the current window
  */
-async function handleEnableForThisWindow(): Promise<void> {
+async function handleSwitchToWindowMode(): Promise<void> {
   try {
     const currentWindow = await chrome.windows.getCurrent();
     const currentWindowId = currentWindow.id;
@@ -261,7 +251,7 @@ async function handleEnableForThisWindow(): Promise<void> {
     const data = await chrome.storage.local.get(['windowStates']) as StorageData;
     const windowStates = data.windowStates ?? {};
 
-    // Get all windows to disable them
+    // Get all windows
     const allWindows = await chrome.windows.getAll();
 
     // Disable ALL windows first
@@ -288,11 +278,31 @@ async function handleEnableForThisWindow(): Promise<void> {
       windowStates,
     });
 
-    console.log('Enabled window mode for ONLY this window:', currentWindowId);
+    console.log('Switched to Window Mode for current window:', currentWindowId);
 
     // UI will update via storage change listener
   } catch (error) {
-    console.error('Error enabling for this window:', error);
+    console.error('Error switching to window mode:', error);
+  }
+}
+
+/**
+ * Handle "Back to Global Mode" button click
+ * Switches back to Global Mode and enables all windows
+ */
+async function handleBackToGlobal(): Promise<void> {
+  try {
+    // Switch back to Global Mode and enable globally
+    await chrome.storage.local.set({
+      operatingMode: 'global',
+      enabled: true, // Enable globally
+    });
+
+    console.log('Switched back to Global Mode');
+
+    // UI will update via storage change listener
+  } catch (error) {
+    console.error('Error switching back to global mode:', error);
   }
 }
 
