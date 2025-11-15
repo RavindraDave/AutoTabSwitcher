@@ -5,7 +5,7 @@
 import { StorageData } from './types.js';
 import { DEFAULT_WINDOW_MODE } from './constants.js';
 import { updateBadge } from './badge-manager.js';
-import { logger } from './logger.js';
+import { logger, logTabSwitch } from './logger.js';
 
 /**
  * Switch to the next tab based on window mode configuration
@@ -17,8 +17,9 @@ import { logger } from './logger.js';
  * If the selected window no longer exists, disables auto-switching.
  *
  * @param specificWindowId - Optional. If provided, switches tabs in this specific window (for Window Mode)
+ * @returns true if tab switch succeeded, false if it failed or was skipped
  */
-export async function switchTab(specificWindowId?: number): Promise<void> {
+export async function switchTab(specificWindowId?: number): Promise<boolean> {
   try {
     let targetWindowId: number | undefined;
     let windowMode: string | undefined;
@@ -35,7 +36,7 @@ export async function switchTab(specificWindowId?: number): Promise<void> {
         await logger.warn('TabSwitcher', 'Specified window no longer exists', {
           windowId: specificWindowId,
         });
-        return;
+        return false;
       }
     } else {
       // EXISTING BEHAVIOR: Use legacy windowMode logic
@@ -47,7 +48,7 @@ export async function switchTab(specificWindowId?: number): Promise<void> {
         // Use the specific selected window
         if (!selectedWindowId) {
           console.warn('Current-window mode but no window selected');
-          return;
+          return false;
         }
 
         // Verify the window still exists
@@ -61,7 +62,7 @@ export async function switchTab(specificWindowId?: number): Promise<void> {
           });
           await chrome.storage.local.set({ enabled: false });
           await updateBadge(false);
-          return;
+          return false;
         }
       } else {
         // Global mode: switch in the currently focused window
@@ -74,14 +75,14 @@ export async function switchTab(specificWindowId?: number): Promise<void> {
     const tabs = await chrome.tabs.query({ windowId: targetWindowId });
 
     if (tabs.length <= 1) {
-      return; // Nothing to switch if only one tab
+      return false; // Nothing to switch if only one tab
     }
 
     const currentTab = tabs.find((tab) => tab.active);
 
     if (!currentTab || currentTab.index === undefined) {
       console.warn('No active tab found in target window');
-      return;
+      return false;
     }
 
     const currentTabIndex = currentTab.index;
@@ -104,7 +105,6 @@ export async function switchTab(specificWindowId?: number): Promise<void> {
       await chrome.storage.local.set({ lastSwitchTimes });
 
       // Enhanced logging with tab information
-      const { logTabSwitch } = await import('./logger.js');
       await logTabSwitch({
         windowId: targetWindowId,
         mode: windowMode === 'global' ? 'global' : 'window',
@@ -113,11 +113,14 @@ export async function switchTab(specificWindowId?: number): Promise<void> {
         previousTabTitle,
         newTabTitle,
       });
+      return true;
     }
+    return false;
   } catch (error) {
     console.error('Error switching tabs:', error);
     await logger.error('TabSwitcher', 'Error switching tabs', {
       error: error instanceof Error ? error.message : String(error),
     });
+    return false;
   }
 }
