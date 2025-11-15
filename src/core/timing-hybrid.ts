@@ -17,7 +17,7 @@ import { logger } from './logger.js';
 
 // Timer state (for setInterval approach)
 let intervalTimerId: number | undefined;
-let lastIntervalCheck: number = Date.now();
+// SECURITY: lastIntervalCheck removed - now stored in chrome.storage for service worker resilience
 
 /**
  * Start timer using setInterval (for sub-30-second delays)
@@ -33,15 +33,18 @@ async function startIntervalTimer(delayMs: number): Promise<void> {
   }
 
   // Store timer state in chrome.storage for restoration after service worker wake
+  // SECURITY: Store lastIntervalCheck in storage for service worker resilience
   await chrome.storage.local.set({
     usingIntervalTimer: true,
     intervalDelayMs: delayMs,
-    lastIntervalStart: Date.now()
+    lastIntervalStart: Date.now(),
+    lastIntervalCheck: Date.now()
   });
 
   // Start new interval with pause checking
   intervalTimerId = setInterval(async () => {
-    lastIntervalCheck = Date.now();
+    // SECURITY: Update lastIntervalCheck in storage instead of module variable
+    await chrome.storage.local.set({ lastIntervalCheck: Date.now() });
 
     const data = await getSettings(['enabled']);
     const enabled = data.enabled ?? DEFAULT_ENABLED;
@@ -93,7 +96,8 @@ async function stopIntervalTimer(): Promise<void> {
   await chrome.storage.local.set({
     usingIntervalTimer: false,
     intervalDelayMs: undefined,
-    lastIntervalStart: undefined
+    lastIntervalStart: undefined,
+    lastIntervalCheck: undefined
   });
 
   await logger.info('TimingHybrid', 'Interval timer and keep-alive stopped');
@@ -135,6 +139,7 @@ async function restoreIntervalTimerIfNeeded(): Promise<void> {
     'usingIntervalTimer',
     'intervalDelayMs',
     'lastIntervalStart',
+    'lastIntervalCheck',
     'enabled'
   ]);
 
@@ -142,6 +147,9 @@ async function restoreIntervalTimerIfNeeded(): Promise<void> {
   if (!data['usingIntervalTimer'] || !data['enabled'] || !data['intervalDelayMs']) {
     return;
   }
+
+  // SECURITY: Get lastIntervalCheck from storage instead of module variable
+  const lastIntervalCheck = data['lastIntervalCheck'] as number || Date.now();
 
   // Check if interval timer is actually running
   const timeSinceLastCheck = Date.now() - lastIntervalCheck;

@@ -1,4 +1,8 @@
 /**
+ * @jest-environment jsdom
+ */
+
+/**
  * Comprehensive tests for popup UI controller
  * Tests all UI interactions, validation, storage integration, and error handling
  */
@@ -127,7 +131,7 @@ describe('Popup UI Controller', () => {
         enabled: true,
       });
 
-      const { loadSettings } = await import('../popup/popup');
+      const { loadSettings } = await import('../popup/index');
       
       if (loadSettings) {
         await loadSettings();
@@ -145,7 +149,7 @@ describe('Popup UI Controller', () => {
       
       mockChrome.storage.local.get.mockResolvedValue({});
 
-      const { loadSettings } = await import('../popup/popup');
+      const { loadSettings } = await import('../popup/index');
       
       if (loadSettings) {
         await loadSettings();
@@ -166,7 +170,7 @@ describe('Popup UI Controller', () => {
         enabled: false,
       });
 
-      const { loadSettings } = await import('../popup/popup');
+      const { loadSettings } = await import('../popup/index');
       
       if (loadSettings) {
         await loadSettings();
@@ -184,7 +188,7 @@ describe('Popup UI Controller', () => {
         enabled: false,
       });
 
-      const { loadSettings } = await import('../popup/popup');
+      const { loadSettings } = await import('../popup/index');
       
       if (loadSettings) {
         await loadSettings();
@@ -202,7 +206,7 @@ describe('Popup UI Controller', () => {
         enabled: false,
       });
 
-      const { loadSettings } = await import('../popup/popup');
+      const { loadSettings } = await import('../popup/index');
       
       if (loadSettings) {
         await loadSettings();
@@ -219,7 +223,7 @@ describe('Popup UI Controller', () => {
       const error = new Error('Storage failed');
       mockChrome.storage.local.get.mockRejectedValue(error);
 
-      const { loadSettings } = await import('../popup/popup');
+      const { loadSettings } = await import('../popup/index');
       
       if (loadSettings) {
         await loadSettings();
@@ -238,7 +242,7 @@ describe('Popup UI Controller', () => {
 
       mockChrome.storage.local.set.mockResolvedValue(undefined);
 
-      const { saveSettings } = await import('../popup/popup');
+      const { saveSettings } = await import('../popup/index');
       
       if (saveSettings) {
         await saveSettings();
@@ -258,7 +262,7 @@ describe('Popup UI Controller', () => {
 
       mockChrome.storage.local.set.mockResolvedValue(undefined);
 
-      const { saveSettings } = await import('../popup/popup');
+      const { saveSettings } = await import('../popup/index');
       
       if (saveSettings) {
         await saveSettings();
@@ -278,7 +282,7 @@ describe('Popup UI Controller', () => {
 
       mockChrome.storage.local.set.mockResolvedValue(undefined);
 
-      const { saveSettings } = await import('../popup/popup');
+      const { saveSettings } = await import('../popup/index');
       
       if (saveSettings) {
         await saveSettings();
@@ -292,7 +296,7 @@ describe('Popup UI Controller', () => {
       
       delayTimeInput.value = 'invalid';
 
-      const { saveSettings } = await import('../popup/popup');
+      const { saveSettings } = await import('../popup/index');
       
       if (saveSettings) {
         await saveSettings();
@@ -307,7 +311,7 @@ describe('Popup UI Controller', () => {
       
       delayTimeInput.value = '0';
 
-      const { saveSettings } = await import('../popup/popup');
+      const { saveSettings } = await import('../popup/index');
       
       if (saveSettings) {
         await saveSettings();
@@ -322,7 +326,7 @@ describe('Popup UI Controller', () => {
       
       delayTimeInput.value = '3601';
 
-      const { saveSettings } = await import('../popup/popup');
+      const { saveSettings } = await import('../popup/index');
       
       if (saveSettings) {
         await saveSettings();
@@ -341,7 +345,7 @@ describe('Popup UI Controller', () => {
       const error = new Error('Storage write failed');
       mockChrome.storage.local.set.mockRejectedValue(error);
 
-      const { saveSettings } = await import('../popup/popup');
+      const { saveSettings } = await import('../popup/index');
       
       if (saveSettings) {
         await saveSettings();
@@ -480,7 +484,7 @@ describe('Popup UI Controller', () => {
 
       mockChrome.storage.local.set.mockResolvedValue(undefined);
 
-      const { saveSettings } = await import('../popup/popup');
+      const { saveSettings } = await import('../popup/index');
       
       if (saveSettings) {
         await saveSettings();
@@ -500,7 +504,7 @@ describe('Popup UI Controller', () => {
 
       mockChrome.storage.local.set.mockResolvedValue(undefined);
 
-      const { saveSettings } = await import('../popup/popup');
+      const { saveSettings } = await import('../popup/index');
       
       if (saveSettings) {
         await saveSettings();
@@ -520,7 +524,7 @@ describe('Popup UI Controller', () => {
 
       mockChrome.storage.local.set.mockResolvedValue(undefined);
 
-      const { saveSettings } = await import('../popup/popup');
+      const { saveSettings } = await import('../popup/index');
       
       if (saveSettings) {
         await saveSettings();

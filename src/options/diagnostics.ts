@@ -104,12 +104,18 @@ function renderLogEntry(entry: LogEntry): string {
   let windowIndicator = '';
 
   if (entry.data) {
-    if (entry.data.mode) {
-      const modeClass = entry.data.mode === 'global' ? 'mode-global' : 'mode-window';
-      modeIndicator = `<span class="log-mode ${modeClass}">${entry.data.mode === 'global' ? '🌐 Global' : '🪟 Window'}</span>`;
+    // SECURITY: Validate mode value to prevent XSS
+    if (entry.data['mode'] === 'global' || entry.data['mode'] === 'window') {
+      const modeClass = entry.data['mode'] === 'global' ? 'mode-global' : 'mode-window';
+      const modeText = entry.data['mode'] === 'global' ? '🌐 Global' : '🪟 Window';
+      modeIndicator = `<span class="log-mode ${modeClass}">${modeText}</span>`;
     }
-    if (entry.data.windowId !== undefined) {
-      windowIndicator = `<span class="log-window">Window ${entry.data.windowId}</span>`;
+    // SECURITY: Sanitize windowId to prevent injection
+    if (entry.data['windowId'] !== undefined) {
+      const windowId = parseInt(String(entry.data['windowId']));
+      if (!isNaN(windowId)) {
+        windowIndicator = `<span class="log-window">Window ${windowId}</span>`;
+      }
     }
   }
 

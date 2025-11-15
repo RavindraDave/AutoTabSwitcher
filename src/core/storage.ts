@@ -2,7 +2,7 @@
  * Storage management helpers
  */
 
-import { StorageData } from './types.js';
+import { StorageData, OperatingMode } from './types.js';
 import {
   DEFAULT_ENABLED,
   DEFAULT_ENABLE_ON_STARTUP,
@@ -11,6 +11,52 @@ import {
   DEFAULT_PAUSE_ON_ACTIVITY,
   DEFAULT_PAUSE_DURATION,
 } from './constants.js';
+
+/**
+ * Validate and sanitize operating mode value
+ * SECURITY: Prevents invalid values from storage being used
+ *
+ * @param value - The operating mode value to validate
+ * @returns Valid operating mode ('global' or 'window')
+ */
+export function validateOperatingMode(value: any): OperatingMode {
+  if (value === 'global' || value === 'window') {
+    return value;
+  }
+  console.warn(`Invalid operating mode value: ${value}, defaulting to 'global'`);
+  return DEFAULT_OPERATING_MODE;
+}
+
+/**
+ * Validate window ID
+ * SECURITY: Ensures windowId is a valid number
+ *
+ * @param windowId - The window ID to validate
+ * @returns true if valid, false otherwise
+ */
+export function isValidWindowId(windowId: any): windowId is number {
+  return typeof windowId === 'number' && !isNaN(windowId) && isFinite(windowId) && windowId > 0;
+}
+
+/**
+ * Check if a window exists
+ * SECURITY: Validates window existence before operations
+ *
+ * @param windowId - The window ID to check
+ * @returns true if window exists, false otherwise
+ */
+export async function windowExists(windowId: number): Promise<boolean> {
+  if (!isValidWindowId(windowId)) {
+    return false;
+  }
+
+  try {
+    await chrome.windows.get(windowId);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
 
 /**
  * Initialize default storage values on extension install
