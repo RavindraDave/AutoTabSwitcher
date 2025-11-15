@@ -257,6 +257,320 @@ describe('Badge Manager', () => {
     });
   });
 
+  describe('Window Mode Badge States (New Operating Mode)', () => {
+    test('should show ON for enabled window, OFF for disabled windows', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({
+        operatingMode: 'window',
+        windowStates: {
+          1: { enabled: true },
+          2: { enabled: false },
+        },
+      });
+
+      const mockWindows = [
+        { id: 1, tabs: [{ id: 10 }, { id: 11 }] }, // Enabled window
+        { id: 2, tabs: [{ id: 20 }, { id: 21 }] }, // Disabled window
+      ];
+
+      mockChrome.windows.getAll.mockResolvedValue(mockWindows);
+      mockChrome.action.setBadgeText.mockResolvedValue(undefined);
+      mockChrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
+
+      await updateBadge(true, false); // enabled param is ignored in window mode
+
+      // Window 1 tabs should show ON (green)
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 10,
+        text: 'ON',
+      });
+      expect(mockChrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+        tabId: 10,
+        color: '#4CAF50',
+      });
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 11,
+        text: 'ON',
+      });
+
+      // Window 2 tabs should show OFF (gray)
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 20,
+        text: 'OFF',
+      });
+      expect(mockChrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+        tabId: 20,
+        color: '#9E9E9E',
+      });
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 21,
+        text: 'OFF',
+      });
+    });
+
+    test('should show pause (orange) for enabled window when paused', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({
+        operatingMode: 'window',
+        windowStates: {
+          1: { enabled: true },
+        },
+      });
+
+      const mockWindows = [
+        { id: 1, tabs: [{ id: 10 }] },
+      ];
+
+      mockChrome.windows.getAll.mockResolvedValue(mockWindows);
+      mockChrome.action.setBadgeText.mockResolvedValue(undefined);
+      mockChrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
+
+      await updateBadge(true, true); // paused = true
+
+      // Should show pause symbol
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 10,
+        text: '⏸',
+      });
+      expect(mockChrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+        tabId: 10,
+        color: '#FF9800',
+      });
+    });
+
+    test('should show OFF for disabled window even when paused', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({
+        operatingMode: 'window',
+        windowStates: {
+          1: { enabled: false },
+        },
+      });
+
+      const mockWindows = [
+        { id: 1, tabs: [{ id: 10 }] },
+      ];
+
+      mockChrome.windows.getAll.mockResolvedValue(mockWindows);
+      mockChrome.action.setBadgeText.mockResolvedValue(undefined);
+      mockChrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
+
+      await updateBadge(true, true); // paused = true
+
+      // Disabled window should show OFF, not pause
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 10,
+        text: 'OFF',
+      });
+      expect(mockChrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+        tabId: 10,
+        color: '#9E9E9E',
+      });
+    });
+
+    test('should show OFF for window not in windowStates (defaults to disabled)', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({
+        operatingMode: 'window',
+        windowStates: {
+          1: { enabled: true },
+          // Window 2 not in windowStates
+        },
+      });
+
+      const mockWindows = [
+        { id: 1, tabs: [{ id: 10 }] },
+        { id: 2, tabs: [{ id: 20 }] }, // Not in windowStates
+      ];
+
+      mockChrome.windows.getAll.mockResolvedValue(mockWindows);
+      mockChrome.action.setBadgeText.mockResolvedValue(undefined);
+      mockChrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
+
+      await updateBadge(true, false);
+
+      // Window 1 should show ON
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 10,
+        text: 'ON',
+      });
+
+      // Window 2 should default to OFF
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 20,
+        text: 'OFF',
+      });
+      expect(mockChrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+        tabId: 20,
+        color: '#9E9E9E',
+      });
+    });
+
+    test('should handle undefined windowStates in window mode', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({
+        operatingMode: 'window',
+        // windowStates is undefined
+      });
+
+      const mockWindows = [
+        { id: 1, tabs: [{ id: 10 }] },
+      ];
+
+      mockChrome.windows.getAll.mockResolvedValue(mockWindows);
+      mockChrome.action.setBadgeText.mockResolvedValue(undefined);
+      mockChrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
+
+      await updateBadge(true, false);
+
+      // All windows should default to OFF when windowStates is undefined
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 10,
+        text: 'OFF',
+      });
+      expect(mockChrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+        tabId: 10,
+        color: '#9E9E9E',
+      });
+    });
+
+    test('should update badge for specific tab in window mode', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({
+        operatingMode: 'window',
+        windowStates: {
+          1: { enabled: true },
+          2: { enabled: false },
+        },
+      });
+
+      mockChrome.tabs.get.mockResolvedValue({
+        id: 123,
+        windowId: 1, // Enabled window
+      });
+      mockChrome.action.setBadgeText.mockResolvedValue(undefined);
+      mockChrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
+
+      await updateBadge(true, false, 123);
+
+      // Should only update this tab, and should show ON (from enabled window)
+      expect(mockChrome.tabs.get).toHaveBeenCalledWith(123);
+      expect(mockChrome.windows.getAll).not.toHaveBeenCalled();
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 123,
+        text: 'ON',
+      });
+      expect(mockChrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+        tabId: 123,
+        color: '#4CAF50',
+      });
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledTimes(1);
+    });
+
+    test('should update badge for tab in disabled window', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({
+        operatingMode: 'window',
+        windowStates: {
+          1: { enabled: true },
+          2: { enabled: false },
+        },
+      });
+
+      mockChrome.tabs.get.mockResolvedValue({
+        id: 123,
+        windowId: 2, // Disabled window
+      });
+      mockChrome.action.setBadgeText.mockResolvedValue(undefined);
+      mockChrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
+
+      await updateBadge(true, false, 123);
+
+      // Should show OFF (from disabled window)
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 123,
+        text: 'OFF',
+      });
+      expect(mockChrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+        tabId: 123,
+        color: '#9E9E9E',
+      });
+    });
+
+    test('should handle multiple windows with mixed states', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({
+        operatingMode: 'window',
+        windowStates: {
+          1: { enabled: true },
+          2: { enabled: false },
+          3: { enabled: true },
+          4: { enabled: false },
+        },
+      });
+
+      const mockWindows = [
+        { id: 1, tabs: [{ id: 10 }] }, // Enabled
+        { id: 2, tabs: [{ id: 20 }] }, // Disabled
+        { id: 3, tabs: [{ id: 30 }] }, // Enabled
+        { id: 4, tabs: [{ id: 40 }] }, // Disabled
+      ];
+
+      mockChrome.windows.getAll.mockResolvedValue(mockWindows);
+      mockChrome.action.setBadgeText.mockResolvedValue(undefined);
+      mockChrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
+
+      await updateBadge(true, false);
+
+      // Enabled windows should show ON
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 10,
+        text: 'ON',
+      });
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 30,
+        text: 'ON',
+      });
+
+      // Disabled windows should show OFF
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 20,
+        text: 'OFF',
+      });
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 40,
+        text: 'OFF',
+      });
+
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledTimes(4);
+    });
+
+    test('should prioritize operatingMode over legacy windowMode', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({
+        operatingMode: 'window', // New mode
+        windowMode: 'global', // Legacy mode - should be ignored
+        windowStates: {
+          1: { enabled: true },
+          2: { enabled: false },
+        },
+      });
+
+      const mockWindows = [
+        { id: 1, tabs: [{ id: 10 }] },
+        { id: 2, tabs: [{ id: 20 }] },
+      ];
+
+      mockChrome.windows.getAll.mockResolvedValue(mockWindows);
+      mockChrome.action.setBadgeText.mockResolvedValue(undefined);
+      mockChrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
+
+      await updateBadge(true, false);
+
+      // Should use operatingMode (window), not legacy windowMode (global)
+      // Window 1 should show ON, Window 2 should show OFF
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 10,
+        text: 'ON',
+      });
+      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 20,
+        text: 'OFF',
+      });
+    });
+  });
+
   describe('Specific Tab Updates', () => {
     test('should update only specified tab', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
