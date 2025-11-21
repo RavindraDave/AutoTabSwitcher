@@ -15,6 +15,7 @@ import {
 } from '../core/constants.js';
 import { StorageData } from '../core/types.js';
 import { validateDelayTime, validatePauseDuration } from '../popup/shared/validation.js';
+import { setDelayTime } from '../core/storage.js';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_SECONDS_ENV = isPacked()
@@ -222,19 +223,21 @@ async function saveSettings(): Promise<void> {
     ) as HTMLInputElement | null;
     const operatingMode = (checkedRadio?.value as 'global' | 'window') ?? 'global';
 
-    // Prepare settings object
-    const settings: Partial<StorageData> = {
-      delayTime: delayInSeconds * 1000, // Convert to milliseconds
+    // Save delayTime with automatic clamping using robust helper
+    const clampedDelayMs = await setDelayTime(delayInSeconds * 1000, {
       enableOnStartup: enableOnStartupCheckbox.checked,
       operatingMode,
       pauseOnActivity,
       pauseDuration,
-    };
+    });
 
-    // Save to storage
-    await chrome.storage.local.set(settings);
-
-    console.log('Settings saved:', settings);
+    console.log('Settings saved:', {
+      delayTime: clampedDelayMs,
+      enableOnStartup: enableOnStartupCheckbox.checked,
+      operatingMode,
+      pauseOnActivity,
+      pauseDuration,
+    });
     showSuccess('Settings saved successfully!');
   } catch (error) {
     console.error('Error saving settings:', error);
@@ -251,16 +254,15 @@ async function resetToDefaults(): Promise<void> {
   }
 
   try {
-    const defaultSettings: Partial<StorageData> = {
-      delayTime: DEFAULT_DELAY_SECONDS * 1000,
+    // Use setDelayTime helper to ensure clamping
+    await setDelayTime(DEFAULT_DELAY_SECONDS * 1000, {
       enabled: false,
       enableOnStartup: false,
       operatingMode: 'global',
       pauseOnActivity: false,
       pauseDuration: DEFAULT_PAUSE_DURATION_SECONDS * 1000,
-    };
+    });
 
-    await chrome.storage.local.set(defaultSettings);
     console.log('Settings reset to defaults');
 
     // Reload the page to show default values
