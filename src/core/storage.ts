@@ -10,7 +10,39 @@ import {
   DEFAULT_OPERATING_MODE,
   DEFAULT_PAUSE_ON_ACTIVITY,
   DEFAULT_PAUSE_DURATION,
+  MIN_DELAY_MS_DEVELOPMENT,
+  MIN_DELAY_MS_PRODUCTION,
 } from './constants.js';
+import { isPacked } from '../utils/environment.js';
+
+/**
+ * Get the minimum delay time based on environment
+ * IMPORTANT: This ensures delays respect environment-specific minimums
+ *
+ * @returns Minimum delay in milliseconds (60s for development, 5s for production)
+ */
+export function getMinDelayMs(): number {
+  return isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;
+}
+
+/**
+ * Clamp delay time to environment-specific minimum
+ * SECURITY: Ensures delay times are always valid for the current environment
+ * and compatible with Chrome alarms API constraints
+ *
+ * @param delayMs - The delay time in milliseconds
+ * @returns Clamped delay time (>= MIN_DELAY_MS for current environment)
+ */
+export function clampDelayTime(delayMs: number): number {
+  const minDelayMs = getMinDelayMs();
+  const clamped = Math.max(delayMs, minDelayMs);
+
+  if (clamped !== delayMs) {
+    console.log(`[Storage] Clamped delayTime from ${delayMs}ms to ${clamped}ms (min: ${minDelayMs}ms)`);
+  }
+
+  return clamped;
+}
 
 /**
  * Validate and sanitize operating mode value
@@ -60,14 +92,17 @@ export async function windowExists(windowId: number): Promise<boolean> {
 
 /**
  * Initialize default storage values on extension install
+ * ROBUST: Clamps defaultDelayTime to environment-specific minimum
  *
  * @param defaultDelayTime - The default delay time in milliseconds
  */
 export async function initializeStorage(defaultDelayTime: number): Promise<void> {
+  const clampedDelayTime = clampDelayTime(defaultDelayTime);
+
   await chrome.storage.local.set({
     enabled: DEFAULT_ENABLED,
     enableOnStartup: DEFAULT_ENABLE_ON_STARTUP,
-    delayTime: defaultDelayTime,
+    delayTime: clampedDelayTime,
     windowMode: DEFAULT_WINDOW_MODE, // Legacy field
     operatingMode: DEFAULT_OPERATING_MODE, // New mode system
     selectedWindowId: undefined,
@@ -85,6 +120,29 @@ export async function initializeStorage(defaultDelayTime: number): Promise<void>
  */
 export async function getSettings(keys: (keyof StorageData)[]): Promise<StorageData> {
   return await chrome.storage.local.get(keys) as StorageData;
+}
+
+/**
+ * Set delay time in storage with automatic clamping
+ * ROBUST: This is the recommended way to save delayTime to ensure it's always valid
+ * SECURITY: Automatically clamps to environment-specific minimum
+ *
+ * @param delayMs - The delay time in milliseconds
+ * @param additionalSettings - Optional additional settings to save atomically
+ * @returns The clamped delay time that was actually saved
+ */
+export async function setDelayTime(
+  delayMs: number,
+  additionalSettings?: Partial<StorageData>
+): Promise<number> {
+  const clampedDelayMs = clampDelayTime(delayMs);
+
+  await chrome.storage.local.set({
+    ...additionalSettings,
+    delayTime: clampedDelayMs,
+  });
+
+  return clampedDelayMs;
 }
 
 /**

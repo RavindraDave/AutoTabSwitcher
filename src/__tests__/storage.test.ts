@@ -3,9 +3,17 @@
  * Tests the security hardening features added to prevent invalid data
  */
 
-import { describe, expect, test, beforeEach } from '@jest/globals';
-import { validateOperatingMode, isValidWindowId, windowExists } from '../core/storage.js';
-import { DEFAULT_OPERATING_MODE } from '../core/constants.js';
+import { describe, expect, test, beforeEach, jest } from '@jest/globals';
+import {
+  validateOperatingMode,
+  isValidWindowId,
+  windowExists,
+  getMinDelayMs,
+  clampDelayTime,
+  setDelayTime,
+} from '../core/storage.js';
+import { DEFAULT_OPERATING_MODE, MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION } from '../core/constants.js';
+import * as environment from '../utils/environment.js';
 
 describe('Security Validation Tests', () => {
   beforeEach(() => {
@@ -286,6 +294,150 @@ describe('Security Validation Tests', () => {
 
       // Should complete 10000 validations in under 10ms
       expect(duration).toBeLessThan(10);
+    });
+  });
+
+  describe('Timer Duration Clamping', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    describe('getMinDelayMs', () => {
+      test('should return development minimum for unpacked extension', () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(false);
+
+        const result = getMinDelayMs();
+
+        expect(result).toBe(MIN_DELAY_MS_DEVELOPMENT);
+      });
+
+      test('should return production minimum for packed extension', () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(true);
+
+        const result = getMinDelayMs();
+
+        expect(result).toBe(MIN_DELAY_MS_PRODUCTION);
+      });
+    });
+
+    describe('clampDelayTime', () => {
+      test('should clamp to development minimum (60s) when unpacked', () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(false);
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        const result = clampDelayTime(10000); // 10 seconds
+
+        expect(result).toBe(MIN_DELAY_MS_DEVELOPMENT); // 60000ms
+        expect(consoleSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Clamped delayTime from 10000ms to 60000ms')
+        );
+
+        consoleSpy.mockRestore();
+      });
+
+      test('should clamp to production minimum (5s) when packed', () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(true);
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        const result = clampDelayTime(3000); // 3 seconds
+
+        expect(result).toBe(MIN_DELAY_MS_PRODUCTION); // 5000ms
+        expect(consoleSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Clamped delayTime from 3000ms to 5000ms')
+        );
+
+        consoleSpy.mockRestore();
+      });
+
+      test('should not clamp when value is above minimum', () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(false);
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        const result = clampDelayTime(120000); // 120 seconds
+
+        expect(result).toBe(120000);
+        expect(consoleSpy).not.toHaveBeenCalled();
+
+        consoleSpy.mockRestore();
+      });
+
+      test('should handle edge case: exactly at minimum', () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(false);
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        const result = clampDelayTime(MIN_DELAY_MS_DEVELOPMENT);
+
+        expect(result).toBe(MIN_DELAY_MS_DEVELOPMENT);
+        expect(consoleSpy).not.toHaveBeenCalled();
+
+        consoleSpy.mockRestore();
+      });
+
+      test('should clamp 10s to 60s in development (main bug fix)', () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(false);
+
+        const result = clampDelayTime(10000); // User sets 10 seconds
+
+        expect(result).toBe(60000); // Should be clamped to 60 seconds
+      });
+
+      test('should allow 10s in production', () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(true);
+
+        const result = clampDelayTime(10000); // User sets 10 seconds
+
+        expect(result).toBe(10000); // Should not be clamped (>= 5s minimum)
+      });
+    });
+
+    describe('setDelayTime', () => {
+      beforeEach(() => {
+        chrome.storage = {
+          local: {
+            set: jest.fn().mockResolvedValue(undefined),
+            get: jest.fn(),
+            remove: jest.fn(),
+            clear: jest.fn(),
+          },
+        } as any;
+      });
+
+      test('should save clamped delayTime to storage', async () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(false);
+
+        const result = await setDelayTime(10000);
+
+        expect(result).toBe(MIN_DELAY_MS_DEVELOPMENT);
+        expect(chrome.storage.local.set).toHaveBeenCalledWith({
+          delayTime: MIN_DELAY_MS_DEVELOPMENT,
+        });
+      });
+
+      test('should save additional settings atomically', async () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(false);
+
+        await setDelayTime(10000, {
+          enabled: true,
+          pauseOnActivity: true,
+        });
+
+        expect(chrome.storage.local.set).toHaveBeenCalledWith({
+          enabled: true,
+          pauseOnActivity: true,
+          delayTime: MIN_DELAY_MS_DEVELOPMENT,
+        });
+      });
+
+      test('should not clamp when value is valid', async () => {
+        jest.spyOn(environment, 'isPacked').mockReturnValue(true);
+
+        const result = await setDelayTime(30000);
+
+        expect(result).toBe(30000);
+        expect(chrome.storage.local.set).toHaveBeenCalledWith({
+          delayTime: 30000,
+        });
+      });
     });
   });
 });

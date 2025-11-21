@@ -6,6 +6,7 @@
 
 import { StorageData } from '../core/types.js';
 import { MIN_DELAY_SECONDS, MAX_DELAY_SECONDS, DEFAULT_PAUSE_DURATION_SECONDS } from '../core/constants.js';
+import { setDelayTime } from '../core/storage.js';
 
 // DOM Elements
 let delayTimeInput: HTMLInputElement;
@@ -232,10 +233,8 @@ async function saveSettings(): Promise<void> {
       selectedWindowId = currentWindow.id;
     }
 
-    // Save to storage
-    const delayTime = delayInSeconds * 1000;
-    await chrome.storage.local.set({
-      delayTime,
+    // Save delayTime with automatic clamping using robust helper
+    const clampedDelayMs = await setDelayTime(delayInSeconds * 1000, {
       windowMode,
       selectedWindowId,
       pauseOnActivity,
@@ -243,7 +242,7 @@ async function saveSettings(): Promise<void> {
     });
 
     console.log('Settings saved:', {
-      delayTime,
+      delayTime: clampedDelayMs,
       windowMode,
       selectedWindowId,
       pauseOnActivity,
