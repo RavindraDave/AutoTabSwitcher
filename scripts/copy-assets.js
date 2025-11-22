@@ -60,6 +60,21 @@ optionsHtmlFiles.forEach(file => {
   }
 });
 
+// Copy onboarding directory
+console.log('Copying onboarding HTML...');
+const onboardingDistDir = path.join(distDir, 'onboarding');
+if (!fs.existsSync(onboardingDistDir)) {
+  fs.mkdirSync(onboardingDistDir, { recursive: true });
+}
+
+const onboardingHtmlFiles = ['onboarding.html'];
+onboardingHtmlFiles.forEach(file => {
+  const srcPath = path.join(srcDir, 'onboarding', file);
+  if (fs.existsSync(srcPath)) {
+    fs.copyFileSync(srcPath, path.join(onboardingDistDir, file));
+  }
+});
+
 // Copy CSS directory
 console.log('Copying CSS files...');
 const cssDistDir = path.join(distDir, 'css');
