@@ -79,11 +79,39 @@ function showEnvironmentInfo(): void {
 }
 
 /**
+ * Update mode indicator badge
+ */
+function updateModeIndicator(mode: 'global' | 'window'): void {
+  const badge = document.getElementById('modeIndicatorBadge');
+  if (badge) {
+    if (mode === 'window') {
+      badge.textContent = '🪟 Window Mode Active';
+    } else {
+      badge.textContent = '🌐 Global Mode Active';
+    }
+  }
+}
+
+/**
  * Handle operating mode radio change
  */
 function handleOperatingModeChange(mode: 'global' | 'window'): void {
-  // Currently no UI changes needed when mode changes
-  // In the future, could show mode-specific settings here
+  // Apply visual theme
+  if (mode === 'window') {
+    document.body.classList.add('window-mode');
+  } else {
+    document.body.classList.remove('window-mode');
+  }
+
+  // Update mode indicator badge
+  updateModeIndicator(mode);
+
+  // Update preview description
+  const previewModeText = document.getElementById('previewModeText');
+  if (previewModeText) {
+    previewModeText.textContent = mode === 'window' ? 'Window Mode' : 'Global Mode';
+  }
+
   console.log('Operating mode changed to:', mode);
 }
 
@@ -96,6 +124,104 @@ function handlePauseOnActivityChange(checked: boolean): void {
   if (pauseOptionsContainer) {
     pauseOptionsContainer.style.display = checked ? 'block' : 'none';
   }
+
+  // Update impact summary
+  if (checked) {
+    updatePauseImpact();
+  }
+}
+
+/**
+ * Update pause impact summary text
+ */
+function updatePauseImpact(): void {
+  const pauseDurationInput = document.getElementById('pauseDurationInput') as HTMLInputElement;
+  const pauseImpact = document.getElementById('pauseImpact');
+
+  if (pauseImpact && pauseDurationInput) {
+    const duration = parseInt(pauseDurationInput.value, 10) || 30;
+    pauseImpact.innerHTML = `⏸️ With current settings, switching will pause for <strong>${duration} seconds</strong> after any activity`;
+  }
+}
+
+/**
+ * Validate input and show feedback
+ */
+function validateInput(
+  inputId: string,
+  iconId: string,
+  errorId: string,
+  min: number,
+  max: number,
+  fieldName: string
+): boolean {
+  const input = document.getElementById(inputId) as HTMLInputElement;
+  const icon = document.getElementById(iconId);
+  const error = document.getElementById(errorId);
+
+  if (!input || !icon || !error) return true;
+
+  const value = parseInt(input.value, 10);
+
+  // Clear previous state
+  input.classList.remove('input-valid', 'input-invalid');
+  icon.classList.remove('valid', 'invalid');
+  error.classList.remove('show');
+  error.textContent = '';
+
+  // Empty input
+  if (!input.value) {
+    return true; // Allow empty for now
+  }
+
+  // Validate range
+  if (isNaN(value) || value < min || value > max) {
+    input.classList.add('input-invalid');
+    icon.classList.add('invalid');
+    error.textContent = `${fieldName} must be between ${min} and ${max} seconds`;
+    error.classList.add('show');
+    return false;
+  }
+
+  // Valid
+  input.classList.add('input-valid');
+  icon.classList.add('valid');
+  return true;
+}
+
+/**
+ * Validate all inputs and update save button state
+ */
+function validateAllInputs(): boolean {
+  const delayValid = validateInput(
+    'defaultDelayInput',
+    'delayValidationIcon',
+    'delayValidationError',
+    MIN_DELAY_SECONDS_ENV,
+    MAX_DELAY_SECONDS,
+    'Default delay'
+  );
+
+  const pauseValid = validateInput(
+    'pauseDurationInput',
+    'pauseValidationIcon',
+    'pauseValidationError',
+    MIN_PAUSE_DURATION_SECONDS,
+    MAX_PAUSE_DURATION_SECONDS,
+    'Pause duration'
+  );
+
+  const allValid = delayValid && pauseValid;
+
+  // Update save button state
+  const saveButton = document.getElementById('saveButton') as HTMLButtonElement;
+  if (saveButton) {
+    saveButton.disabled = !allValid;
+    saveButton.style.opacity = allValid ? '1' : '0.6';
+    saveButton.style.cursor = allValid ? 'pointer' : 'not-allowed';
+  }
+
+  return allValid;
 }
 
 /**
@@ -148,6 +274,9 @@ async function loadSettings(): Promise<void> {
     } else if (operatingMode === 'window' && operatingModeWindow) {
       operatingModeWindow.checked = true;
     }
+
+    // Apply initial theme and mode indicator
+    handleOperatingModeChange(operatingMode);
 
     // Pause on activity
     const pauseOnActivityCheckbox = document.getElementById(
@@ -334,6 +463,11 @@ function initializeOptionsPage(): void {
         saveSettings();
       }
     });
+
+    // Real-time validation
+    defaultDelayInput.addEventListener('input', () => {
+      validateAllInputs();
+    });
   }
 
   if (pauseDurationInput) {
@@ -343,7 +477,16 @@ function initializeOptionsPage(): void {
         saveSettings();
       }
     });
+
+    // Update impact summary when duration changes
+    pauseDurationInput.addEventListener('input', () => {
+      updatePauseImpact();
+      validateAllInputs();
+    });
   }
+
+  // Initial validation
+  validateAllInputs();
 }
 
 // Initialize when DOM is ready

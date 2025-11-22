@@ -18,6 +18,9 @@ describe('Background Service Worker', () => {
     jest.spyOn(console, 'log').mockImplementation();
     jest.spyOn(console, 'warn').mockImplementation();
     jest.spyOn(console, 'error').mockImplementation();
+
+    // Default storage mock
+    mockChrome.storage.local.get.mockResolvedValue({});
   });
 
   describe('Constants', () => {

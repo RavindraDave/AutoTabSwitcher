@@ -1,0 +1,39 @@
+/**
+ * Shared Theme Styles
+ * Defines colors and gradients for Global and Window modes
+ */
+
+/* Global Mode Theme (Default) */
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-color: #667eea;
+    --secondary-color: #764ba2;
+    --bg-active: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    --shadow-color: rgba(102, 126, 234, 0.3);
+}
+
+/* Window Mode Theme Override */
+body.window-mode {
+    --primary-gradient: linear-gradient(135deg, #20B2AA 0%, #3CB371 100%);
+    --primary-color: #20B2AA;
+    --secondary-color: #3CB371;
+    --bg-active: linear-gradient(135deg, #E0F2F1 0%, #B2DFDB 100%);
+    --shadow-color: rgba(32, 178, 170, 0.3);
+}
+
+/* Common Utility Classes using Variables */
+.theme-gradient-bg {
+    background: var(--primary-gradient);
+}
+
+.theme-text {
+    color: var(--primary-color);
+}
+
+.theme-border {
+    border-color: var(--primary-color);
+}
+
+.theme-shadow {
+    box-shadow: 0 4px 12px var(--shadow-color);
+}

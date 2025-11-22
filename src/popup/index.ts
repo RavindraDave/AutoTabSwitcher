@@ -20,10 +20,8 @@ let countdownLabel: HTMLElement;
 let pulse: HTMLElement;
 let statusText: HTMLElement;
 let toggleButton: HTMLButtonElement;
-let advancedOptionsSection: HTMLElement;
-let switchToWindowModeButton: HTMLButtonElement;
-let backToGlobalSection: HTMLElement;
-let backToGlobalButton: HTMLButtonElement;
+let modeGlobalBtn: HTMLButtonElement;
+let modeWindowBtn: HTMLButtonElement;
 let modeValue: HTMLElement;
 let intervalValue: HTMLElement;
 let settingsButton: HTMLButtonElement;
@@ -36,7 +34,10 @@ let switchIntervalMs: number = 60000;
 /**
  * Initialize the popup
  */
-async function initializePopup(): Promise<void> {
+/**
+ * Initialize popup
+ */
+export async function initializePopup(): Promise<void> {
   // Get DOM elements
   header = document.getElementById('header')!;
   statusBadge = document.getElementById('statusBadge')!;
@@ -49,18 +50,16 @@ async function initializePopup(): Promise<void> {
   pulse = document.getElementById('pulse')!;
   statusText = document.getElementById('statusText')!;
   toggleButton = document.getElementById('toggleButton') as HTMLButtonElement;
-  advancedOptionsSection = document.getElementById('advancedOptionsSection')!;
-  switchToWindowModeButton = document.getElementById('switchToWindowModeButton') as HTMLButtonElement;
-  backToGlobalSection = document.getElementById('backToGlobalSection')!;
-  backToGlobalButton = document.getElementById('backToGlobalButton') as HTMLButtonElement;
+  modeGlobalBtn = document.getElementById('modeGlobalBtn') as HTMLButtonElement;
+  modeWindowBtn = document.getElementById('modeWindowBtn') as HTMLButtonElement;
   modeValue = document.getElementById('modeValue')!;
   intervalValue = document.getElementById('intervalValue')!;
   settingsButton = document.getElementById('settingsButton') as HTMLButtonElement;
 
   // Set up event listeners
   toggleButton.addEventListener('click', handleToggle);
-  switchToWindowModeButton.addEventListener('click', handleSwitchToWindowMode);
-  backToGlobalButton.addEventListener('click', handleBackToGlobal);
+  modeGlobalBtn.addEventListener('click', () => handleModeSwitch('global'));
+  modeWindowBtn.addEventListener('click', () => handleModeSwitch('window'));
   settingsButton.addEventListener('click', openSettings);
 
   // Listen for storage changes
@@ -127,8 +126,11 @@ async function updateUI(): Promise<void> {
     // Update toggle button
     updateToggleButton(isCurrentWindowEnabled, operatingMode);
 
-    // Update mode-specific sections (Advanced Options or Back to Global)
-    updateModeSections(operatingMode);
+    // Update segmented control state
+    updateSegmentedControl(operatingMode);
+
+    // Apply visual theme
+    applyTheme(operatingMode);
   } catch (error) {
     console.error('Error updating UI:', error);
   }
@@ -170,7 +172,10 @@ function updateState(enabled: boolean, paused: boolean): void {
     statusText.textContent = 'Auto-switching enabled';
     countdownRing.classList.remove('hidden');
     countdownLabel.textContent = 'seconds';
-    countdownCircle.style.stroke = 'url(#gradient-active)';
+    countdownLabel.textContent = 'seconds';
+    // Gradient URL will be updated by applyTheme
+    // countdownCircle.style.stroke = 'url(#gradient-active)';
+    pulse.style.display = 'block';
     pulse.style.display = 'block';
   }
 }
@@ -218,91 +223,92 @@ function updateToggleButton(
 }
 
 /**
- * Update mode-specific sections visibility
- * Shows "Advanced Options" in Global Mode or "Back to Global" in Window Mode
+ * Update segmented control UI state
  */
-function updateModeSections(operatingMode: string): void {
-  if (operatingMode === 'global') {
-    // Global Mode: Show advanced options to switch to Window Mode
-    advancedOptionsSection.classList.remove('hidden');
-    backToGlobalSection.classList.add('hidden');
+function updateSegmentedControl(operatingMode: string): void {
+  if (operatingMode === 'window') {
+    modeGlobalBtn.classList.remove('active');
+    modeWindowBtn.classList.add('active');
   } else {
-    // Window Mode: Show back button to return to Global Mode
-    advancedOptionsSection.classList.add('hidden');
-    backToGlobalSection.classList.remove('hidden');
+    modeGlobalBtn.classList.add('active');
+    modeWindowBtn.classList.remove('active');
   }
 }
 
 /**
- * Handle "Switch to Window Mode" button click
- * Switches to Window Mode and enables ONLY the current window
+ * Apply visual theme based on mode
  */
-async function handleSwitchToWindowMode(): Promise<void> {
-  try {
-    const currentWindow = await chrome.windows.getCurrent();
-    const currentWindowId = currentWindow.id;
-
-    if (currentWindowId === undefined) {
-      console.error('Could not get current window ID');
-      return;
+function applyTheme(operatingMode: string): void {
+  if (operatingMode === 'window') {
+    document.body.classList.add('window-mode');
+    // Update countdown circle gradient if active
+    if (header.classList.contains('active')) {
+      countdownCircle.style.stroke = 'url(#gradient-active-window)';
     }
+  } else {
+    document.body.classList.remove('window-mode');
+    // Update countdown circle gradient if active
+    if (header.classList.contains('active')) {
+      countdownCircle.style.stroke = 'url(#gradient-active)';
+    }
+  }
+}
 
-    // Get current window states
-    const data = await chrome.storage.local.get(['windowStates']) as StorageData;
-    const windowStates = data.windowStates ?? {};
+/**
+ * Handle mode switching via Segmented Control
+ */
+async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> {
+  try {
+    if (targetMode === 'window') {
+      // Switch to Window Mode
+      const currentWindow = await chrome.windows.getCurrent();
+      const currentWindowId = currentWindow.id;
 
-    // Get all windows
-    const allWindows = await chrome.windows.getAll();
-
-    // Disable ALL windows first
-    for (const window of allWindows) {
-      if (window.id !== undefined) {
-        windowStates[window.id] = {
-          enabled: false,
-          enabledTimestamp: undefined,
-          lastSwitchTime: windowStates[window.id]?.lastSwitchTime ?? Date.now(),
-        };
+      if (currentWindowId === undefined) {
+        console.error('Could not get current window ID');
+        return;
       }
+
+      // Get current window states
+      const data = await chrome.storage.local.get(['windowStates']) as StorageData;
+      const windowStates = data.windowStates ?? {};
+
+      // Get all windows
+      const allWindows = await chrome.windows.getAll();
+
+      // Disable ALL windows first (to match previous behavior of starting fresh in window mode)
+      // Or should we preserve states? The requirement says "automatically select the current window".
+      // Let's stick to the previous logic: Disable all, enable current.
+      for (const window of allWindows) {
+        if (window.id !== undefined) {
+          windowStates[window.id] = {
+            enabled: false,
+            enabledTimestamp: undefined,
+            lastSwitchTime: windowStates[window.id]?.lastSwitchTime ?? Date.now(),
+          };
+        }
+      }
+
+      // Enable ONLY the current window
+      windowStates[currentWindowId] = {
+        enabled: true,
+        enabledTimestamp: Date.now(),
+        lastSwitchTime: Date.now(),
+      };
+
+      await chrome.storage.local.set({
+        operatingMode: 'window',
+        windowStates,
+      });
+    } else {
+      // Switch to Global Mode
+      await chrome.storage.local.set({
+        operatingMode: 'global',
+        enabled: true, // Enable globally by default when switching back
+      });
     }
-
-    // Then enable ONLY the current window
-    windowStates[currentWindowId] = {
-      enabled: true,
-      enabledTimestamp: Date.now(),
-      lastSwitchTime: Date.now(),
-    };
-
-    // Switch to Window Mode and save states
-    await chrome.storage.local.set({
-      operatingMode: 'window',
-      windowStates,
-    });
-
-    console.log('Switched to Window Mode for current window:', currentWindowId);
-
-    // UI will update via storage change listener
   } catch (error) {
-    console.error('Error switching to window mode:', error);
-  }
-}
-
-/**
- * Handle "Back to Global Mode" button click
- * Switches back to Global Mode and enables all windows
- */
-async function handleBackToGlobal(): Promise<void> {
-  try {
-    // Switch back to Global Mode and enable globally
-    await chrome.storage.local.set({
-      operatingMode: 'global',
-      enabled: true, // Enable globally
-    });
-
-    console.log('Switched back to Global Mode');
-
-    // UI will update via storage change listener
-  } catch (error) {
-    console.error('Error switching back to global mode:', error);
+    console.error('Error switching mode:', error);
   }
 }
 
@@ -311,7 +317,7 @@ async function handleBackToGlobal(): Promise<void> {
  * In Global Mode: toggles global enabled state
  * In Window Mode: toggles current window's enabled state
  */
-async function handleToggle(): Promise<void> {
+export async function handleToggle(): Promise<void> {
   try {
     const data = await chrome.storage.local.get([
       'operatingMode',

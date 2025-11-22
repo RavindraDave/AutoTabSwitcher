@@ -19,6 +19,9 @@ export interface StorageData {
   // New fields for enhanced mode system
   operatingMode?: OperatingMode; // 'global' | 'window' - new mode system
   windowStates?: { [windowId: number]: WindowState }; // Per-window states for Window Mode
+
+  // Onboarding
+  hasSeenOnboarding?: boolean; // Whether user has completed the onboarding tour
 }
 
 /**

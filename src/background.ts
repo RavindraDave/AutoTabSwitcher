@@ -122,8 +122,8 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
   }
 
   const relevantChanges = 'enabled' in changes || 'delayTime' in changes ||
-                          'windowMode' in changes || 'selectedWindowId' in changes ||
-                          'operatingMode' in changes || 'windowStates' in changes;
+    'windowMode' in changes || 'selectedWindowId' in changes ||
+    'operatingMode' in changes || 'windowStates' in changes;
 
   if (relevantChanges) {
     console.log('Settings changed, restarting tab switcher (debounced)');
@@ -137,74 +137,74 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
     storageChangeTimeout = setTimeout(async () => {
       storageChangeTimeout = undefined;
 
-    // Enhanced logging for operating mode changes
-    if ('operatingMode' in changes) {
-      await logModeChange({
-        previousMode: changes['operatingMode'].oldValue || 'global',
-        newMode: changes['operatingMode'].newValue || 'global',
-      });
+      // Enhanced logging for operating mode changes
+      if ('operatingMode' in changes) {
+        await logModeChange({
+          previousMode: changes['operatingMode'].oldValue || 'global',
+          newMode: changes['operatingMode'].newValue || 'global',
+        });
 
-      // Update badge when operating mode changes
-      const data = await chrome.storage.local.get(['enabled']);
-      await updateBadge(data['enabled'] ?? false, false);
-    }
+        // Update badge when operating mode changes
+        const data = await chrome.storage.local.get(['enabled']);
+        await updateBadge(data['enabled'] ?? false, false);
+      }
 
-    // Enhanced logging for window state changes
-    if ('windowStates' in changes) {
-      const oldStates = changes['windowStates'].oldValue || {};
-      const newStates = changes['windowStates'].newValue || {};
+      // Enhanced logging for window state changes
+      if ('windowStates' in changes) {
+        const oldStates = changes['windowStates'].oldValue || {};
+        const newStates = changes['windowStates'].newValue || {};
 
-      // Find which window(s) changed
-      const allWindowIds = new Set([...Object.keys(oldStates), ...Object.keys(newStates)]);
+        // Find which window(s) changed
+        const allWindowIds = new Set([...Object.keys(oldStates), ...Object.keys(newStates)]);
 
-      for (const windowIdStr of allWindowIds) {
-        const windowId = Number(windowIdStr);
-        const oldEnabled = oldStates[windowId]?.enabled ?? false;
-        const newEnabled = newStates[windowId]?.enabled ?? false;
+        for (const windowIdStr of allWindowIds) {
+          const windowId = Number(windowIdStr);
+          const oldEnabled = oldStates[windowId]?.enabled ?? false;
+          const newEnabled = newStates[windowId]?.enabled ?? false;
 
-        if (oldEnabled !== newEnabled) {
+          if (oldEnabled !== newEnabled) {
+            await logWindowToggle({
+              windowId,
+              enabled: newEnabled,
+              mode: 'window',
+            });
+          }
+        }
+
+        // Update badge when window states change in Window mode
+        const data = await chrome.storage.local.get(['operatingMode']);
+        const mode = validateOperatingMode(data['operatingMode']);
+        if (mode === 'window') {
+          // Update all badges to reflect new window states
+          await updateBadge(false, false); // enabled param is ignored in window mode
+        }
+      }
+
+      // Enhanced logging for global enabled changes
+      if ('enabled' in changes) {
+        const data = await chrome.storage.local.get(['operatingMode']);
+        // SECURITY: Validate operating mode
+        const mode = validateOperatingMode(data['operatingMode']);
+
+        if (mode === 'global') {
           await logWindowToggle({
-            windowId,
-            enabled: newEnabled,
-            mode: 'window',
+            windowId: 0, // 0 indicates global
+            enabled: changes['enabled'].newValue ?? false,
+            mode: 'global',
           });
         }
       }
 
-      // Update badge when window states change in Window mode
-      const data = await chrome.storage.local.get(['operatingMode']);
-      const mode = validateOperatingMode(data['operatingMode']);
-      if (mode === 'window') {
-        // Update all badges to reflect new window states
-        await updateBadge(false, false); // enabled param is ignored in window mode
+      // Log setting changes
+      const changedSettings: Record<string, any> = {};
+      for (const [key, change] of Object.entries(changes)) {
+        if (relevantChanges) {
+          changedSettings[key] = {
+            old: change.oldValue,
+            new: change.newValue,
+          };
+        }
       }
-    }
-
-    // Enhanced logging for global enabled changes
-    if ('enabled' in changes) {
-      const data = await chrome.storage.local.get(['operatingMode']);
-      // SECURITY: Validate operating mode
-      const mode = validateOperatingMode(data['operatingMode']);
-
-      if (mode === 'global') {
-        await logWindowToggle({
-          windowId: 0, // 0 indicates global
-          enabled: changes['enabled'].newValue ?? false,
-          mode: 'global',
-        });
-      }
-    }
-
-    // Log setting changes
-    const changedSettings: Record<string, any> = {};
-    for (const [key, change] of Object.entries(changes)) {
-      if (relevantChanges) {
-        changedSettings[key] = {
-          old: change.oldValue,
-          new: change.newValue,
-        };
-      }
-    }
 
       logger.info('Settings', 'Settings changed', changedSettings);
       await toggleTabSwitcher();
@@ -225,6 +225,14 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
   if (details.reason === 'install') {
     await initializeStorage(DEFAULT_DELAY_TIME);
+
+    // Check if user has seen onboarding
+    const data = await getSettings(['hasSeenOnboarding']);
+    if (!data.hasSeenOnboarding) {
+      // Open onboarding tour
+      await chrome.tabs.create({ url: 'onboarding/onboarding.html' });
+      await logger.info('Onboarding', 'Opened onboarding tour for new user');
+    }
   } else if (details.reason === 'update') {
     // Migrate existing users to new operating mode system
     // NON-BREAKING: Defaults to 'global' mode to preserve existing behavior

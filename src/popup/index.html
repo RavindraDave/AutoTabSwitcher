@@ -1,411 +1,27 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auto Tab Switcher</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            width: 320px;
-            background: white;
-            overflow: hidden;
-        }
-
-        .popup-container {
-            width: 100%;
-            background: white;
-            border-radius: 0;
-        }
-
-        .header {
-            padding: 24px;
-            color: white;
-            text-align: center;
-            transition: background 0.3s ease;
-        }
-
-        .header.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .header.paused {
-            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-        }
-
-        .header.inactive {
-            background: linear-gradient(135deg, #9E9E9E 0%, #757575 100%);
-        }
-
-        .header h1 {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-        }
-
-        .content {
-            padding: 24px;
-        }
-
-        .status-card {
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 20px;
-            text-align: center;
-            position: relative;
-            transition: background 0.3s ease;
-        }
-
-        .status-card.active {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        }
-
-        .status-card.paused {
-            background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
-        }
-
-        .status-card.inactive {
-            background: linear-gradient(135deg, #FAFAFA 0%, #EEEEEE 100%);
-        }
-
-        .status-icon {
-            font-size: 42px;
-            margin-bottom: 12px;
-        }
-
-        .status-card.inactive .status-icon {
-            filter: grayscale(1);
-            opacity: 0.5;
-        }
-
-        .countdown-ring {
-            margin: 16px auto;
-            width: 80px;
-            height: 80px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .countdown-svg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            transform: rotate(-90deg);
-        }
-
-        .countdown-circle-bg {
-            fill: none;
-            stroke: rgba(102, 126, 234, 0.1);
-            stroke-width: 4;
-        }
-
-        .status-card.paused .countdown-circle-bg {
-            stroke: rgba(255, 152, 0, 0.2);
-        }
-
-        .countdown-circle {
-            fill: none;
-            stroke-width: 4;
-            stroke-linecap: round;
-            stroke-dasharray: 226;
-            stroke-dashoffset: 0;
-            transition: stroke-dashoffset 1s linear;
-        }
-
-        .countdown-number {
-            font-size: 24px;
-            font-weight: 700;
-            color: #667eea;
-            z-index: 1;
-        }
-
-        .status-card.paused .countdown-number {
-            color: #FF9800;
-        }
-
-        .countdown-label {
-            position: absolute;
-            bottom: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 11px;
-            color: #718096;
-            white-space: nowrap;
-        }
-
-        .status-text {
-            font-size: 14px;
-            color: #4a5568;
-            margin-top: 8px;
-        }
-
-        .status-card.inactive .status-text {
-            color: #718096;
-            margin-top: 12px;
-        }
-
-        .pulse {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            border: 2px solid rgba(102, 126, 234, 0.4);
-            border-radius: 50%;
-            animation: pulse-ring 2s infinite;
-        }
-
-        @keyframes pulse-ring {
-            0% {
-                transform: scale(0.95);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(1.3);
-                opacity: 0;
-            }
-        }
-
-        .toggle-section {
-            margin-bottom: 20px;
-        }
-
-        .toggle-button {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: white;
-        }
-
-        .toggle-button.enable {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-        }
-
-        .toggle-button.disable {
-            background: linear-gradient(135deg, #9E9E9E 0%, #757575 100%);
-            box-shadow: 0 4px 12px rgba(158, 158, 158, 0.3);
-        }
-
-        .toggle-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-        }
-
-        .toggle-button:active {
-            transform: translateY(0);
-        }
-
-        .form-text {
-            color: #718096;
-            font-size: 12px;
-            text-align: center;
-            display: block;
-            margin-top: 8px;
-            line-height: 1.4;
-        }
-
-        /* Advanced Options Section */
-        .advanced-section {
-            margin: 20px 0;
-            padding-top: 16px;
-        }
-
-        .section-divider {
-            height: 1px;
-            background: linear-gradient(to right, transparent, #e2e8f0, transparent);
-            margin-bottom: 16px;
-        }
-
-        .advanced-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #718096;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 12px;
-        }
-
-        .mode-switch-button {
-            width: 100%;
-            padding: 14px;
-            border: 1px solid #e2e8f0;
-            background: white;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: #4a5568;
-            text-align: left;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .mode-switch-button:hover {
-            background: #f7fafc;
-            border-color: #cbd5e0;
-            color: #2d3748;
-        }
-
-        .mode-switch-button:active {
-            transform: scale(0.98);
-        }
-
-        /* Back to Global Mode Section */
-        .back-section {
-            margin: 16px 0;
-        }
-
-        .back-button {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            background: transparent;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: #667eea;
-            text-align: left;
-        }
-
-        .back-button:hover {
-            background: #f7fafc;
-            color: #5568d3;
-        }
-
-        .back-button:active {
-            transform: scale(0.98);
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 14px;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            color: #718096;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .info-icon {
-            font-size: 16px;
-        }
-
-        .info-value {
-            color: #2d3748;
-            font-weight: 500;
-        }
-
-        .settings-button {
-            width: 100%;
-            padding: 14px;
-            border: 2px solid #667eea;
-            background: white;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #667eea;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 16px;
-        }
-
-        .settings-button:hover {
-            background: #667eea;
-            color: white;
-        }
-
-        .settings-button:active {
-            transform: scale(0.98);
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .window-info-alert {
-            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
-            border-left: 4px solid #2196F3;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-            display: none;
-        }
-
-        .window-info-alert.show {
-            display: block;
-        }
-
-        .window-info-alert .alert-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #0d47a1;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .window-info-alert .alert-text {
-            font-size: 13px;
-            color: #1976D2;
-            line-height: 1.5;
-            margin-bottom: 8px;
-        }
-
-        .window-info-alert .monitored-window {
-            font-size: 12px;
-            color: #0d47a1;
-            background: rgba(255, 255, 255, 0.6);
-            padding: 8px;
-            border-radius: 6px;
-            margin-top: 8px;
-            font-family: monospace;
-        }
-    </style>
+    <link rel="stylesheet" href="../css/theme.css">
+    <link rel="stylesheet" href="../css/popup.css">
 </head>
+</head>
+
 <body>
     <div class="popup-container">
         <div class="header" id="header">
             <h1>Auto Tab Switcher</h1>
             <div class="status-badge" id="statusBadge">LOADING...</div>
+        </div>
+
+        <div class="segmented-control-container">
+            <div class="segmented-control">
+                <button class="segment-btn active" id="modeGlobalBtn">Global</button>
+                <button class="segment-btn" id="modeWindowBtn">Window</button>
+            </div>
         </div>
         <div class="content">
             <!-- Window Info Alert (shown when popup opened on non-monitored window) -->
@@ -431,13 +47,18 @@
                                 <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
                                 <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
                             </linearGradient>
+                            <linearGradient id="gradient-active-window" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#20B2AA;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#3CB371;stop-opacity:1" />
+                            </linearGradient>
                             <linearGradient id="gradient-paused" x1="0%" y1="0%" x2="100%" y2="100%">
                                 <stop offset="0%" style="stop-color:#FF9800;stop-opacity:1" />
                                 <stop offset="100%" style="stop-color:#F57C00;stop-opacity:1" />
                             </linearGradient>
                         </defs>
-                        <circle class="countdown-circle-bg" cx="40" cy="40" r="36"/>
-                        <circle class="countdown-circle" id="countdownCircle" cx="40" cy="40" r="36" style="stroke: url(#gradient-active);"/>
+                        <circle class="countdown-circle-bg" cx="40" cy="40" r="36" />
+                        <circle class="countdown-circle" id="countdownCircle" cx="40" cy="40" r="36"
+                            style="stroke: url(#gradient-active);" />
                     </svg>
                     <div class="pulse" id="pulse"></div>
                     <div class="countdown-number" id="countdownNumber">--</div>
@@ -451,27 +72,7 @@
                 <button class="toggle-button" id="toggleButton">Toggle</button>
             </div>
 
-            <!-- Advanced Options Section (shown in Global Mode) -->
-            <div id="advancedOptionsSection" class="advanced-section hidden">
-                <div class="section-divider"></div>
-                <div class="advanced-label">Advanced Options</div>
-                <button class="mode-switch-button" id="switchToWindowModeButton">
-                    🪟 Switch to Window Mode
-                </button>
-                <small class="form-text">
-                    Control tab switching individually for each browser window
-                </small>
-            </div>
-
-            <!-- Back to Global Mode (shown in Window Mode) -->
-            <div id="backToGlobalSection" class="back-section hidden">
-                <button class="back-button" id="backToGlobalButton">
-                    ← Back to Global Mode
-                </button>
-                <small class="form-text">
-                    Control all windows together
-                </small>
-            </div>
+            <!-- Advanced Options and Back to Global sections removed -->
 
             <div class="info-row">
                 <span class="info-label">
@@ -491,11 +92,13 @@
             <button class="settings-button" id="settingsButton">⚙️ Open Settings</button>
 
             <div style="text-align: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
-                <a href="../options/diagnostics.html" target="_blank" style="color: #667eea; text-decoration: none; font-size: 13px;">🔍 View Diagnostics</a>
+                <a href="../options/diagnostics.html" target="_blank"
+                    style="color: #667eea; text-decoration: none; font-size: 13px;">🔍 View Diagnostics</a>
             </div>
         </div>
     </div>
 
     <script type="module" src="index.js"></script>
 </body>
+
 </html>

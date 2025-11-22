@@ -32,7 +32,10 @@ let pauseOnActivity = false;
 /**
  * Initialize settings page
  */
-async function initializeSettings(): Promise<void> {
+/**
+ * Initialize settings page
+ */
+export async function initializeSettings(): Promise<void> {
   // Get DOM elements
   delayTimeInput = document.getElementById('delayTimeInput') as HTMLInputElement;
   radioGlobal = document.getElementById('radioGlobal')!;
@@ -73,7 +76,10 @@ async function initializeSettings(): Promise<void> {
 /**
  * Load settings from storage
  */
-async function loadSettings(): Promise<void> {
+/**
+ * Load settings from storage
+ */
+export async function loadSettings(): Promise<void> {
   try {
     const data = await chrome.storage.local.get([
       'delayTime',
@@ -85,7 +91,7 @@ async function loadSettings(): Promise<void> {
 
     // Delay time
     const delayInSeconds = data.delayTime ? Math.round(data.delayTime / 1000) : MIN_DELAY_SECONDS;
-    delayTimeInput.value = String(delayInSeconds);
+    if (delayTimeInput) delayTimeInput.value = String(delayInSeconds);
 
     // Window mode
     const windowMode = data.windowMode ?? 'global';
@@ -103,7 +109,7 @@ async function loadSettings(): Promise<void> {
     const pauseDurationInSeconds = data.pauseDuration
       ? Math.round(data.pauseDuration / 1000)
       : DEFAULT_PAUSE_DURATION_SECONDS;
-    pauseDurationInput.value = String(pauseDurationInSeconds);
+    if (pauseDurationInput) pauseDurationInput.value = String(pauseDurationInSeconds);
   } catch (error) {
     console.error('Error loading settings:', error);
     showError('Failed to load settings');
@@ -113,18 +119,18 @@ async function loadSettings(): Promise<void> {
 /**
  * Select window mode
  */
-function selectWindowMode(mode: 'global' | 'current-window'): void {
+export function selectWindowMode(mode: 'global' | 'current-window'): void {
   // Update UI
-  radioGlobal.classList.remove('selected');
-  radioCurrentWindow.classList.remove('selected');
+  if (radioGlobal) radioGlobal.classList.remove('selected');
+  if (radioCurrentWindow) radioCurrentWindow.classList.remove('selected');
 
   if (mode === 'global') {
-    radioGlobal.classList.add('selected');
-    (radioInputs[0] as HTMLInputElement).checked = true;
-    windowInfo.style.display = 'none';
+    if (radioGlobal) radioGlobal.classList.add('selected');
+    if (radioInputs && radioInputs[0]) (radioInputs[0] as HTMLInputElement).checked = true;
+    if (windowInfo) windowInfo.style.display = 'none';
   } else {
-    radioCurrentWindow.classList.add('selected');
-    (radioInputs[1] as HTMLInputElement).checked = true;
+    if (radioCurrentWindow) radioCurrentWindow.classList.add('selected');
+    if (radioInputs && radioInputs[1]) (radioInputs[1] as HTMLInputElement).checked = true;
     // Show window info
     chrome.windows.getCurrent().then(win => {
       if (win.id) {
@@ -142,14 +148,16 @@ async function updateWindowInfo(windowId: number): Promise<void> {
     const win = await chrome.windows.get(windowId, { populate: true });
     const tabCount = win.tabs ? win.tabs.length : 0;
 
-    windowInfoText.innerHTML = `
-      <strong>Current window:</strong> Window ${windowId} (${tabCount} tabs)<br>
-      Auto-switching will only affect tabs in this window.
-    `;
-    windowInfo.style.display = 'block';
+    if (windowInfoText) {
+      windowInfoText.innerHTML = `
+        <strong>Current window:</strong> Window ${windowId} (${tabCount} tabs)<br>
+        Auto-switching will only affect tabs in this window.
+      `;
+    }
+    if (windowInfo) windowInfo.style.display = 'block';
   } catch (error) {
     console.error('Error getting window info:', error);
-    windowInfo.style.display = 'none';
+    if (windowInfo) windowInfo.style.display = 'none';
   }
 }
 
@@ -166,25 +174,25 @@ function togglePauseOnActivity(): void {
  */
 function updatePauseOnActivitySwitch(): void {
   if (pauseOnActivity) {
-    pauseOnActivitySwitch.classList.add('on');
-    pauseDurationSection.classList.remove('hidden');
+    if (pauseOnActivitySwitch) pauseOnActivitySwitch.classList.add('on');
+    if (pauseDurationSection) pauseDurationSection.classList.remove('hidden');
   } else {
-    pauseOnActivitySwitch.classList.remove('on');
-    pauseDurationSection.classList.add('hidden');
+    if (pauseOnActivitySwitch) pauseOnActivitySwitch.classList.remove('on');
+    if (pauseDurationSection) pauseDurationSection.classList.add('hidden');
   }
 }
 
 /**
  * Save settings
  */
-async function saveSettings(): Promise<void> {
+export async function saveSettings(): Promise<void> {
   hideMessages();
 
   try {
     // Validate delay time
     const delayInSeconds = parseInt(delayTimeInput.value, 10);
-    if (isNaN(delayInSeconds) || delayInSeconds < MIN_DELAY_SECONDS || delayInSeconds > MAX_DELAY_SECONDS) {
-      showError(`Delay time must be between ${MIN_DELAY_SECONDS} and ${MAX_DELAY_SECONDS} seconds`);
+    if (isNaN(delayInSeconds) || delayInSeconds < (MIN_DELAY_SECONDS || 60) || delayInSeconds > (MAX_DELAY_SECONDS || 3600)) {
+      showError(`Delay time must be between ${MIN_DELAY_SECONDS || 60} and ${MAX_DELAY_SECONDS || 3600} seconds`);
       return;
     }
 
