@@ -191,9 +191,27 @@ export async function saveSettings(): Promise<void> {
   try {
     // Validate delay time
     const delayInSeconds = parseInt(delayTimeInput.value, 10);
-    if (isNaN(delayInSeconds) || delayInSeconds < (MIN_DELAY_SECONDS || 60) || delayInSeconds > (MAX_DELAY_SECONDS || 3600)) {
-      showError(`Delay time must be between ${MIN_DELAY_SECONDS || 60} and ${MAX_DELAY_SECONDS || 3600} seconds`);
+    if (isNaN(delayInSeconds) || delayInSeconds < (MIN_DELAY_SECONDS || 2) || delayInSeconds > (MAX_DELAY_SECONDS || 3600)) {
+      showError(`Delay time must be between ${MIN_DELAY_SECONDS || 2} and ${MAX_DELAY_SECONDS || 3600} seconds`);
       return;
+    }
+
+    // Warn user about very low delay times
+    if (delayInSeconds < 5) {
+      const confirmed = confirm(
+        `⚠️ WARNING: Very Low Delay Time (${delayInSeconds} seconds)\n\n` +
+        `Setting a delay below 5 seconds can cause serious issues:\n\n` +
+        `• The extension may be VERY DIFFICULT TO STOP once started\n` +
+        `  (tabs will switch before you can click the stop button)\n\n` +
+        `• May cause browser performance problems\n\n` +
+        `• Can interfere with normal browsing\n\n` +
+        `This is NOT recommended for general use.\n\n` +
+        `Are you SURE you want to continue with ${delayInSeconds} seconds?`
+      );
+
+      if (!confirmed) {
+        return; // User cancelled
+      }
     }
 
     // Validate pause duration if enabled
