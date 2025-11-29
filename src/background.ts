@@ -72,6 +72,107 @@ async function toggleTabSwitcher(): Promise<void> {
 }
 
 /**
+ * Check if a window is being disabled in the windowStates change
+ * BUGFIX: Helper to detect disable operations for immediate handling
+ */
+function isWindowBeingDisabled(change: any): boolean {
+  if (!change || !change.oldValue || !change.newValue) {
+    return false;
+  }
+
+  const oldStates = change.oldValue;
+  const newStates = change.newValue;
+
+  // Check if any window went from enabled to disabled
+  for (const windowId in newStates) {
+    const wasEnabled = oldStates[windowId]?.enabled ?? false;
+    const isEnabled = newStates[windowId]?.enabled ?? false;
+
+    if (wasEnabled && !isEnabled) {
+      return true; // Found a window being disabled
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Handle settings change logging and badge updates
+ * BUGFIX: Extracted from debounced handler for reuse
+ */
+async function handleSettingsChange(changes: any): Promise<void> {
+  // Enhanced logging for operating mode changes
+  if ('operatingMode' in changes) {
+    await logModeChange({
+      previousMode: changes['operatingMode'].oldValue || 'global',
+      newMode: changes['operatingMode'].newValue || 'global',
+    });
+
+    // Update badge when operating mode changes
+    const data = await chrome.storage.local.get(['enabled']);
+    await updateBadge(data['enabled'] ?? false, false);
+  }
+
+  // Enhanced logging for window state changes
+  if ('windowStates' in changes) {
+    const oldStates = changes['windowStates'].oldValue || {};
+    const newStates = changes['windowStates'].newValue || {};
+
+    // Find which window(s) changed
+    const allWindowIds = new Set([...Object.keys(oldStates), ...Object.keys(newStates)]);
+
+    for (const windowIdStr of allWindowIds) {
+      const windowId = Number(windowIdStr);
+      const oldEnabled = oldStates[windowId]?.enabled ?? false;
+      const newEnabled = newStates[windowId]?.enabled ?? false;
+
+      if (oldEnabled !== newEnabled) {
+        await logWindowToggle({
+          windowId,
+          enabled: newEnabled,
+          mode: 'window',
+        });
+      }
+    }
+
+    // Update badge when window states change in Window mode
+    const data = await chrome.storage.local.get(['operatingMode']);
+    const mode = validateOperatingMode(data['operatingMode']);
+    if (mode === 'window') {
+      // Update all badges to reflect new window states
+      await updateBadge(false, false); // enabled param is ignored in window mode
+    }
+  }
+
+  // Enhanced logging for global enabled changes
+  if ('enabled' in changes) {
+    const data = await chrome.storage.local.get(['operatingMode']);
+    // SECURITY: Validate operating mode
+    const mode = validateOperatingMode(data['operatingMode']);
+
+    if (mode === 'global') {
+      await logWindowToggle({
+        windowId: 0, // 0 indicates global
+        enabled: changes['enabled'].newValue ?? false,
+        mode: 'global',
+      });
+    }
+  }
+
+  // Log setting changes
+  const changedSettings: Record<string, any> = {};
+  for (const [key, change] of Object.entries(changes)) {
+    const typedChange = change as { oldValue?: any; newValue?: any };
+    changedSettings[key] = {
+      old: typedChange.oldValue,
+      new: typedChange.newValue,
+    };
+  }
+
+  logger.info('Settings', 'Settings changed', changedSettings);
+}
+
+/**
  * Handle Window Mode toggle - NEW function for per-window control
  * This is isolated from existing global mode logic
  */
@@ -114,7 +215,7 @@ async function handleWindowModeToggle(
 /**
  * Handle storage changes - restart alarm if settings changed
  * ENHANCED: Now includes operatingMode and windowStates
- * SECURITY: Debounced to prevent race conditions from simultaneous storage changes
+ * BUGFIX: Skip debouncing for disable operations to prevent race conditions
  */
 chrome.storage.onChanged.addListener(async (changes, namespace) => {
   if (namespace !== 'local') {
@@ -126,89 +227,42 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
     'operatingMode' in changes || 'windowStates' in changes;
 
   if (relevantChanges) {
-    console.log('Settings changed, restarting tab switcher (debounced)');
+    // BUGFIX: Detect if this is a disable operation
+    const isDisableOperation =
+      ('enabled' in changes && changes['enabled'].newValue === false) ||
+      ('windowStates' in changes && isWindowBeingDisabled(changes['windowStates']));
 
-    // Clear any existing timeout to debounce rapid changes
-    if (storageChangeTimeout !== undefined) {
-      clearTimeout(storageChangeTimeout);
-    }
+    if (isDisableOperation) {
+      // BUGFIX: For disable operations, execute IMMEDIATELY without debouncing
+      console.log('Settings changed (disable operation), stopping tab switcher immediately');
 
-    // Debounce for 100ms to prevent race conditions
-    storageChangeTimeout = setTimeout(async () => {
-      storageChangeTimeout = undefined;
-
-      // Enhanced logging for operating mode changes
-      if ('operatingMode' in changes) {
-        await logModeChange({
-          previousMode: changes['operatingMode'].oldValue || 'global',
-          newMode: changes['operatingMode'].newValue || 'global',
-        });
-
-        // Update badge when operating mode changes
-        const data = await chrome.storage.local.get(['enabled']);
-        await updateBadge(data['enabled'] ?? false, false);
+      // Clear any existing timeout
+      if (storageChangeTimeout !== undefined) {
+        clearTimeout(storageChangeTimeout);
+        storageChangeTimeout = undefined;
       }
 
-      // Enhanced logging for window state changes
-      if ('windowStates' in changes) {
-        const oldStates = changes['windowStates'].oldValue || {};
-        const newStates = changes['windowStates'].newValue || {};
-
-        // Find which window(s) changed
-        const allWindowIds = new Set([...Object.keys(oldStates), ...Object.keys(newStates)]);
-
-        for (const windowIdStr of allWindowIds) {
-          const windowId = Number(windowIdStr);
-          const oldEnabled = oldStates[windowId]?.enabled ?? false;
-          const newEnabled = newStates[windowId]?.enabled ?? false;
-
-          if (oldEnabled !== newEnabled) {
-            await logWindowToggle({
-              windowId,
-              enabled: newEnabled,
-              mode: 'window',
-            });
-          }
-        }
-
-        // Update badge when window states change in Window mode
-        const data = await chrome.storage.local.get(['operatingMode']);
-        const mode = validateOperatingMode(data['operatingMode']);
-        if (mode === 'window') {
-          // Update all badges to reflect new window states
-          await updateBadge(false, false); // enabled param is ignored in window mode
-        }
-      }
-
-      // Enhanced logging for global enabled changes
-      if ('enabled' in changes) {
-        const data = await chrome.storage.local.get(['operatingMode']);
-        // SECURITY: Validate operating mode
-        const mode = validateOperatingMode(data['operatingMode']);
-
-        if (mode === 'global') {
-          await logWindowToggle({
-            windowId: 0, // 0 indicates global
-            enabled: changes['enabled'].newValue ?? false,
-            mode: 'global',
-          });
-        }
-      }
-
-      // Log setting changes
-      const changedSettings: Record<string, any> = {};
-      for (const [key, change] of Object.entries(changes)) {
-        if (relevantChanges) {
-          changedSettings[key] = {
-            old: change.oldValue,
-            new: change.newValue,
-          };
-        }
-      }
-
-      logger.info('Settings', 'Settings changed', changedSettings);
+      // Execute immediately
+      await handleSettingsChange(changes);
       await toggleTabSwitcher();
-    }, 100) as unknown as number;
+    } else {
+      // For enable/update operations, use debouncing as before
+      console.log('Settings changed, restarting tab switcher (debounced)');
+
+      // Clear any existing timeout to debounce rapid changes
+      if (storageChangeTimeout !== undefined) {
+        clearTimeout(storageChangeTimeout);
+      }
+
+      // Debounce for 100ms to prevent race conditions
+      storageChangeTimeout = setTimeout(async () => {
+        storageChangeTimeout = undefined;
+
+        // Use the extracted handler for consistency
+        await handleSettingsChange(changes);
+        await toggleTabSwitcher();
+      }, 100) as unknown as number;
+    }
   }
 });
 
@@ -437,11 +491,27 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
       // Only process if in Window Mode
       if (operatingMode === 'window' && data.windowStates && data.windowStates[windowId]) {
+        // BUGFIX: Check if this window is being stopped
+        if (windowTimerManager.isStopping(windowId)) {
+          console.log(`Window ${windowId} timer alarm fired but window is being stopped, aborting`);
+          return;
+        }
+
         const windowState = data.windowStates[windowId];
 
         if (windowState.enabled) {
+          // BUGFIX: Re-check after async storage operation
+          if (windowTimerManager.isStopping(windowId)) {
+            return;
+          }
+
           // Check if switching is paused due to user activity
           const paused = await isPaused();
+
+          // BUGFIX: Final check before tab switch
+          if (windowTimerManager.isStopping(windowId)) {
+            return;
+          }
 
           if (!paused) {
             // Perform tab switch for this window

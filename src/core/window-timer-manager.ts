@@ -7,16 +7,25 @@
 /**
  * Manages timers for individual windows in Window Mode
  * Uses Chrome alarms API for reliability across service worker suspensions
+ * BUGFIX: Added stopping flags to prevent race conditions
  */
 export class WindowTimerManager {
   private windowTimers: Map<number, number> = new Map();
+  // BUGFIX: Track which windows are actively stopping to prevent race conditions
+  private stoppingWindows: Set<number> = new Set();
+  // BUGFIX: Global flag to prevent all window timer operations when stopping all
+  private isStoppingAll: boolean = false;
 
   /**
    * Start a timer for a specific window
+   * BUGFIX: Clears stopping flag when starting
    * @param windowId - The window ID
    * @param delayMs - Delay in milliseconds
    */
   async startTimer(windowId: number, delayMs: number): Promise<void> {
+    // BUGFIX: Clear stopping flag for this window
+    this.stoppingWindows.delete(windowId);
+
     const alarmName = this.getAlarmName(windowId);
 
     // Use Chrome alarms for reliability
@@ -34,10 +43,14 @@ export class WindowTimerManager {
   /**
    * Stop a timer for a specific window
    * SECURITY: Verifies alarm was successfully cleared
+   * BUGFIX: Sets stopping flag immediately to prevent race conditions
    * @param windowId - The window ID
    * @returns true if timer was stopped, false if it wasn't running
    */
   async stopTimer(windowId: number): Promise<boolean> {
+    // BUGFIX: Set stopping flag IMMEDIATELY before any async operations
+    this.stoppingWindows.add(windowId);
+
     const alarmName = this.getAlarmName(windowId);
     const wasCleared = await chrome.alarms.clear(alarmName);
 
@@ -52,12 +65,20 @@ export class WindowTimerManager {
 
   /**
    * Stop all window timers
+   * BUGFIX: Stops timers in parallel and sets global stopping flag immediately
    */
   async stopAllTimers(): Promise<void> {
+    // BUGFIX: Set global stopping flag IMMEDIATELY
+    this.isStoppingAll = true;
+
     const windowIds = Array.from(this.windowTimers.keys());
-    for (const windowId of windowIds) {
-      await this.stopTimer(windowId);
-    }
+
+    // BUGFIX: Stop all timers in parallel instead of sequentially
+    await Promise.all(windowIds.map(windowId => this.stopTimer(windowId)));
+
+    // Reset the global flag and clear all stopping flags after all timers are stopped
+    this.isStoppingAll = false;
+    this.stoppingWindows.clear();
 
     console.log('[WindowTimerManager] Stopped all window timers');
   }
@@ -84,6 +105,16 @@ export class WindowTimerManager {
    */
   hasActiveTimer(windowId: number): boolean {
     return this.windowTimers.has(windowId);
+  }
+
+  /**
+   * Check if a window is currently being stopped
+   * BUGFIX: Allows alarm callbacks to check if they should abort
+   * @param windowId - The window ID
+   * @returns True if window is being stopped or all timers are being stopped
+   */
+  isStopping(windowId: number): boolean {
+    return this.isStoppingAll || this.stoppingWindows.has(windowId);
   }
 
   /**

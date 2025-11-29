@@ -73,6 +73,7 @@ const runtimeMock = {
   },
   getManifest: jest.fn().mockReturnValue({
     update_url: undefined, // Simulates unpacked extension
+    version: '1.0.0', // Mock version for tests
   }),
   lastError: undefined,
 };

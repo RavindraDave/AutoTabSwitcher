@@ -23,13 +23,16 @@ describe('Activity Tracker', () => {
     mockChrome.tabs.onActivated.addListener.mockReset();
     mockChrome.windows.onFocusChanged.addListener.mockReset();
 
-    // Import module (only once at top level)
-    if (!isPaused) {
-      const activityModule = await import('../core/activity-tracker.js');
-      isPaused = activityModule.isPaused;
-      recordUserActivity = activityModule.recordUserActivity;
-      setupActivityListeners = activityModule.setupActivityListeners;
-    }
+    // Default mock for storage.get
+    mockChrome.storage.local.get.mockResolvedValue({});
+    mockChrome.storage.local.set.mockResolvedValue(undefined);
+
+    // Reset module by clearing cache and reimporting
+    jest.resetModules();
+    const activityModule = await import('../core/activity-tracker.js');
+    isPaused = activityModule.isPaused;
+    recordUserActivity = activityModule.recordUserActivity;
+    setupActivityListeners = activityModule.setupActivityListeners;
   });
 
   describe('isPaused()', () => {
@@ -111,7 +114,7 @@ describe('Activity Tracker', () => {
       const storedActivity = Date.now() - 2000;
 
       mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys.includes('lastUserActivityTime')) {
+        if (Array.isArray(keys) && keys.includes('lastUserActivityTime')) {
           return Promise.resolve({ lastUserActivityTime: storedActivity });
         }
         return Promise.resolve({
@@ -122,8 +125,13 @@ describe('Activity Tracker', () => {
 
       await isPaused();
 
-      // Should have loaded from storage
-      expect(mockChrome.storage.local.get).toHaveBeenCalledWith(['lastUserActivityTime']);
+      // Should have called storage.get for both initialization and pause settings
+      expect(mockChrome.storage.local.get).toHaveBeenCalled();
+      const calls = mockChrome.storage.local.get.mock.calls;
+      const hasInitCall = calls.some((call: any[]) =>
+        Array.isArray(call[0]) && call[0].includes('lastUserActivityTime')
+      );
+      expect(hasInitCall).toBe(true);
     });
 
     test('should handle missing lastUserActivityTime in storage', async () => {
@@ -170,23 +178,23 @@ describe('Activity Tracker', () => {
       );
     });
 
-    test('should handle storage errors gracefully', () => {
+    test('should handle storage errors gracefully', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
       mockChrome.storage.local.set.mockRejectedValue(new Error('Storage error'));
 
+      // Call recordUserActivity and wait for the promise to settle
       recordUserActivity();
 
-      // Should not throw, error is caught
-      expect(() => recordUserActivity()).not.toThrow();
+      // Wait a bit for the async error handler to execute
+      await new Promise(resolve => setTimeout(resolve, 50));
 
-      // Wait for promise to reject
-      setTimeout(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          'Failed to persist activity time:',
-          expect.any(Error)
-        );
-        consoleErrorSpy.mockRestore();
-      }, 10);
+      // Should have logged the error
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to persist activity time:',
+        expect.any(Error)
+      );
+
+      consoleErrorSpy.mockRestore();
     });
 
     test('should update timestamp on multiple calls', () => {
