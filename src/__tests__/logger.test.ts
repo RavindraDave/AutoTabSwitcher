@@ -101,7 +101,9 @@ describe('Logger', () => {
 
     test('should handle storage errors gracefully', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      mockChrome.storage.local.get.mockRejectedValue(new Error('Storage error'));
+      // Make storage.get succeed but storage.set fail
+      mockChrome.storage.local.get.mockResolvedValue({ diagnosticLogs: [] });
+      mockChrome.storage.local.set.mockRejectedValue(new Error('Storage error'));
 
       await log('INFO', 'Test', 'Message');
 

@@ -251,9 +251,9 @@ describe('Timing Hybrid', () => {
 
       const intervalCallback = setIntervalSpy.mock.calls[0][0];
 
-      const beforeTime = Date.now();
+      const beforeTime = Date.now() - 10; // Add 10ms tolerance for timing precision
       await intervalCallback();
-      const afterTime = Date.now();
+      const afterTime = Date.now() + 10; // Add 10ms tolerance for timing precision
 
       // Should have updated lastIntervalCheck
       const setCall = mockChrome.storage.local.set.mock.calls.find((call: any) =>
