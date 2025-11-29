@@ -22,10 +22,11 @@ This PR addresses three critical user-reported bugs and implements a highly requ
 **Problem:** Users confused about valid timer ranges, unclear validation messages
 
 **Solution:**
-- Added clear range display in popup help text (e.g., "Range: 5-3600 seconds")
+- Added clear range display in popup help text (e.g., "Range: 2-3600 seconds")
 - Dynamic minimum delay display based on environment (dev vs production)
 - Improved validation error messages to show full valid range
 - Added HTML input min/max attributes for better browser validation
+- Warning for values below 5 seconds
 
 **Impact:** Users now clearly understand timer constraints
 

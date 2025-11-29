@@ -14,12 +14,12 @@ const mockChrome = (global as any).chrome;
 
 // Mock Constants
 jest.mock('../core/constants', () => ({
-  MIN_DELAY_SECONDS: 60,
+  MIN_DELAY_SECONDS: 2,
   MAX_DELAY_SECONDS: 3600,
   DEFAULT_PAUSE_DURATION_SECONDS: 30,
   MIN_PAUSE_DURATION_SECONDS: 5,
   MAX_PAUSE_DURATION_SECONDS: 300,
-  MIN_DELAY_MS_PRODUCTION: 5000,
+  MIN_DELAY_MS_PRODUCTION: 2000,
   MIN_DELAY_MS_DEVELOPMENT: 60000,
 }));
 
@@ -175,7 +175,7 @@ describe('Popup UI Controller', () => {
       }
 
       const delayInput = document.getElementById('delayTimeInput') as HTMLInputElement;
-      expect(delayInput.value).toBe('60'); // MIN_DELAY_SECONDS
+      expect(delayInput.value).toBe('2'); // MIN_DELAY_SECONDS
     });
   });
 

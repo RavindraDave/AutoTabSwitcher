@@ -366,10 +366,11 @@
             <div class="form-group">
                 <label class="form-label">Switch Interval</label>
                 <div class="input-group">
-                    <input type="number" class="input-field" id="delayTimeInput" min="60" max="3600" style="flex: 1;">
+                    <input type="number" class="input-field" id="delayTimeInput" min="2" max="3600" style="flex: 1;">
                     <span class="input-addon">seconds</span>
                 </div>
-                <span class="form-help">Time between automatic tab switches (60-3600 seconds)</span>
+                <span class="form-help">Time between automatic tab switches (2-3600 seconds)</span>
+                <span class="form-help" style="color: #d97706; font-weight: 600; margin-top: 8px;">⚠️ Warning: Values below 5 seconds may be difficult to stop and could cause performance issues.</span>
             </div>
         </div>
 

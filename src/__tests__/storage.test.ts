@@ -335,15 +335,15 @@ describe('Security Validation Tests', () => {
         consoleSpy.mockRestore();
       });
 
-      test('should clamp to production minimum (5s) when packed', () => {
+      test('should clamp to production minimum (2s) when packed', () => {
         jest.spyOn(environment, 'isPacked').mockReturnValue(true);
         const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-        const result = clampDelayTime(3000); // 3 seconds
+        const result = clampDelayTime(1000); // 1 second (below 2s minimum)
 
-        expect(result).toBe(MIN_DELAY_MS_PRODUCTION); // 5000ms
+        expect(result).toBe(MIN_DELAY_MS_PRODUCTION); // 2000ms
         expect(consoleSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Clamped delayTime from 3000ms to 5000ms')
+          expect.stringContaining('Clamped delayTime from 1000ms to 2000ms')
         );
 
         consoleSpy.mockRestore();

@@ -7,6 +7,7 @@
 
 import { StorageData } from '../core/types.js';
 import { isPaused } from '../core/activity-tracker.js';
+import { getMinDelayMs } from '../core/storage.js';
 
 // DOM Elements
 let header: HTMLElement;
@@ -29,7 +30,7 @@ let settingsButton: HTMLButtonElement;
 // State
 let countdownInterval: number | undefined;
 let nextSwitchTime: number = 0;
-let switchIntervalMs: number = 60000;
+let switchIntervalMs: number = getMinDelayMs(); // Use environment-specific minimum as initial value
 
 /**
  * Initialize the popup
@@ -96,7 +97,7 @@ async function updateUI(): Promise<void> {
       operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
     }
 
-    const delayTime = data.delayTime ?? 60000;
+    const delayTime = data.delayTime ?? getMinDelayMs(); // Fallback to environment-specific minimum
     switchIntervalMs = delayTime;
 
     // Get current window
