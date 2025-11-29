@@ -76,8 +76,9 @@ export class WindowTimerManager {
     // BUGFIX: Stop all timers in parallel instead of sequentially
     await Promise.all(windowIds.map(windowId => this.stopTimer(windowId)));
 
-    // Reset the global flag after all timers are stopped
+    // Reset the global flag and clear all stopping flags after all timers are stopped
     this.isStoppingAll = false;
+    this.stoppingWindows.clear();
 
     console.log('[WindowTimerManager] Stopped all window timers');
   }

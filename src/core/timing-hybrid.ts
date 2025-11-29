@@ -52,40 +52,49 @@ async function startIntervalTimer(delayMs: number): Promise<void> {
 
   // Start new interval with pause checking
   intervalTimerId = setInterval(async () => {
-    // BUGFIX: Immediate guard check before any async operations
-    if (isStopping || !isEnabled) {
-      return;
-    }
+    try {
+      // BUGFIX: Immediate guard check before any async operations
+      if (isStopping || !isEnabled) {
+        return;
+      }
 
-    // SECURITY: Update lastIntervalCheck in storage instead of module variable
-    await chrome.storage.local.set({ lastIntervalCheck: Date.now() });
+      // SECURITY: Update lastIntervalCheck in storage instead of module variable
+      await chrome.storage.local.set({ lastIntervalCheck: Date.now() });
 
-    // BUGFIX: Re-check after async storage operation
-    if (isStopping || !isEnabled) {
-      return;
-    }
+      // BUGFIX: Re-check after async storage operation
+      if (isStopping || !isEnabled) {
+        return;
+      }
 
-    const data = await getSettings(['enabled']);
-    const enabled = data.enabled ?? DEFAULT_ENABLED;
+      const data = await getSettings(['enabled']);
+      const enabled = data.enabled ?? DEFAULT_ENABLED;
 
-    // Short-circuit if disabled
-    if (!enabled || isStopping || !isEnabled) {
-      return;
-    }
+      // Short-circuit if disabled
+      if (!enabled || isStopping || !isEnabled) {
+        return;
+      }
 
-    const paused = await isPaused();
+      const paused = await isPaused();
 
-    // BUGFIX: Final check before tab switch
-    if (isStopping || !isEnabled) {
-      return;
-    }
+      // BUGFIX: Final check before tab switch
+      if (isStopping || !isEnabled) {
+        return;
+      }
 
-    if (paused) {
-      console.log('Auto-switching paused due to recent user activity');
-      await updateBadge(enabled, true);
-    } else {
-      await updateBadge(enabled, false);
-      await switchTab();
+      if (paused) {
+        console.log('Auto-switching paused due to recent user activity');
+        await updateBadge(enabled, true);
+      } else {
+        await updateBadge(enabled, false);
+        await switchTab();
+      }
+    } catch (error) {
+      // CRITICAL: Catch all errors to prevent interval from running in broken state
+      console.error('Error in interval timer callback:', error);
+      await logger.error('TimingHybrid', 'Interval callback failed', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   }, delayMs) as unknown as number;
 

@@ -518,4 +518,109 @@ describe('Race Condition Prevention', () => {
       expect(manager.getActiveWindows()).toHaveLength(0);
     });
   });
+
+  describe('Edge Cases and Stress Tests', () => {
+    test('should not restore timer after service worker wake if user disabled', async () => {
+      // Start interval timer
+      await toggleHybridTimer(true, 10000, 5000);
+      expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+
+      // User disables
+      await toggleHybridTimer(false, 10000, 5000);
+      expect(clearIntervalSpy).toHaveBeenCalled();
+
+      // Simulate service worker suspension and wake
+      // Storage has stale usingIntervalTimer flag, but enabled is false
+      mockChrome.storage.local.get.mockResolvedValue({
+        usingIntervalTimer: true, // Stale value from before disable
+        enabled: false, // User disabled - this is the source of truth
+        intervalDelayMs: 10000,
+        lastIntervalCheck: Date.now() - 30000 // Long gap suggests suspension
+      });
+
+      // Simulate keep-alive alarm firing (would try to restore timer)
+      setupAlarmListener();
+      const alarmCallback = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
+      await alarmCallback({ name: 'keepAlive' });
+
+      // Should NOT have restarted interval timer because enabled=false
+      // setIntervalSpy was called once during initial start, should not be called again
+      expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+      expect(switchTab).not.toHaveBeenCalled();
+    });
+
+    test('should handle rapid enable/disable cycles without errors', async () => {
+      // Stress test: Rapid enable/disable cycles
+      for (let i = 0; i < 20; i++) {
+        await toggleHybridTimer(true, 10000, 5000);
+        await toggleHybridTimer(false, 10000, 5000);
+      }
+
+      // Should be in clean stopped state
+      expect(switchTab).not.toHaveBeenCalled();
+      expect(clearIntervalSpy).toHaveBeenCalled();
+
+      // Verify no intervals are still running
+      const finalState = await mockChrome.storage.local.get(['usingIntervalTimer']);
+      // Can't check exact value as it depends on last call, but should not error
+      expect(finalState).toBeDefined();
+
+      // Should be able to start cleanly after rapid cycles
+      mockChrome.storage.local.get.mockResolvedValue({ enabled: true });
+      await toggleHybridTimer(true, 10000, 5000);
+
+      // Should have started successfully
+      expect(setIntervalSpy).toHaveBeenCalled();
+    });
+
+    test('should handle concurrent window timer operations', async () => {
+      const manager = new WindowTimerManager();
+
+      // Start many windows concurrently
+      await Promise.all([
+        manager.startTimer(1, 10000),
+        manager.startTimer(2, 10000),
+        manager.startTimer(3, 10000),
+        manager.startTimer(4, 10000),
+        manager.startTimer(5, 10000),
+      ]);
+
+      // All windows should be active
+      expect(manager.getActiveWindows()).toHaveLength(5);
+      expect(manager.hasActiveTimer(1)).toBe(true);
+      expect(manager.hasActiveTimer(2)).toBe(true);
+      expect(manager.hasActiveTimer(3)).toBe(true);
+      expect(manager.hasActiveTimer(4)).toBe(true);
+      expect(manager.hasActiveTimer(5)).toBe(true);
+
+      // Stop some windows concurrently while others are running
+      await Promise.all([
+        manager.stopTimer(1),
+        manager.stopTimer(3),
+        manager.stopTimer(5),
+      ]);
+
+      // Only stopped windows should be inactive
+      expect(manager.hasActiveTimer(1)).toBe(false);
+      expect(manager.hasActiveTimer(2)).toBe(true);
+      expect(manager.hasActiveTimer(3)).toBe(false);
+      expect(manager.hasActiveTimer(4)).toBe(true);
+      expect(manager.hasActiveTimer(5)).toBe(false);
+
+      // Stop all remaining windows
+      await manager.stopAllTimers();
+
+      // All should be stopped and clean
+      expect(manager.getActiveWindows()).toHaveLength(0);
+      expect(manager.isStopping(1)).toBe(false); // Flags should be cleared
+      expect(manager.isStopping(2)).toBe(false);
+      expect(manager.isStopping(3)).toBe(false);
+      expect(manager.isStopping(4)).toBe(false);
+      expect(manager.isStopping(5)).toBe(false);
+
+      // Should be able to restart after concurrent operations
+      await manager.startTimer(1, 10000);
+      expect(manager.hasActiveTimer(1)).toBe(true);
+    });
+  });
 });
