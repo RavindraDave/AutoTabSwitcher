@@ -97,7 +97,7 @@ describe('Timing Hybrid', () => {
       expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 10000);
 
       // Should create keep-alive alarm
-      expect(mockChrome.alarms.create).toHaveBeenCalledWith('keepalive', {
+      expect(mockChrome.alarms.create).toHaveBeenCalledWith('keepAlive', {
         delayInMinutes: 1,
         periodInMinutes: 1,
       });
@@ -131,7 +131,7 @@ describe('Timing Hybrid', () => {
 
       // Should NOT create keep-alive alarm
       expect(mockChrome.alarms.create).not.toHaveBeenCalledWith(
-        'keepalive',
+        'keepAlive',
         expect.anything()
       );
     });
@@ -181,7 +181,7 @@ describe('Timing Hybrid', () => {
 
       expect(clearIntervalSpy).toHaveBeenCalled();
       expect(mockChrome.alarms.clear).toHaveBeenCalledWith('tabSwitcher');
-      expect(mockChrome.alarms.clear).toHaveBeenCalledWith('keepalive');
+      expect(mockChrome.alarms.clear).toHaveBeenCalledWith('keepAlive');
       expect(setIntervalSpy).not.toHaveBeenCalled();
       expect(updateBadge).toHaveBeenCalledWith(false);
     });
@@ -235,6 +235,9 @@ describe('Timing Hybrid', () => {
       (getSettings as jest.Mock).mockResolvedValue({ enabled: false });
 
       await toggleHybridTimer(true, 10000, 5000);
+
+      // Clear the updateBadge call from toggleHybridTimer
+      (updateBadge as jest.Mock).mockClear();
 
       const intervalCallback = setIntervalSpy.mock.calls[0][0];
       await intervalCallback();
@@ -327,6 +330,9 @@ describe('Timing Hybrid', () => {
     });
 
     test('should execute tab switch when main alarm fires', async () => {
+      // Start timer first to set in-memory flags
+      await toggleHybridTimer(true, 60000, 5000);
+
       setupAlarmListener();
 
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
@@ -340,6 +346,9 @@ describe('Timing Hybrid', () => {
 
     test('should handle pause when main alarm fires', async () => {
       (isPaused as jest.Mock).mockResolvedValue(true);
+
+      // Start timer first to set in-memory flags
+      await toggleHybridTimer(true, 60000, 5000);
 
       setupAlarmListener();
 
@@ -365,6 +374,9 @@ describe('Timing Hybrid', () => {
 
   describe('setupAlarmListener() - Keep-Alive Alarm', () => {
     test('should handle keep-alive alarm', async () => {
+      // Start an interval timer first
+      await toggleHybridTimer(true, 10000, 5000);
+
       mockChrome.storage.local.get.mockResolvedValue({
         usingIntervalTimer: false,
       });
@@ -374,7 +386,7 @@ describe('Timing Hybrid', () => {
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
 
       // Simulate keep-alive alarm
-      await listener({ name: 'keepalive' });
+      await listener({ name: 'keepAlive' });
 
       // Should have checked storage for timer state
       expect(mockChrome.storage.local.get).toHaveBeenCalled();
@@ -382,6 +394,9 @@ describe('Timing Hybrid', () => {
 
     test('should restore interval timer after service worker wake', async () => {
       const oldTime = Date.now() - 100000; // 100 seconds ago
+
+      // Start timer first
+      await toggleHybridTimer(true, 10000, 5000);
 
       mockChrome.storage.local.get.mockResolvedValue({
         usingIntervalTimer: true,
@@ -393,7 +408,7 @@ describe('Timing Hybrid', () => {
       setupAlarmListener();
 
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
-      await listener({ name: 'keepalive' });
+      await listener({ name: 'keepAlive' });
 
       // Should have restarted the interval timer
       expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 10000);
@@ -419,7 +434,7 @@ describe('Timing Hybrid', () => {
       setupAlarmListener();
 
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
-      await listener({ name: 'keepalive' });
+      await listener({ name: 'keepAlive' });
 
       // Should NOT restart the interval timer
       expect(setIntervalSpy).not.toHaveBeenCalled();
@@ -434,7 +449,7 @@ describe('Timing Hybrid', () => {
       setupAlarmListener();
 
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
-      await listener({ name: 'keepalive' });
+      await listener({ name: 'keepAlive' });
 
       expect(setIntervalSpy).not.toHaveBeenCalled();
     });
@@ -450,7 +465,7 @@ describe('Timing Hybrid', () => {
       setupAlarmListener();
 
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
-      await listener({ name: 'keepalive' });
+      await listener({ name: 'keepAlive' });
 
       expect(setIntervalSpy).not.toHaveBeenCalled();
     });
@@ -466,13 +481,16 @@ describe('Timing Hybrid', () => {
       setupAlarmListener();
 
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
-      await listener({ name: 'keepalive' });
+      await listener({ name: 'keepAlive' });
 
       expect(setIntervalSpy).not.toHaveBeenCalled();
     });
 
     test('should calculate gap intervals correctly', async () => {
       const oldTime = Date.now() - 50000; // 50 seconds ago
+
+      // Start timer first
+      await toggleHybridTimer(true, 10000, 5000);
 
       mockChrome.storage.local.get.mockResolvedValue({
         usingIntervalTimer: true,
@@ -484,7 +502,7 @@ describe('Timing Hybrid', () => {
       setupAlarmListener();
 
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
-      await listener({ name: 'keepalive' });
+      await listener({ name: 'keepAlive' });
 
       expect(logger.warn).toHaveBeenCalledWith(
         'TimingHybrid',
@@ -537,7 +555,7 @@ describe('Timing Hybrid', () => {
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
 
       // Should not throw, should use Date.now() as fallback
-      await expect(listener({ name: 'keepalive' })).resolves.not.toThrow();
+      await expect(listener({ name: 'keepAlive' })).resolves.not.toThrow();
     });
 
     test('should handle alarm with unknown name', async () => {
@@ -572,6 +590,9 @@ describe('Timing Hybrid', () => {
       const gapTime = intervalDelayMs * 2.5; // More than 2x
       const oldTime = Date.now() - gapTime;
 
+      // Start timer first
+      await toggleHybridTimer(true, 10000, 5000);
+
       mockChrome.storage.local.get.mockResolvedValue({
         usingIntervalTimer: true,
         enabled: true,
@@ -582,7 +603,7 @@ describe('Timing Hybrid', () => {
       setupAlarmListener();
 
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
-      await listener({ name: 'keepalive' });
+      await listener({ name: 'keepAlive' });
 
       // Should detect suspension and restore
       expect(setIntervalSpy).toHaveBeenCalled();
@@ -608,7 +629,7 @@ describe('Timing Hybrid', () => {
       setupAlarmListener();
 
       const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
-      await listener({ name: 'keepalive' });
+      await listener({ name: 'keepAlive' });
 
       // Should NOT restore
       expect(setIntervalSpy).not.toHaveBeenCalled();
