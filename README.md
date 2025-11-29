@@ -7,7 +7,7 @@ A powerful Chrome extension that automatically cycles through open tabs at confi
 ### Core Functionality
 - 🔄 **Automatic tab cycling** - Cycles through tabs in sequential order
 - 🪟 **Dual operating modes** - Global Mode (all windows) or Window Mode (per-window control)
-- ⏱️ **Configurable delays** - 5 seconds to 1 hour (environment-aware)
+- ⏱️ **Configurable delays** - 2 seconds to 1 hour (environment-aware, ⚠️ <5s not recommended)
 - ⏸️ **Pause on activity** - Automatically pause when user is active
 - 🎚️ **Easy toggle** - Enable/disable with a single click
 - 💾 **Persistent settings** - All settings saved across browser sessions
@@ -73,7 +73,7 @@ A powerful Chrome extension that automatically cycles through open tabs at confi
 
 1. **Click the extension icon** to open the popup
 2. **Configure your settings**:
-   - **Delay Time**: 60-3600 seconds (5-3600 for production)
+   - **Delay Time**: 60-3600 seconds (2-3600 for production) ⚠️ Values below 5s not recommended
    - **Operating Mode**: Choose Global Mode or Window Mode
    - **Pause on Activity**: Automatically pause when you're active
 3. **Click Save** to apply changes
@@ -144,7 +144,9 @@ The extension adapts minimum delays based on environment:
 | Environment | Minimum Delay | How to Identify |
 |-------------|---------------|-----------------|
 | **Development** (unpacked) | 60 seconds | "Development Mode" in popup |
-| **Production** (Chrome Web Store) | 5 seconds | "Production Mode" in popup |
+| **Production** (Chrome Web Store) | 2 seconds ⚠️ | "Production Mode" in popup |
+
+**Note**: Values below 5 seconds may be difficult to stop and can cause performance issues.
 
 ### Enhanced Diagnostic Logging
 
@@ -352,7 +354,7 @@ zip -r ../auto-tab-switcher.zip . -x "*.map" "*.DS_Store"
 
 The extension automatically detects the environment at runtime:
 - **Unpacked (dev)**: 60-second minimum delay
-- **Chrome Web Store**: 5-second minimum delay
+- **Chrome Web Store**: 2-second minimum delay (⚠️ <5s not recommended)
 
 ### TypeScript Configuration
 

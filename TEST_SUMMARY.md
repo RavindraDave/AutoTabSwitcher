@@ -39,7 +39,7 @@ A comprehensive test suite has been created for the Auto Tab Switcher Chrome ext
 #### Test Coverage:
 - ✅ **Constants validation** - Min/max/default delay values
 - ✅ **Input validation**:
-  - Valid delay times (1-3600 seconds)
+  - Valid delay times (2-3600 seconds)
   - NaN rejection
   - Below minimum rejection
   - Negative values rejection
@@ -66,7 +66,7 @@ A comprehensive test suite has been created for the Auto Tab Switcher Chrome ext
   - Error element reuse
 - ✅ **Edge cases**:
   - Maximum delay time (3600 seconds)
-  - Minimum delay time (1 second)
+  - Minimum delay time (2 seconds)
   - Decimal input handling
 
 **Total Test Cases:** 35

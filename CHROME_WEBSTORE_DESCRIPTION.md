@@ -69,7 +69,7 @@ Auto Tab Switcher is a powerful Chrome extension that automatically cycles throu
 4. Repeat for other windows as needed
 
 **Configure Settings:**
-- Set tab switching interval (5-3600 seconds)
+- Set tab switching interval (2-3600 seconds, ⚠️ <5s not recommended)
 - Enable pause on activity
 - Choose operating mode
 - Customize behavior to your needs
