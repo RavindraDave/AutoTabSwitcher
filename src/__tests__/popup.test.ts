@@ -32,6 +32,12 @@ jest.mock('../core/storage', () => ({
   getSettings: jest.fn().mockResolvedValue({}),
   initializeStorage: jest.fn().mockResolvedValue(undefined),
   validateOperatingMode: jest.fn().mockImplementation((mode) => mode),
+  getMinDelayMs: jest.fn().mockReturnValue(2000),
+}));
+
+// Mock Activity Tracker
+jest.mock('../core/activity-tracker', () => ({
+  isPaused: jest.fn().mockResolvedValue(false),
 }));
 
 // Mock DOM
@@ -56,10 +62,8 @@ const createMockDOM = () => {
   const pulse = createEl('pulse');
   const statusText = createEl('statusText');
   const toggleButton = createEl('toggleButton', 'button');
-  const advancedOptionsSection = createEl('advancedOptionsSection');
-  const switchToWindowModeButton = createEl('switchToWindowModeButton', 'button');
-  const backToGlobalSection = createEl('backToGlobalSection');
-  const backToGlobalButton = createEl('backToGlobalButton', 'button');
+  const modeGlobalBtn = createEl('modeGlobalBtn', 'button');
+  const modeWindowBtn = createEl('modeWindowBtn', 'button');
   const modeValue = createEl('modeValue');
   const intervalValue = createEl('intervalValue');
   const settingsButton = createEl('settingsButton', 'button');
