@@ -26,6 +26,16 @@ let backButton: HTMLAnchorElement;
 let resetButton: HTMLButtonElement;
 let saveButton: HTMLButtonElement;
 
+// Modal Elements
+let confirmModal: HTMLElement;
+let modalTitle: HTMLElement;
+let modalSubtitle: HTMLElement;
+let modalMessage: HTMLElement;
+let modalWarningList: HTMLElement;
+let modalFooterMessage: HTMLElement;
+let modalCancelBtn: HTMLButtonElement;
+let modalConfirmBtn: HTMLButtonElement;
+
 // State
 let pauseOnActivity = false;
 
@@ -53,6 +63,16 @@ export async function initializeSettings(): Promise<void> {
   backButton = document.getElementById('backButton') as HTMLAnchorElement;
   resetButton = document.getElementById('resetButton') as HTMLButtonElement;
   saveButton = document.getElementById('saveButton') as HTMLButtonElement;
+
+  // Modal elements
+  confirmModal = document.getElementById('confirmModal')!;
+  modalTitle = document.getElementById('modalTitle')!;
+  modalSubtitle = document.getElementById('modalSubtitle')!;
+  modalMessage = document.getElementById('modalMessage')!;
+  modalWarningList = document.getElementById('modalWarningList')!;
+  modalFooterMessage = document.getElementById('modalFooterMessage')!;
+  modalCancelBtn = document.getElementById('modalCancelBtn') as HTMLButtonElement;
+  modalConfirmBtn = document.getElementById('modalConfirmBtn') as HTMLButtonElement;
 
   // Set up event listeners
   radioGlobal.addEventListener('click', () => selectWindowMode('global'));
@@ -183,6 +203,77 @@ function updatePauseOnActivitySwitch(): void {
 }
 
 /**
+ * Show custom confirmation modal
+ * @param title - Modal title
+ * @param subtitle - Modal subtitle
+ * @param message - Modal message
+ * @param showWarnings - Whether to show the warning list (default: false)
+ * @returns Promise that resolves to true if confirmed, false if cancelled
+ */
+function showConfirmModal(title: string, subtitle: string, message: string, showWarnings: boolean = false): Promise<boolean> {
+  return new Promise((resolve) => {
+    // Set modal content
+    modalTitle.textContent = title;
+    modalSubtitle.textContent = subtitle;
+    modalMessage.textContent = message;
+
+    // Show/hide warning list
+    if (showWarnings) {
+      modalWarningList.style.display = 'block';
+      modalFooterMessage.style.display = 'block';
+    } else {
+      modalWarningList.style.display = 'none';
+      modalFooterMessage.style.display = 'none';
+    }
+
+    // Show modal
+    confirmModal.classList.add('show');
+
+    // Handle confirm
+    const handleConfirm = () => {
+      confirmModal.classList.remove('show');
+      cleanup();
+      resolve(true);
+    };
+
+    // Handle cancel
+    const handleCancel = () => {
+      confirmModal.classList.remove('show');
+      cleanup();
+      resolve(false);
+    };
+
+    // Handle escape key
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCancel();
+      }
+    };
+
+    // Handle click outside modal
+    const handleClickOutside = (e: MouseEvent) => {
+      if (e.target === confirmModal) {
+        handleCancel();
+      }
+    };
+
+    // Cleanup function
+    const cleanup = () => {
+      modalConfirmBtn.removeEventListener('click', handleConfirm);
+      modalCancelBtn.removeEventListener('click', handleCancel);
+      document.removeEventListener('keydown', handleEscape);
+      confirmModal.removeEventListener('click', handleClickOutside);
+    };
+
+    // Add event listeners
+    modalConfirmBtn.addEventListener('click', handleConfirm);
+    modalCancelBtn.addEventListener('click', handleCancel);
+    document.addEventListener('keydown', handleEscape);
+    confirmModal.addEventListener('click', handleClickOutside);
+  });
+}
+
+/**
  * Save settings
  */
 export async function saveSettings(): Promise<void> {
@@ -198,15 +289,11 @@ export async function saveSettings(): Promise<void> {
 
     // Warn user about very low delay times
     if (delayInSeconds < 5) {
-      const confirmed = confirm(
-        `⚠️ WARNING: Very Low Delay Time (${delayInSeconds} seconds)\n\n` +
-        `Setting a delay below 5 seconds can cause serious issues:\n\n` +
-        `• The extension may be VERY DIFFICULT TO STOP once started\n` +
-        `  (tabs will switch before you can click the stop button)\n\n` +
-        `• May cause browser performance problems\n\n` +
-        `• Can interfere with normal browsing\n\n` +
-        `This is NOT recommended for general use.\n\n` +
-        `Are you SURE you want to continue with ${delayInSeconds} seconds?`
+      const confirmed = await showConfirmModal(
+        `Very Low Delay Time (${delayInSeconds} seconds)`,
+        'This setting may cause issues',
+        `You are about to set the delay to ${delayInSeconds} seconds. Are you absolutely sure you want to continue?`,
+        true // Show warnings
       );
 
       if (!confirmed) {
@@ -241,10 +328,10 @@ export async function saveSettings(): Promise<void> {
       currentSelectedWindowId !== undefined &&
       isCurrentlyEnabled
     ) {
-      const confirmed = confirm(
-        `⚠️ Warning: Switching to Global mode\n\n` +
-        `This will override the current window-only mode (Window ${currentSelectedWindowId}) and apply auto-switching to ALL windows.\n\n` +
-        `Do you want to continue?`
+      const confirmed = await showConfirmModal(
+        'Switching to Global Mode',
+        'This will affect all windows',
+        `This will override the current window-only mode (Window ${currentSelectedWindowId}) and apply auto-switching to ALL windows. Do you want to continue?`
       );
 
       if (!confirmed) {
@@ -291,7 +378,13 @@ export async function saveSettings(): Promise<void> {
  * Reset to default settings
  */
 async function resetToDefaults(): Promise<void> {
-  if (!confirm('Are you sure you want to reset all settings to defaults?')) {
+  const confirmed = await showConfirmModal(
+    'Reset to Defaults',
+    'This will reset all settings',
+    'All your custom settings will be reset to their default values. This action cannot be undone. Do you want to continue?'
+  );
+
+  if (!confirmed) {
     return;
   }
 
