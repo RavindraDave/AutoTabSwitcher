@@ -270,16 +270,15 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
         return;
       }
 
-      // Get current window states
-      const data = await chrome.storage.local.get(['windowStates']) as StorageData;
+      // Get current states
+      const data = await chrome.storage.local.get(['windowStates', 'enabled']) as StorageData;
       const windowStates = data.windowStates ?? {};
+      const wasGloballyEnabled = data.enabled ?? false;
 
       // Get all windows
       const allWindows = await chrome.windows.getAll();
 
-      // Disable ALL windows first (to match previous behavior of starting fresh in window mode)
-      // Or should we preserve states? The requirement says "automatically select the current window".
-      // Let's stick to the previous logic: Disable all, enable current.
+      // Disable ALL windows first
       for (const window of allWindows) {
         if (window.id !== undefined) {
           windowStates[window.id] = {
@@ -290,12 +289,14 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
         }
       }
 
-      // Enable ONLY the current window
-      windowStates[currentWindowId] = {
-        enabled: true,
-        enabledTimestamp: Date.now(),
-        lastSwitchTime: Date.now(),
-      };
+      // Only enable current window if it was previously enabled in global mode
+      if (wasGloballyEnabled) {
+        windowStates[currentWindowId] = {
+          enabled: true,
+          enabledTimestamp: Date.now(),
+          lastSwitchTime: Date.now(),
+        };
+      }
 
       await chrome.storage.local.set({
         operatingMode: 'window',
@@ -303,9 +304,22 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
       });
     } else {
       // Switch to Global Mode
+      const currentWindow = await chrome.windows.getCurrent();
+      const currentWindowId = currentWindow.id;
+
+      if (currentWindowId === undefined) {
+        console.error('Could not get current window ID');
+        return;
+      }
+
+      // Get current window state to preserve enabled status
+      const data = await chrome.storage.local.get(['windowStates']) as StorageData;
+      const windowStates = data.windowStates ?? {};
+      const wasWindowEnabled = windowStates[currentWindowId]?.enabled ?? false;
+
       await chrome.storage.local.set({
         operatingMode: 'global',
-        enabled: true, // Enable globally by default when switching back
+        enabled: wasWindowEnabled, // Preserve the current window's enabled state
       });
     }
   } catch (error) {
