@@ -503,7 +503,14 @@ async function updateCountdown(): Promise<void> {
     // Recalculate next switch time if we have a lastSwitchTime
     // This ensures accuracy when tabs are switched in background
     if (lastSwitchTime) {
-      const calculatedNextSwitch = lastSwitchTime + switchIntervalMs;
+      // Calculate when the next switch should occur
+      let calculatedNextSwitch = lastSwitchTime + switchIntervalMs;
+
+      // If the calculated time is in the past, find the next future switch time
+      // by adding intervals until we're in the future
+      while (calculatedNextSwitch <= now) {
+        calculatedNextSwitch += switchIntervalMs;
+      }
 
       // If our stored nextSwitchTime differs significantly, update it
       if (Math.abs(nextSwitchTime - calculatedNextSwitch) > 2000) {

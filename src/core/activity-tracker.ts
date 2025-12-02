@@ -70,34 +70,50 @@ export function setupActivityListeners(): void {
   /**
    * Detect tab updates (user navigating, reloading, etc.)
    */
-  chrome.tabs.onUpdated.addListener((_tabId, changeInfo, _tab) => {
+  chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, _tab) => {
     // Only count meaningful updates as activity
     if (changeInfo.url || changeInfo.status === 'loading') {
-      recordUserActivity();
+      // Only record activity if pause-on-activity is enabled
+      const data = await chrome.storage.local.get(['pauseOnActivity']) as StorageData;
+      if (data.pauseOnActivity ?? DEFAULT_PAUSE_ON_ACTIVITY) {
+        recordUserActivity();
+      }
     }
   });
 
   /**
    * Detect new tab creation (user opening tabs)
    */
-  chrome.tabs.onCreated.addListener(() => {
-    recordUserActivity();
+  chrome.tabs.onCreated.addListener(async () => {
+    // Only record activity if pause-on-activity is enabled
+    const data = await chrome.storage.local.get(['pauseOnActivity']) as StorageData;
+    if (data.pauseOnActivity ?? DEFAULT_PAUSE_ON_ACTIVITY) {
+      recordUserActivity();
+    }
   });
 
   /**
    * Detect tab switching (user manually switching tabs)
    */
-  chrome.tabs.onActivated.addListener(() => {
-    recordUserActivity();
+  chrome.tabs.onActivated.addListener(async () => {
+    // Only record activity if pause-on-activity is enabled
+    const data = await chrome.storage.local.get(['pauseOnActivity']) as StorageData;
+    if (data.pauseOnActivity ?? DEFAULT_PAUSE_ON_ACTIVITY) {
+      recordUserActivity();
+    }
   });
 
   /**
    * Detect window focus changes (user switching windows)
    */
-  chrome.windows.onFocusChanged.addListener((windowId) => {
+  chrome.windows.onFocusChanged.addListener(async (windowId) => {
     // windowId is -1 when all Chrome windows lose focus
     if (windowId !== chrome.windows.WINDOW_ID_NONE) {
-      recordUserActivity();
+      // Only record activity if pause-on-activity is enabled
+      const data = await chrome.storage.local.get(['pauseOnActivity']) as StorageData;
+      if (data.pauseOnActivity ?? DEFAULT_PAUSE_ON_ACTIVITY) {
+        recordUserActivity();
+      }
     }
   });
 }
