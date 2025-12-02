@@ -250,7 +250,8 @@ describe('Activity Tracker', () => {
       );
     });
 
-    test('should record activity on URL change', () => {
+    test('should record activity on URL change', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({ pauseOnActivity: true });
       mockChrome.storage.local.set.mockResolvedValue(undefined);
       setupActivityListeners();
 
@@ -258,7 +259,7 @@ describe('Activity Tracker', () => {
       const callback = mockChrome.tabs.onUpdated.addListener.mock.calls[0][0];
 
       // Simulate URL change
-      callback(123, { url: 'https://example.com' }, {});
+      await callback(123, { url: 'https://example.com' }, {});
 
       expect(mockChrome.storage.local.set).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -267,14 +268,15 @@ describe('Activity Tracker', () => {
       );
     });
 
-    test('should record activity on tab loading', () => {
+    test('should record activity on tab loading', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({ pauseOnActivity: true });
       mockChrome.storage.local.set.mockResolvedValue(undefined);
       setupActivityListeners();
 
       const callback = mockChrome.tabs.onUpdated.addListener.mock.calls[0][0];
 
       // Simulate tab loading
-      callback(123, { status: 'loading' }, {});
+      await callback(123, { status: 'loading' }, {});
 
       expect(mockChrome.storage.local.set).toHaveBeenCalled();
     });
@@ -291,38 +293,41 @@ describe('Activity Tracker', () => {
       expect(mockChrome.storage.local.set).not.toHaveBeenCalled();
     });
 
-    test('should record activity on tab creation', () => {
+    test('should record activity on tab creation', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({ pauseOnActivity: true });
       mockChrome.storage.local.set.mockResolvedValue(undefined);
       setupActivityListeners();
 
       const callback = mockChrome.tabs.onCreated.addListener.mock.calls[0][0];
 
       // Simulate tab creation
-      callback({ id: 123 });
+      await callback({ id: 123 });
 
       expect(mockChrome.storage.local.set).toHaveBeenCalled();
     });
 
-    test('should record activity on tab activation', () => {
+    test('should record activity on tab activation', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({ pauseOnActivity: true });
       mockChrome.storage.local.set.mockResolvedValue(undefined);
       setupActivityListeners();
 
       const callback = mockChrome.tabs.onActivated.addListener.mock.calls[0][0];
 
       // Simulate tab activation
-      callback({ tabId: 123, windowId: 1 });
+      await callback({ tabId: 123, windowId: 1 });
 
       expect(mockChrome.storage.local.set).toHaveBeenCalled();
     });
 
-    test('should record activity on window focus change', () => {
+    test('should record activity on window focus change', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({ pauseOnActivity: true });
       mockChrome.storage.local.set.mockResolvedValue(undefined);
       setupActivityListeners();
 
       const callback = mockChrome.windows.onFocusChanged.addListener.mock.calls[0][0];
 
       // Simulate window focus change
-      callback(100);
+      await callback(100);
 
       expect(mockChrome.storage.local.set).toHaveBeenCalled();
     });

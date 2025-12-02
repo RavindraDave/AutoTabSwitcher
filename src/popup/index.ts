@@ -363,7 +363,9 @@ export async function handleToggle(): Promise<void> {
       windowStates[currentWindowId] = {
         enabled: !isCurrentlyEnabled,
         enabledTimestamp: !isCurrentlyEnabled ? Date.now() : undefined,
-        lastSwitchTime: currentWindowState?.lastSwitchTime ?? Date.now(),
+        // BUGFIX: Always use Date.now() when enabling to start timer fresh
+        // When disabling, preserve old value for consistency (though it's unused)
+        lastSwitchTime: !isCurrentlyEnabled ? Date.now() : (currentWindowState?.lastSwitchTime ?? Date.now()),
       };
 
       await chrome.storage.local.set({ windowStates });
