@@ -99,10 +99,30 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       console.log(`Switched to next tab in window ${targetWindowId} (mode: ${windowMode})`);
 
       // Store the timestamp of this switch per window
-      const data = await chrome.storage.local.get(['lastSwitchTimes']) as StorageData;
+      const now = Date.now();
+      const data = await chrome.storage.local.get(['lastSwitchTimes', 'windowStates', 'operatingMode']) as StorageData;
       const lastSwitchTimes = data.lastSwitchTimes || {};
-      lastSwitchTimes[targetWindowId] = Date.now();
-      await chrome.storage.local.set({ lastSwitchTimes });
+      lastSwitchTimes[targetWindowId] = now;
+
+      // BUGFIX: Also update windowStates.lastSwitchTime for Window Mode
+      // This ensures the popup timer works correctly in Window Mode
+      const operatingMode = data.operatingMode;
+      if (operatingMode === 'window' && data.windowStates?.[targetWindowId]) {
+        const windowStates = { ...data.windowStates };
+        const currentState = windowStates[targetWindowId];
+        if (currentState) {
+          windowStates[targetWindowId] = {
+            enabled: currentState.enabled,
+            enabledTimestamp: currentState.enabledTimestamp,
+            lastSwitchTime: now
+          };
+          await chrome.storage.local.set({ lastSwitchTimes, windowStates });
+        } else {
+          await chrome.storage.local.set({ lastSwitchTimes });
+        }
+      } else {
+        await chrome.storage.local.set({ lastSwitchTimes });
+      }
 
       // Enhanced logging with tab information
       await logTabSwitch({
