@@ -40,8 +40,24 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       }
     } else {
       // EXISTING BEHAVIOR: Use legacy windowMode logic
-      const data = await chrome.storage.local.get(['windowMode', 'selectedWindowId']) as StorageData;
-      windowMode = data.windowMode ?? DEFAULT_WINDOW_MODE;
+      // BUGFIX: Check operatingMode first (new system), fallback to windowMode (legacy)
+      const data = await chrome.storage.local.get(['operatingMode', 'windowMode', 'selectedWindowId']) as StorageData;
+      const operatingMode = data.operatingMode;
+
+      // Determine window mode from new or legacy field
+      if (operatingMode === 'global') {
+        // New Global mode: switch in currently focused window
+        windowMode = 'global';
+      } else if (operatingMode === 'window') {
+        // New Window mode without specificWindowId shouldn't happen,
+        // but default to global behavior (use last focused window)
+        console.warn('Window mode active but switchTab() called without specificWindowId, defaulting to global behavior');
+        windowMode = 'global';
+      } else {
+        // Fallback to legacy windowMode field if operatingMode not set
+        windowMode = data.windowMode ?? DEFAULT_WINDOW_MODE;
+      }
+
       const selectedWindowId = data.selectedWindowId;
 
       if (windowMode === 'current-window') {
