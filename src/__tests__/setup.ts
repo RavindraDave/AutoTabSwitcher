@@ -93,6 +93,7 @@ const windowsMock = {
     removeListener: jest.fn(),
   },
   getCurrent: jest.fn(),
+  getLastFocused: jest.fn(),
   getAll: jest.fn(),
   get: jest.fn(),
   WINDOW_ID_NONE: -1,
