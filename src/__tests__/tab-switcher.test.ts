@@ -34,6 +34,7 @@ describe('Tab Switcher', () => {
     // Reset chrome mocks
     mockChrome.windows.get.mockReset();
     mockChrome.windows.getCurrent.mockReset();
+    mockChrome.windows.getLastFocused.mockReset();
     mockChrome.tabs.query.mockReset();
     mockChrome.tabs.update.mockReset();
     mockChrome.storage.local.get.mockReset();
@@ -148,14 +149,14 @@ describe('Tab Switcher', () => {
         windowMode: 'global',
         lastSwitchTimes: {},
       });
-      mockChrome.windows.getCurrent.mockResolvedValue({ id: 200 });
+      mockChrome.windows.getLastFocused.mockResolvedValue({ id: 200 });
       mockChrome.tabs.query.mockResolvedValue(mockTabs);
       mockChrome.tabs.update.mockResolvedValue({});
       mockChrome.storage.local.set.mockResolvedValue(undefined);
 
       await switchTab();
 
-      expect(mockChrome.windows.getCurrent).toHaveBeenCalled();
+      expect(mockChrome.windows.getLastFocused).toHaveBeenCalled();
       expect(mockChrome.tabs.query).toHaveBeenCalledWith({ windowId: 200 });
       expect(mockChrome.tabs.update).toHaveBeenCalledWith(11, { active: true });
       expect(logTabSwitch).toHaveBeenCalledWith({
@@ -175,14 +176,14 @@ describe('Tab Switcher', () => {
       ];
 
       mockChrome.storage.local.get.mockResolvedValue({ lastSwitchTimes: {} });
-      mockChrome.windows.getCurrent.mockResolvedValue({ id: 200 });
+      mockChrome.windows.getLastFocused.mockResolvedValue({ id: 200 });
       mockChrome.tabs.query.mockResolvedValue(mockTabs);
       mockChrome.tabs.update.mockResolvedValue({});
       mockChrome.storage.local.set.mockResolvedValue(undefined);
 
       await switchTab();
 
-      expect(mockChrome.windows.getCurrent).toHaveBeenCalled();
+      expect(mockChrome.windows.getLastFocused).toHaveBeenCalled();
       expect(mockChrome.tabs.update).toHaveBeenCalled();
     });
   });

@@ -66,7 +66,9 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
         }
       } else {
         // Global mode: switch in the currently focused window
-        const currentWindow = await chrome.windows.getCurrent();
+        // BUGFIX: Use getLastFocused() instead of getCurrent() for service worker compatibility
+        // getCurrent() doesn't work in Manifest V3 service workers since they don't run in a window context
+        const currentWindow = await chrome.windows.getLastFocused();
         targetWindowId = currentWindow.id;
       }
     }
