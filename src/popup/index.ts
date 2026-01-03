@@ -355,12 +355,18 @@ export async function handleToggle(): Promise<void> {
       const currentlyEnabled = data.enabled ?? false;
       const updates: any = { enabled: !currentlyEnabled };
 
-      // BUGFIX: When enabling Global mode, initialize timer by setting lastSwitchTimes
-      // This ensures the countdown starts properly from the current time
+      // BUGFIX: When enabling Global mode, initialize lastSwitchTimes for proper countdown
+      // and ensure operatingMode is explicitly set to prevent any confusion
       if (!currentlyEnabled) {
         const lastSwitchTimes = (await chrome.storage.local.get(['lastSwitchTimes']) as any).lastSwitchTimes || {};
         lastSwitchTimes[currentWindowId] = Date.now();
         updates.lastSwitchTimes = lastSwitchTimes;
+
+        // BUGFIX: Explicitly set operatingMode to 'global' to ensure proper initialization
+        // This prevents any race conditions or undefined state issues on fresh install
+        updates.operatingMode = 'global';
+
+        console.log('[Enable All Windows] Initializing Global mode with lastSwitchTimes');
       }
 
       await chrome.storage.local.set(updates);
