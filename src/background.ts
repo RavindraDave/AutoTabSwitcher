@@ -307,21 +307,48 @@ chrome.runtime.onStartup.addListener(async () => {
 
   try {
     // Check if auto-start on browser startup is enabled
-    const data = await getSettings(['enableOnStartup', 'enabled']);
+    const data = await getSettings(['enableOnStartup', 'enabled', 'operatingMode', 'windowStates']);
     const enableOnStartup = data.enableOnStartup ?? false;
+    const operatingMode = validateOperatingMode(data.operatingMode);
 
     if (enableOnStartup) {
       console.log('Auto-start enabled, enabling tab switching');
-      await logger.info('Lifecycle', 'Auto-start enabled, activating tab switching');
+      await logger.info('Lifecycle', 'Auto-start enabled, activating tab switching', {
+        operatingMode
+      });
 
-      // Enable tab switching
-      await chrome.storage.local.set({ enabled: true });
+      // BUGFIX: Handle both Global and Window modes
+      if (operatingMode === 'global') {
+        // Global mode: set enabled flag
+        await chrome.storage.local.set({ enabled: true });
+      } else {
+        // Window mode: enable all currently open windows
+        const windows = await chrome.windows.getAll();
+        const windowStates = data.windowStates || {};
+        const now = Date.now();
+
+        for (const window of windows) {
+          if (window.id !== undefined) {
+            windowStates[window.id] = {
+              enabled: true,
+              enabledTimestamp: now,
+              lastSwitchTime: now
+            };
+          }
+        }
+
+        await chrome.storage.local.set({ windowStates });
+        await logger.info('Lifecycle', 'Enabled all windows on startup', {
+          windowCount: windows.length
+        });
+      }
 
       // The storage change listener will automatically call toggleTabSwitcher()
     } else {
       console.log('Auto-start disabled, restoring previous state');
       await logger.info('Lifecycle', 'Auto-start disabled, restoring previous state', {
-        previouslyEnabled: data.enabled ?? false
+        previouslyEnabled: data.enabled ?? false,
+        operatingMode
       });
 
       // Just restore the previous state
