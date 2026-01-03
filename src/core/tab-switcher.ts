@@ -49,10 +49,16 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
         // New Global mode: switch in currently focused window
         windowMode = 'global';
       } else if (operatingMode === 'window') {
-        // New Window mode without specificWindowId shouldn't happen,
-        // but default to global behavior (use last focused window)
-        console.warn('Window mode active but switchTab() called without specificWindowId, defaulting to global behavior');
-        windowMode = 'global';
+        // BUG: Window mode should always call switchTab(windowId) with a specific ID
+        // This path should never execute - indicates a bug in WindowTimerManager or timing-hybrid.ts
+        console.error('[BUG] Window mode active but switchTab() called without specificWindowId');
+        console.error('      This indicates timing-hybrid.ts is being used instead of WindowTimerManager');
+        await logger.error('TabSwitcher', 'Invalid state: Window mode without specificWindowId', {
+          operatingMode,
+          callStack: new Error().stack
+        });
+        // Return false instead of falling back - make the bug obvious
+        return false;
       } else {
         // Fallback to legacy windowMode field if operatingMode not set
         windowMode = data.windowMode ?? DEFAULT_WINDOW_MODE;
