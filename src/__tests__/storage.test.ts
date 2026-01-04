@@ -4,6 +4,16 @@
  */
 
 import { describe, expect, test, beforeEach, jest } from '@jest/globals';
+
+// Mock the logger module
+jest.mock('../core/logger.js', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
 import {
   validateOperatingMode,
   isValidWindowId,
@@ -14,6 +24,7 @@ import {
 } from '../core/storage.js';
 import { DEFAULT_OPERATING_MODE, MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION } from '../core/constants.js';
 import * as environment from '../utils/environment.js';
+import { logger } from '../core/logger.js';
 
 describe('Security Validation Tests', () => {
   beforeEach(() => {
@@ -32,75 +43,58 @@ describe('Security Validation Tests', () => {
     });
 
     test('should reject invalid string and default to global', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const result = validateOperatingMode('invalid-mode');
 
       expect(result).toBe(DEFAULT_OPERATING_MODE);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid operating mode value: invalid-mode')
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Storage',
+        'Invalid operating mode value, defaulting to global',
+        expect.objectContaining({
+          invalidValue: 'invalid-mode'
+        })
       );
-
-      consoleSpy.mockRestore();
     });
 
     test('should reject null and default to global', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const result = validateOperatingMode(null);
 
       expect(result).toBe(DEFAULT_OPERATING_MODE);
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(logger.warn).toHaveBeenCalled();
     });
 
     test('should reject undefined and default to global', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const result = validateOperatingMode(undefined);
 
       expect(result).toBe(DEFAULT_OPERATING_MODE);
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(logger.warn).toHaveBeenCalled();
     });
 
     test('should reject number and default to global', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const result = validateOperatingMode(123);
 
       expect(result).toBe(DEFAULT_OPERATING_MODE);
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(logger.warn).toHaveBeenCalled();
     });
 
     test('should reject object and default to global', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const result = validateOperatingMode({ mode: 'global' });
 
       expect(result).toBe(DEFAULT_OPERATING_MODE);
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(logger.warn).toHaveBeenCalled();
     });
 
     test('should reject array and default to global', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const result = validateOperatingMode(['global']);
 
       expect(result).toBe(DEFAULT_OPERATING_MODE);
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(logger.warn).toHaveBeenCalled();
     });
 
     test('should reject XSS attempt and default to global', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const result = validateOperatingMode('<script>alert("xss")</script>');
 
       expect(result).toBe(DEFAULT_OPERATING_MODE);
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(logger.warn).toHaveBeenCalled();
     });
   });
 
@@ -226,24 +220,16 @@ describe('Security Validation Tests', () => {
 
   describe('Security - Edge Cases', () => {
     test('validateOperatingMode should handle case-sensitive input', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-
       // TypeScript union types are case-sensitive
       expect(validateOperatingMode('Global')).toBe(DEFAULT_OPERATING_MODE);
       expect(validateOperatingMode('WINDOW')).toBe(DEFAULT_OPERATING_MODE);
       expect(validateOperatingMode('Window')).toBe(DEFAULT_OPERATING_MODE);
-
-      consoleSpy.mockRestore();
     });
 
     test('validateOperatingMode should handle whitespace', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-
       expect(validateOperatingMode(' global')).toBe(DEFAULT_OPERATING_MODE);
       expect(validateOperatingMode('global ')).toBe(DEFAULT_OPERATING_MODE);
       expect(validateOperatingMode(' global ')).toBe(DEFAULT_OPERATING_MODE);
-
-      consoleSpy.mockRestore();
     });
 
     test('isValidWindowId should handle type coercion attempts', () => {
@@ -323,54 +309,52 @@ describe('Security Validation Tests', () => {
     describe('clampDelayTime', () => {
       test('should clamp to development minimum (60s) when unpacked', () => {
         jest.spyOn(environment, 'isPacked').mockReturnValue(false);
-        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
         const result = clampDelayTime(10000); // 10 seconds
 
         expect(result).toBe(MIN_DELAY_MS_DEVELOPMENT); // 60000ms
-        expect(consoleSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Clamped delayTime from 10000ms to 60000ms')
+        expect(logger.info).toHaveBeenCalledWith(
+          'Storage',
+          'Clamped delayTime to minimum',
+          expect.objectContaining({
+            originalMs: 10000,
+            clampedMs: 60000
+          })
         );
-
-        consoleSpy.mockRestore();
       });
 
       test('should clamp to production minimum (2s) when packed', () => {
         jest.spyOn(environment, 'isPacked').mockReturnValue(true);
-        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
         const result = clampDelayTime(1000); // 1 second (below 2s minimum)
 
         expect(result).toBe(MIN_DELAY_MS_PRODUCTION); // 2000ms
-        expect(consoleSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Clamped delayTime from 1000ms to 2000ms')
+        expect(logger.info).toHaveBeenCalledWith(
+          'Storage',
+          'Clamped delayTime to minimum',
+          expect.objectContaining({
+            originalMs: 1000,
+            clampedMs: 2000
+          })
         );
-
-        consoleSpy.mockRestore();
       });
 
       test('should not clamp when value is above minimum', () => {
         jest.spyOn(environment, 'isPacked').mockReturnValue(false);
-        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
         const result = clampDelayTime(120000); // 120 seconds
 
         expect(result).toBe(120000);
-        expect(consoleSpy).not.toHaveBeenCalled();
-
-        consoleSpy.mockRestore();
+        expect(logger.info).not.toHaveBeenCalled();
       });
 
       test('should handle edge case: exactly at minimum', () => {
         jest.spyOn(environment, 'isPacked').mockReturnValue(false);
-        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
         const result = clampDelayTime(MIN_DELAY_MS_DEVELOPMENT);
 
         expect(result).toBe(MIN_DELAY_MS_DEVELOPMENT);
-        expect(consoleSpy).not.toHaveBeenCalled();
-
-        consoleSpy.mockRestore();
+        expect(logger.info).not.toHaveBeenCalled();
       });
 
       test('should clamp 10s to 60s in development (main bug fix)', () => {

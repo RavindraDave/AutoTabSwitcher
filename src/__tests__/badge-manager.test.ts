@@ -5,10 +5,20 @@
 
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
+// Mock the logger module
+jest.mock('../core/logger.js', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
 const mockChrome = (global as any).chrome;
 
 describe('Badge Manager', () => {
   let updateBadge: any;
+  let logger: any;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -23,6 +33,10 @@ describe('Badge Manager', () => {
     // Import fresh module
     const badgeModule = await import('../core/badge-manager.js');
     updateBadge = badgeModule.updateBadge;
+
+    // Import logger mock
+    const loggerModule = await import('../core/logger.js');
+    logger = loggerModule.logger;
   });
 
   describe('Global Mode Badge States', () => {
@@ -712,8 +726,6 @@ describe('Badge Manager', () => {
     });
 
     test('should handle chrome API errors gracefully', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
       mockChrome.storage.local.get.mockResolvedValue({
         windowMode: 'global',
       });
@@ -721,11 +733,13 @@ describe('Badge Manager', () => {
 
       await updateBadge(true, false);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error updating badge:',
-        expect.any(Error)
+      expect(logger.error).toHaveBeenCalledWith(
+        'BadgeManager',
+        'Error updating badge',
+        expect.objectContaining({
+          error: expect.any(String)
+        })
       );
-      consoleErrorSpy.mockRestore();
     });
 
     test('should handle empty windows array', async () => {

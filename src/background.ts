@@ -64,7 +64,6 @@ async function toggleTabSwitcher(): Promise<void> {
       await handleWindowModeToggle(data.windowStates || {}, delayTime);
     }
   } catch (error) {
-    console.error('Error toggling tab switcher:', error);
     await logger.error('TabSwitcher', 'Failed to toggle tab switcher', {
       error: error instanceof Error ? error.message : String(error),
     });
@@ -189,7 +188,9 @@ async function handleWindowModeToggle(
       const windowId = parseInt(windowIdStr);
       // SECURITY: Validate windowId before operations
       if (!isValidWindowId(windowId)) {
-        console.warn(`Invalid windowId in windowStates: ${windowIdStr}`);
+        await logger.warn('WindowMode', 'Invalid windowId in windowStates', {
+          windowIdStr
+        });
         continue;
       }
 
@@ -200,12 +201,13 @@ async function handleWindowModeToggle(
           await windowTimerManager.startTimer(windowId, delayTime);
           await logger.info('WindowMode', 'Started timer for window', { windowId, delayTime });
         } else {
-          console.warn(`Window ${windowId} no longer exists, skipping timer start`);
+          await logger.warn('WindowMode', 'Window no longer exists, skipping timer start', {
+            windowId
+          });
         }
       }
     }
   } catch (error) {
-    console.error('Error in handleWindowModeToggle:', error);
     await logger.error('WindowMode', 'Error in handleWindowModeToggle', {
       error: error instanceof Error ? error.message : String(error),
     });
@@ -234,7 +236,7 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
 
     if (isDisableOperation) {
       // BUGFIX: For disable operations, execute IMMEDIATELY without debouncing
-      console.log('Settings changed (disable operation), stopping tab switcher immediately');
+      await logger.info('Settings', 'Settings changed (disable operation), stopping immediately');
 
       // Clear any existing timeout
       if (storageChangeTimeout !== undefined) {
@@ -247,7 +249,7 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
       await toggleTabSwitcher();
     } else {
       // For enable/update operations, use debouncing as before
-      console.log('Settings changed, restarting tab switcher (debounced)');
+      await logger.info('Settings', 'Settings changed, restarting tab switcher (debounced)');
 
       // Clear any existing timeout to debounce rapid changes
       if (storageChangeTimeout !== undefined) {
@@ -271,7 +273,6 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
  * ENHANCED: Now includes migration for existing users
  */
 chrome.runtime.onInstalled.addListener(async (details) => {
-  console.log('Extension installed/updated:', details.reason);
   await logger.info('Lifecycle', 'Extension installed/updated', {
     reason: details.reason,
     version: chrome.runtime.getManifest().version,
@@ -302,7 +303,6 @@ chrome.runtime.onInstalled.addListener(async (details) => {
  * This fires when the browser starts (not when service worker wakes)
  */
 chrome.runtime.onStartup.addListener(async () => {
-  console.log('Browser started, checking auto-start setting');
   await logger.info('Lifecycle', 'Browser started');
 
   try {
@@ -312,7 +312,6 @@ chrome.runtime.onStartup.addListener(async () => {
     const switchingMode = getSwitchingMode(data);
 
     if (enableOnStartup) {
-      console.log('Auto-start enabled, enabling tab switching');
       await logger.info('Lifecycle', 'Auto-start enabled, activating tab switching', {
         switchingMode
       });
@@ -345,7 +344,6 @@ chrome.runtime.onStartup.addListener(async () => {
 
       // The storage change listener will automatically call toggleTabSwitcher()
     } else {
-      console.log('Auto-start disabled, restoring previous state');
       await logger.info('Lifecycle', 'Auto-start disabled, restoring previous state', {
         previouslyEnabled: data.enabled ?? false,
         switchingMode
@@ -355,7 +353,6 @@ chrome.runtime.onStartup.addListener(async () => {
       await toggleTabSwitcher();
     }
   } catch (error) {
-    console.error('Error in startup handler:', error);
     await logger.error('Lifecycle', 'Error in startup handler', {
       error: error instanceof Error ? error.message : String(error),
     });
@@ -372,12 +369,10 @@ chrome.windows.onCreated.addListener(async () => {
   try {
     const data = await getSettings(['enabled']);
     if (data.enabled) {
-      console.log('New window created, ensuring switcher is active');
       await logger.info('Window', 'New window created, ensuring switcher active');
       await toggleTabSwitcher();
     }
   } catch (error) {
-    console.error('Error in window creation handler:', error);
     await logger.error('Window', 'Error in window creation handler', {
       error: error instanceof Error ? error.message : String(error),
     });
@@ -404,7 +399,9 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
       await toggleTabSwitcher();
     }
   } catch (error) {
-    console.error('Error in window focus change handler:', error);
+    await logger.error('Window', 'Error in window focus change handler', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
@@ -416,7 +413,9 @@ chrome.windows.onRemoved.addListener(async (windowId) => {
   try {
     // SECURITY: Validate windowId
     if (!isValidWindowId(windowId)) {
-      console.warn(`Invalid windowId in onRemoved handler: ${windowId}`);
+      await logger.warn('Window', 'Invalid windowId in onRemoved handler', {
+        windowId
+      });
       return;
     }
 
@@ -434,10 +433,8 @@ chrome.windows.onRemoved.addListener(async (windowId) => {
       await chrome.storage.local.set({ windowStates });
 
       await logger.info('Window', 'Window closed, cleaned up state', { windowId });
-      console.log(`Window ${windowId} closed, cleaned up state`);
     }
   } catch (error) {
-    console.error('Error in window removal handler:', error);
     await logger.error('Window', 'Error in window removal handler', {
       error: error instanceof Error ? error.message : String(error),
       windowId,
@@ -458,7 +455,9 @@ chrome.tabs.onCreated.addListener(async (tab) => {
     // Update badge for the newly created tab
     await updateBadge(enabled, false, tab.id);
   } catch (error) {
-    console.error('Error in tab creation handler:', error);
+    await logger.error('Tab', 'Error in tab creation handler', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
@@ -476,7 +475,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, _tab) => {
       await updateBadge(enabled, false, tabId);
     }
   } catch (error) {
-    console.error('Error in tab update handler:', error);
+    await logger.error('Tab', 'Error in tab update handler', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
@@ -491,7 +492,9 @@ chrome.tabs.onAttached.addListener(async (tabId, _attachInfo) => {
     // Update badge for the tab in its new window
     await updateBadge(enabled, false, tabId);
   } catch (error) {
-    console.error('Error in tab attach handler:', error);
+    await logger.error('Tab', 'Error in tab attach handler', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
@@ -507,7 +510,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     try {
       // SECURITY: Validate windowId
       if (!isValidWindowId(windowId)) {
-        console.warn(`Invalid windowId from alarm: ${windowId}`);
+        await logger.warn('WindowMode', 'Invalid windowId from alarm', {
+          windowId
+        });
         return;
       }
 
@@ -518,7 +523,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       if (switchingMode === 'window' && data.windowStates && data.windowStates[windowId]) {
         // BUGFIX: Check if this window is being stopped
         if (windowTimerManager.isStopping(windowId)) {
-          console.log(`Window ${windowId} timer alarm fired but window is being stopped, aborting`);
+          await logger.info('WindowMode', 'Window timer alarm fired but window is stopping, aborting', {
+            windowId
+          });
           return;
         }
 
@@ -545,12 +552,13 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
               await logger.info('WindowMode', 'Tab switched for window', { windowId });
             }
           } else {
-            console.log(`Auto-switching paused for window ${windowId} due to recent user activity`);
+            await logger.info('WindowMode', 'Auto-switching paused due to user activity', {
+              windowId
+            });
           }
         }
       }
     } catch (error) {
-      console.error(`Error handling window timer alarm for window ${windowId}:`, error);
       await logger.error('WindowMode', 'Error in window timer alarm handler', {
         error: error instanceof Error ? error.message : String(error),
         windowId,

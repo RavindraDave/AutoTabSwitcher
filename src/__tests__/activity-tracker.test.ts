@@ -5,12 +5,22 @@
 
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
+// Mock the logger module
+jest.mock('../core/logger.js', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
 const mockChrome = (global as any).chrome;
 
 describe('Activity Tracker', () => {
   let isPaused: any;
   let recordUserActivity: any;
   let setupActivityListeners: any;
+  let logger: any;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -29,6 +39,11 @@ describe('Activity Tracker', () => {
 
     // Reset module by clearing cache and reimporting
     jest.resetModules();
+
+    // Import logger mock after reset
+    const loggerModule = await import('../core/logger.js');
+    logger = loggerModule.logger;
+
     const activityModule = await import('../core/activity-tracker.js');
     isPaused = activityModule.isPaused;
     recordUserActivity = activityModule.recordUserActivity;
@@ -179,7 +194,6 @@ describe('Activity Tracker', () => {
     });
 
     test('should handle storage errors gracefully', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
       mockChrome.storage.local.set.mockRejectedValue(new Error('Storage error'));
 
       // Call recordUserActivity and wait for the promise to settle
@@ -189,12 +203,13 @@ describe('Activity Tracker', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Should have logged the error
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to persist activity time:',
-        expect.any(Error)
+      expect(logger.error).toHaveBeenCalledWith(
+        'ActivityTracker',
+        'Failed to persist activity time',
+        expect.objectContaining({
+          error: expect.any(String)
+        })
       );
-
-      consoleErrorSpy.mockRestore();
     });
 
     test('should update timestamp on multiple calls', () => {
