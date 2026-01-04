@@ -119,6 +119,7 @@ export async function initializeStorage(defaultDelayTime: number): Promise<void>
     pauseOnActivity: DEFAULT_PAUSE_ON_ACTIVITY,
     pauseDuration: DEFAULT_PAUSE_DURATION,
     windowStates: {}, // Initialize empty window states
+    lastSwitchTimes: {}, // BUGFIX: Initialize lastSwitchTimes on fresh install
   });
 }
 
