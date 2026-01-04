@@ -11,10 +11,8 @@ import {
   DEFAULT_OPERATING_MODE,
   DEFAULT_PAUSE_ON_ACTIVITY,
   DEFAULT_PAUSE_DURATION,
-  MIN_DELAY_MS_DEVELOPMENT,
   MIN_DELAY_MS_PRODUCTION,
 } from './constants.js';
-import { isPacked } from '../utils/environment.js';
 import { logger } from './logger.js';
 
 /**
