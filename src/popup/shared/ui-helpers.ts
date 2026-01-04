@@ -2,6 +2,8 @@
  * UI helper functions for popup
  */
 
+import { logger } from '../../core/logger.js';
+
 /**
  * Show error message to user
  *
@@ -54,7 +56,9 @@ export async function updateWindowInfo(windowId: number): Promise<void> {
     `;
     windowInfoEl.style.display = 'block';
   } catch (error) {
-    console.error('Error getting window info:', error);
+    await logger.error('PopupUI', 'Error getting window info', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     const windowInfoEl = document.getElementById('windowInfo');
     if (windowInfoEl) {
       windowInfoEl.style.display = 'none';

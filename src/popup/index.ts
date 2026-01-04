@@ -8,6 +8,7 @@
 import { StorageData } from '../core/types.js';
 import { isPaused } from '../core/activity-tracker.js';
 import { getMinDelayMs, getSwitchingMode } from '../core/storage.js';
+import { logger } from '../core/logger.js';
 
 // DOM Elements
 let header: HTMLElement;
@@ -131,7 +132,9 @@ async function updateUI(): Promise<void> {
     // Apply visual theme
     applyTheme(switchingMode);
   } catch (error) {
-    console.error('Error updating UI:', error);
+    await logger.error('PopupIndex', 'Error updating UI', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 
@@ -262,7 +265,7 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
       const currentWindowId = currentWindow.id;
 
       if (currentWindowId === undefined) {
-        console.error('Could not get current window ID');
+        await logger.error('PopupIndex', 'Could not get current window ID (window mode switch)');
         return;
       }
 
@@ -305,7 +308,7 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
       const currentWindowId = currentWindow.id;
 
       if (currentWindowId === undefined) {
-        console.error('Could not get current window ID');
+        await logger.error('PopupIndex', 'Could not get current window ID (global mode switch)');
         return;
       }
 
@@ -321,7 +324,9 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
       });
     }
   } catch (error) {
-    console.error('Error switching mode:', error);
+    await logger.error('PopupIndex', 'Error switching mode', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 
@@ -363,7 +368,7 @@ export async function handleToggle(): Promise<void> {
         updates.switchingMode = 'global';
         updates.operatingMode = 'global'; // DEPRECATED: Kept for backward compatibility
 
-        console.log('[Enable All Windows] Initializing Global mode with lastSwitchTimes');
+        await logger.info('PopupIndex', 'Initializing Global mode with lastSwitchTimes');
       }
 
       await chrome.storage.local.set(updates);
@@ -386,7 +391,9 @@ export async function handleToggle(): Promise<void> {
 
     // UI will update via storage change listener
   } catch (error) {
-    console.error('Error toggling auto-switch:', error);
+    await logger.error('PopupIndex', 'Error toggling auto-switch', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 
@@ -548,7 +555,9 @@ async function updateCountdown(): Promise<void> {
     const offset = circumference * (1 - progress);
     countdownCircle.style.strokeDashoffset = String(offset);
   } catch (error) {
-    console.error('Error updating countdown:', error);
+    await logger.error('PopupIndex', 'Error updating countdown', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 
