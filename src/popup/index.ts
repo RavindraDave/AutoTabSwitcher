@@ -171,10 +171,8 @@ function updateState(enabled: boolean, paused: boolean): void {
     statusText.textContent = 'Auto-switching enabled';
     countdownRing.classList.remove('hidden');
     countdownLabel.textContent = 'seconds';
-    countdownLabel.textContent = 'seconds';
     // Gradient URL will be updated by applyTheme
     // countdownCircle.style.stroke = 'url(#gradient-active)';
-    pulse.style.display = 'block';
     pulse.style.display = 'block';
   }
 }
