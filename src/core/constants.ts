@@ -9,15 +9,11 @@ export const KEEPALIVE_ALARM_NAME = 'keepAlive';
 /**
  * Timing constants
  *
- * IMPORTANT: Development vs Production timing differences
+ * IMPORTANT: Minimum delay time
  * --------------------------------------------------------
- * - Development (unpacked): 60 second minimum
- *   Reason: Provides a safer testing experience and reduces accidental rapid tab switching
- *           during development. Developers can manually test with shorter intervals if needed.
- *
- * - Production (Chrome Web Store): 2 second minimum
- *   Reason: Users expect faster switching options. The 2-second minimum allows for rapid
- *           transitions but comes with important caveats.
+ * - Both Development and Production: 2 second minimum
+ *   Reason: Provides consistency between UI validation and storage layer.
+ *           The UI allows 2-second minimum, so storage should match.
  *
  *   ⚠️ WARNING: Very low values (2-5 seconds) can cause issues:
  *      - May be difficult to stop once started (tabs switch before you can click stop)
@@ -30,8 +26,8 @@ export const KEEPALIVE_ALARM_NAME = 'keepAlive';
  *         For delays >= 30s, it uses the more efficient chrome.alarms API.
  */
 export const MIN_ALARM_DELAY_MS = 30000; // 30 seconds - Chrome alarms API minimum for packed extensions
-export const MIN_DELAY_MS_DEVELOPMENT = 60000; // 60 seconds for unpacked (development)
-export const MIN_DELAY_MS_PRODUCTION = 2000; // 2 seconds for packed (Chrome Web Store) - USE WITH CAUTION!
+export const MIN_DELAY_MS_DEVELOPMENT = 60000; // DEPRECATED: No longer used - kept for backward compatibility with old tests
+export const MIN_DELAY_MS_PRODUCTION = 2000; // 2 seconds for both development and production - USE WITH CAUTION!
 
 // Feature defaults
 export const DEFAULT_ENABLED = false;

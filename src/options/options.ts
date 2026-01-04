@@ -18,11 +18,9 @@ import { validateDelayTime, validatePauseDuration } from '../popup/shared/valida
 import { setDelayTime, getSwitchingMode } from '../core/storage.js';
 import { logger } from '../core/logger.js';
 
-// Determine minimum delay based on environment
-const MIN_DELAY_SECONDS_ENV = isPacked()
-  ? MIN_DELAY_MS_PRODUCTION / 1000
-  : MIN_DELAY_SECONDS;
-const DEFAULT_DELAY_SECONDS = MIN_DELAY_SECONDS_ENV;
+// Minimum delay based on environment (both use 2 seconds now)
+const MIN_DELAY_SECONDS_ENV = MIN_DELAY_SECONDS; // 2 seconds for all
+const DEFAULT_DELAY_SECONDS = 5; // 5 seconds initial default for all
 
 /**
  * Show success message
@@ -68,8 +66,8 @@ function showEnvironmentInfo(): void {
     infoEl.innerHTML = `
       <div class="alert alert-info mt-2" style="font-size: 0.9rem;">
         <strong>${environment} Mode</strong><br>
-        Minimum delay: ${minDelay} seconds
-        ${!isPacked() ? '<br><small>Production version allows 5-second minimum</small>' : ''}
+        Minimum delay: ${minDelay} seconds<br>
+        Default delay: 5 seconds
       </div>
     `;
   }

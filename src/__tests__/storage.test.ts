@@ -289,12 +289,13 @@ describe('Security Validation Tests', () => {
     });
 
     describe('getMinDelayMs', () => {
-      test('should return development minimum for unpacked extension', () => {
+      test('should return production minimum for unpacked extension (consistent with UI)', () => {
         jest.spyOn(environment, 'isPacked').mockReturnValue(false);
 
         const result = getMinDelayMs();
 
-        expect(result).toBe(MIN_DELAY_MS_DEVELOPMENT);
+        // FIXED: Now uses 2-second minimum in both modes for consistency with UI validation
+        expect(result).toBe(MIN_DELAY_MS_PRODUCTION);
       });
 
       test('should return production minimum for packed extension', () => {
@@ -307,20 +308,14 @@ describe('Security Validation Tests', () => {
     });
 
     describe('clampDelayTime', () => {
-      test('should clamp to development minimum (60s) when unpacked', () => {
+      test('should NOT clamp 10s when unpacked (now consistent with UI)', () => {
         jest.spyOn(environment, 'isPacked').mockReturnValue(false);
 
         const result = clampDelayTime(10000); // 10 seconds
 
-        expect(result).toBe(MIN_DELAY_MS_DEVELOPMENT); // 60000ms
-        expect(logger.info).toHaveBeenCalledWith(
-          'Storage',
-          'Clamped delayTime to minimum',
-          expect.objectContaining({
-            originalMs: 10000,
-            clampedMs: 60000
-          })
-        );
+        // FIXED: Now allows 10s in development mode (>= 2s minimum)
+        expect(result).toBe(10000);
+        expect(logger.info).not.toHaveBeenCalled();
       });
 
       test('should clamp to production minimum (2s) when packed', () => {
@@ -351,26 +346,22 @@ describe('Security Validation Tests', () => {
       test('should handle edge case: exactly at minimum', () => {
         jest.spyOn(environment, 'isPacked').mockReturnValue(false);
 
-        const result = clampDelayTime(MIN_DELAY_MS_DEVELOPMENT);
+        const result = clampDelayTime(MIN_DELAY_MS_PRODUCTION); // Now uses 2s minimum
 
-        expect(result).toBe(MIN_DELAY_MS_DEVELOPMENT);
+        expect(result).toBe(MIN_DELAY_MS_PRODUCTION);
         expect(logger.info).not.toHaveBeenCalled();
       });
 
-      test('should clamp 10s to 60s in development (main bug fix)', () => {
+      test('should allow 10s in both development and production', () => {
+        // Test development mode
         jest.spyOn(environment, 'isPacked').mockReturnValue(false);
+        let result = clampDelayTime(10000); // User sets 10 seconds
+        expect(result).toBe(10000); // FIXED: Should NOT be clamped
 
-        const result = clampDelayTime(10000); // User sets 10 seconds
-
-        expect(result).toBe(60000); // Should be clamped to 60 seconds
-      });
-
-      test('should allow 10s in production', () => {
+        // Test production mode
         jest.spyOn(environment, 'isPacked').mockReturnValue(true);
-
-        const result = clampDelayTime(10000); // User sets 10 seconds
-
-        expect(result).toBe(10000); // Should not be clamped (>= 5s minimum)
+        result = clampDelayTime(10000); // User sets 10 seconds
+        expect(result).toBe(10000); // Should not be clamped (>= 2s minimum)
       });
     });
 
@@ -386,14 +377,15 @@ describe('Security Validation Tests', () => {
         } as any;
       });
 
-      test('should save clamped delayTime to storage', async () => {
+      test('should save delayTime to storage without clamping (above minimum)', async () => {
         jest.spyOn(environment, 'isPacked').mockReturnValue(false);
 
         const result = await setDelayTime(10000);
 
-        expect(result).toBe(MIN_DELAY_MS_DEVELOPMENT);
+        // FIXED: 10s is now allowed in development mode
+        expect(result).toBe(10000);
         expect(chrome.storage.local.set).toHaveBeenCalledWith({
-          delayTime: MIN_DELAY_MS_DEVELOPMENT,
+          delayTime: 10000,
         });
       });
 
@@ -405,10 +397,11 @@ describe('Security Validation Tests', () => {
           pauseOnActivity: true,
         });
 
+        // FIXED: 10s is now allowed in development mode
         expect(chrome.storage.local.set).toHaveBeenCalledWith({
           enabled: true,
           pauseOnActivity: true,
-          delayTime: MIN_DELAY_MS_DEVELOPMENT,
+          delayTime: 10000,
         });
       });
 

@@ -20,11 +20,14 @@ import { logger } from './logger.js';
 /**
  * Get the minimum delay time based on environment
  * IMPORTANT: This ensures delays respect environment-specific minimums
+ * FIXED: Now matches UI validation logic for consistency
  *
- * @returns Minimum delay in milliseconds (60s for development, 5s for production)
+ * @returns Minimum delay in milliseconds (2s for both development and production)
  */
 export function getMinDelayMs(): number {
-  return isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;
+  // Use same minimum as UI validation to prevent silent clamping
+  // Both development and production now use 2-second minimum
+  return MIN_DELAY_MS_PRODUCTION;
 }
 
 /**

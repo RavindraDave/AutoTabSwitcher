@@ -6,8 +6,7 @@
  * All state is persisted in chrome.storage.local.
  */
 
-import { isPacked } from './utils/environment.js';
-import { MIN_DELAY_MS_DEVELOPMENT, MIN_DELAY_MS_PRODUCTION, DEFAULT_ENABLED } from './core/constants.js';
+import { DEFAULT_ENABLED } from './core/constants.js';
 import { initializeStorage, getSettings, migrateToSwitchingMode, getSwitchingMode, isValidWindowId, windowExists } from './core/storage.js';
 import { setupActivityListeners, isPaused } from './core/activity-tracker.js';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
@@ -16,9 +15,8 @@ import { switchTab } from './core/tab-switcher.js';
 import { logger, logModeChange, logWindowToggle } from './core/logger.js';
 import { WindowTimerManager } from './core/window-timer-manager.js';
 
-// Determine minimum delay based on environment
-const MIN_DELAY_MS = isPacked() ? MIN_DELAY_MS_PRODUCTION : MIN_DELAY_MS_DEVELOPMENT;
-const DEFAULT_DELAY_TIME = MIN_DELAY_MS;
+// Default delay time: 5 seconds for all environments
+const DEFAULT_DELAY_TIME = 5000; // 5 seconds
 
 // Initialize Window Timer Manager for per-window timers (Window Mode only)
 const windowTimerManager = new WindowTimerManager();
