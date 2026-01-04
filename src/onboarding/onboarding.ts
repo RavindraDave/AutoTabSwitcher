@@ -2,6 +2,8 @@
  * Onboarding Tour Controller
  */
 
+import { logger } from '../core/logger.js';
+
 let currentStep = 1;
 const totalSteps = 5;
 
@@ -129,7 +131,9 @@ async function completeOnboarding(): Promise<void> {
             await chrome.tabs.remove(tab.id);
         }
     } catch (error) {
-        console.error('Error completing onboarding:', error);
+        await logger.error('Onboarding', 'Error completing onboarding', {
+            error: error instanceof Error ? error.message : String(error)
+        });
         // Fallback: just close the tab
         window.close();
     }

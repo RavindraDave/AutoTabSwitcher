@@ -16,6 +16,7 @@ import {
 import { StorageData } from '../core/types.js';
 import { validateDelayTime, validatePauseDuration } from '../popup/shared/validation.js';
 import { setDelayTime, getSwitchingMode } from '../core/storage.js';
+import { logger } from '../core/logger.js';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_SECONDS_ENV = isPacked()
@@ -95,7 +96,7 @@ function updateModeIndicator(mode: 'global' | 'window'): void {
 /**
  * Handle operating mode radio change
  */
-function handleOperatingModeChange(mode: 'global' | 'window'): void {
+async function handleOperatingModeChange(mode: 'global' | 'window'): Promise<void> {
   // Apply visual theme
   if (mode === 'window') {
     document.body.classList.add('window-mode');
@@ -112,7 +113,7 @@ function handleOperatingModeChange(mode: 'global' | 'window'): void {
     previewModeText.textContent = mode === 'window' ? 'Window Mode' : 'Global Mode';
   }
 
-  console.log('Operating mode changed to:', mode);
+  await logger.info('OptionsPage', 'Operating mode changed', { mode });
 }
 
 /**
@@ -295,7 +296,9 @@ async function loadSettings(): Promise<void> {
       pauseDurationInput.max = String(MAX_PAUSE_DURATION_SECONDS);
     }
   } catch (error) {
-    console.error('Error loading settings:', error);
+    await logger.error('OptionsPage', 'Error loading settings', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showError('Failed to load settings');
   }
 }
@@ -358,7 +361,7 @@ async function saveSettings(): Promise<void> {
       pauseDuration,
     });
 
-    console.log('Settings saved:', {
+    await logger.info('OptionsPage', 'Settings saved', {
       delayTime: clampedDelayMs,
       enableOnStartup: enableOnStartupCheckbox.checked,
       switchingMode,
@@ -367,7 +370,9 @@ async function saveSettings(): Promise<void> {
     });
     showSuccess('Settings saved successfully!');
   } catch (error) {
-    console.error('Error saving settings:', error);
+    await logger.error('OptionsPage', 'Error saving settings', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showError('Failed to save settings. Please try again.');
   }
 }
@@ -391,12 +396,14 @@ async function resetToDefaults(): Promise<void> {
       pauseDuration: DEFAULT_PAUSE_DURATION_SECONDS * 1000,
     });
 
-    console.log('Settings reset to defaults');
+    await logger.info('OptionsPage', 'Settings reset to defaults');
 
     // Reload the page to show default values
     window.location.reload();
   } catch (error) {
-    console.error('Error resetting settings:', error);
+    await logger.error('OptionsPage', 'Error resetting settings', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showError('Failed to reset settings');
   }
 }
