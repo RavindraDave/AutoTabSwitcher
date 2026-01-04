@@ -4,6 +4,7 @@
 
 import { StorageData } from './types.js';
 import { DEFAULT_PAUSE_ON_ACTIVITY, DEFAULT_PAUSE_DURATION } from './constants.js';
+import { logger } from './logger.js';
 
 /**
  * Track last user activity timestamp
@@ -57,9 +58,13 @@ export function recordUserActivity(): void {
   // SECURITY: Persist to storage for service worker resilience
   // Use non-blocking call to avoid performance impact
   chrome.storage.local.set({ lastUserActivityTime }).catch(err => {
-    console.error('Failed to persist activity time:', err);
+    logger.error('ActivityTracker', 'Failed to persist activity time', {
+      error: err instanceof Error ? err.message : String(err)
+    });
   });
-  console.log('User activity detected, updating timestamp');
+  logger.info('ActivityTracker', 'User activity detected', {
+    timestamp: lastUserActivityTime
+  });
 }
 
 /**

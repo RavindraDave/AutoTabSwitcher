@@ -15,6 +15,7 @@ import {
   MIN_DELAY_MS_PRODUCTION,
 } from './constants.js';
 import { isPacked } from '../utils/environment.js';
+import { logger } from './logger.js';
 
 /**
  * Get the minimum delay time based on environment
@@ -39,7 +40,11 @@ export function clampDelayTime(delayMs: number): number {
   const clamped = Math.max(delayMs, minDelayMs);
 
   if (clamped !== delayMs) {
-    console.log(`[Storage] Clamped delayTime from ${delayMs}ms to ${clamped}ms (min: ${minDelayMs}ms)`);
+    logger.info('Storage', 'Clamped delayTime to minimum', {
+      originalMs: delayMs,
+      clampedMs: clamped,
+      minDelayMs
+    });
   }
 
   return clamped;
@@ -56,7 +61,10 @@ export function validateOperatingMode(value: any): OperatingMode {
   if (value === 'global' || value === 'window') {
     return value;
   }
-  console.warn(`Invalid operating mode value: ${value}, defaulting to 'global'`);
+  logger.warn('Storage', 'Invalid operating mode value, defaulting to global', {
+    invalidValue: value,
+    defaulting: DEFAULT_OPERATING_MODE
+  });
   return DEFAULT_OPERATING_MODE;
 }
 
@@ -189,11 +197,19 @@ export async function migrateToSwitchingMode(): Promise<void> {
     });
 
     if (data.operatingMode) {
-      console.log(`[AutoTabSwitcher] Migrated operatingMode ('${data.operatingMode}') to switchingMode`);
+      await logger.info('Migration', 'Migrated operatingMode to switchingMode', {
+        from: data.operatingMode,
+        to: modeToUse
+      });
     } else if (data.windowMode) {
-      console.log(`[AutoTabSwitcher] Migrated windowMode ('${data.windowMode}') to switchingMode ('${modeToUse}')`);
+      await logger.info('Migration', 'Migrated windowMode to switchingMode', {
+        from: data.windowMode,
+        to: modeToUse
+      });
     } else {
-      console.log('[AutoTabSwitcher] Initialized switching mode system (default: global)');
+      await logger.info('Migration', 'Initialized switching mode system', {
+        defaultMode: modeToUse
+      });
     }
   }
 }

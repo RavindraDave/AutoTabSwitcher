@@ -33,7 +33,6 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
         targetWindowId = specificWindowId;
         windowMode = 'window'; // Mark as Window Mode
       } catch (error) {
-        console.warn(`Window ${specificWindowId} no longer exists, cannot switch tabs`);
         await logger.warn('TabSwitcher', 'Specified window no longer exists', {
           windowId: specificWindowId,
         });
@@ -56,9 +55,7 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       } else if (switchingMode === 'window' && !isLegacyCurrentWindowMode) {
         // BUG: New window mode should always call switchTab(windowId) with a specific ID
         // This path should never execute - indicates a bug in WindowTimerManager or timing-hybrid.ts
-        console.error('[BUG] Window mode active but switchTab() called without specificWindowId');
-        console.error('      This indicates timing-hybrid.ts is being used instead of WindowTimerManager');
-        await logger.error('TabSwitcher', 'Invalid state: Window mode without specificWindowId', {
+        await logger.error('TabSwitcher', 'BUG: Window mode without specificWindowId - timing-hybrid.ts used instead of WindowTimerManager', {
           switchingMode,
           callStack: new Error().stack
         });
@@ -74,7 +71,7 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       if (windowMode === 'current-window') {
         // Use the specific selected window
         if (!selectedWindowId) {
-          console.warn('Current-window mode but no window selected');
+          await logger.warn('TabSwitcher', 'Current-window mode but no window selected', {});
           return false;
         }
 
@@ -83,7 +80,6 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
           await chrome.windows.get(selectedWindowId);
           targetWindowId = selectedWindowId;
         } catch (error) {
-          console.warn('Selected window no longer exists, disabling auto-switching');
           await logger.warn('TabSwitcher', 'Selected window no longer exists, disabling', {
             selectedWindowId,
           });
@@ -110,7 +106,9 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
     const currentTab = tabs.find((tab) => tab.active);
 
     if (!currentTab || currentTab.index === undefined) {
-      console.warn('No active tab found in target window');
+      await logger.warn('TabSwitcher', 'No active tab found in target window', {
+        targetWindowId
+      });
       return false;
     }
 
@@ -125,7 +123,6 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       const previousTabId = currentTab?.id;
 
       await chrome.tabs.update(nextTab.id, { active: true });
-      console.log(`Switched to next tab in window ${targetWindowId} (mode: ${windowMode})`);
 
       // Store the timestamp of this switch per window
       const now = Date.now();
@@ -166,7 +163,6 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
     }
     return false;
   } catch (error) {
-    console.error('Error switching tabs:', error);
     await logger.error('TabSwitcher', 'Error switching tabs', {
       error: error instanceof Error ? error.message : String(error),
     });

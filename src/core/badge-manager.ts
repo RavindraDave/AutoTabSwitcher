@@ -4,6 +4,7 @@
 
 import { StorageData } from './types.js';
 import { getSwitchingMode } from './storage.js';
+import { logger } from './logger.js';
 
 /**
  * Determine badge state for a specific window
@@ -137,6 +138,8 @@ export async function updateBadge(enabled: boolean, paused: boolean = false, tab
       }
     }
   } catch (error) {
-    console.error('Error updating badge:', error);
+    logger.error('BadgeManager', 'Error updating badge', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
