@@ -7,6 +7,7 @@
 import { StorageData } from '../core/types.js';
 import { MIN_DELAY_SECONDS, MAX_DELAY_SECONDS, DEFAULT_PAUSE_DURATION_SECONDS } from '../core/constants.js';
 import { setDelayTime } from '../core/storage.js';
+import { logger } from '../core/logger.js';
 
 // DOM Elements
 let delayTimeInput: HTMLInputElement;
@@ -131,7 +132,9 @@ export async function loadSettings(): Promise<void> {
       : DEFAULT_PAUSE_DURATION_SECONDS;
     if (pauseDurationInput) pauseDurationInput.value = String(pauseDurationInSeconds);
   } catch (error) {
-    console.error('Error loading settings:', error);
+    await logger.error('PopupSettings', 'Error loading settings', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showError('Failed to load settings');
   }
 }
@@ -176,7 +179,9 @@ async function updateWindowInfo(windowId: number): Promise<void> {
     }
     if (windowInfo) windowInfo.style.display = 'block';
   } catch (error) {
-    console.error('Error getting window info:', error);
+    await logger.error('PopupSettings', 'Error getting window info', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     if (windowInfo) windowInfo.style.display = 'none';
   }
 }
@@ -354,7 +359,7 @@ export async function saveSettings(): Promise<void> {
       pauseDuration,
     });
 
-    console.log('Settings saved:', {
+    await logger.info('PopupSettings', 'Settings saved', {
       delayTime: clampedDelayMs,
       windowMode,
       selectedWindowId,
@@ -369,7 +374,9 @@ export async function saveSettings(): Promise<void> {
       window.close();
     }, 1000);
   } catch (error) {
-    console.error('Error saving settings:', error);
+    await logger.error('PopupSettings', 'Error saving settings', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showError('Failed to save settings. Please try again.');
   }
 }
@@ -398,7 +405,9 @@ async function resetToDefaults(): Promise<void> {
 
     hideMessages();
   } catch (error) {
-    console.error('Error resetting to defaults:', error);
+    await logger.error('PopupSettings', 'Error resetting to defaults', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showError('Failed to reset settings');
   }
 }

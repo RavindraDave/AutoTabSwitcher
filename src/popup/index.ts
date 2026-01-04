@@ -7,7 +7,8 @@
 
 import { StorageData } from '../core/types.js';
 import { isPaused } from '../core/activity-tracker.js';
-import { getMinDelayMs } from '../core/storage.js';
+import { getMinDelayMs, getSwitchingMode } from '../core/storage.js';
+import { logger } from '../core/logger.js';
 
 // DOM Elements
 let header: HTMLElement;
@@ -84,6 +85,7 @@ async function updateUI(): Promise<void> {
   try {
     const data = await chrome.storage.local.get([
       'enabled',
+      'switchingMode',
       'operatingMode',
       'windowMode', // Legacy fallback
       'windowStates',
@@ -91,11 +93,8 @@ async function updateUI(): Promise<void> {
       'pauseOnActivity',
     ]) as StorageData;
 
-    // Determine operating mode (with legacy fallback)
-    let operatingMode = data.operatingMode ?? 'global';
-    if (!data.operatingMode && data.windowMode) {
-      operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
-    }
+    // Get switching mode with backward compatibility
+    const switchingMode = getSwitchingMode(data);
 
     const delayTime = data.delayTime ?? getMinDelayMs(); // Fallback to environment-specific minimum
     switchIntervalMs = delayTime;
@@ -106,7 +105,7 @@ async function updateUI(): Promise<void> {
 
     // Determine if current window is enabled
     let isCurrentWindowEnabled = false;
-    if (operatingMode === 'global') {
+    if (switchingMode === 'global') {
       // In global mode, use the global enabled state
       isCurrentWindowEnabled = data.enabled ?? false;
     } else {
@@ -122,18 +121,20 @@ async function updateUI(): Promise<void> {
     updateState(isCurrentWindowEnabled, paused);
 
     // Update info rows
-    updateInfoRows(operatingMode, delayTime);
+    updateInfoRows(switchingMode, delayTime);
 
     // Update toggle button
-    updateToggleButton(isCurrentWindowEnabled, operatingMode);
+    updateToggleButton(isCurrentWindowEnabled, switchingMode);
 
     // Update segmented control state
-    updateSegmentedControl(operatingMode);
+    updateSegmentedControl(switchingMode);
 
     // Apply visual theme
-    applyTheme(operatingMode);
+    applyTheme(switchingMode);
   } catch (error) {
-    console.error('Error updating UI:', error);
+    await logger.error('PopupIndex', 'Error updating UI', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 
@@ -173,10 +174,8 @@ function updateState(enabled: boolean, paused: boolean): void {
     statusText.textContent = 'Auto-switching enabled';
     countdownRing.classList.remove('hidden');
     countdownLabel.textContent = 'seconds';
-    countdownLabel.textContent = 'seconds';
     // Gradient URL will be updated by applyTheme
     // countdownCircle.style.stroke = 'url(#gradient-active)';
-    pulse.style.display = 'block';
     pulse.style.display = 'block';
   }
 }
@@ -184,9 +183,9 @@ function updateState(enabled: boolean, paused: boolean): void {
 /**
  * Update info rows (mode and interval)
  */
-function updateInfoRows(operatingMode: string, delayTime: number): void {
+function updateInfoRows(switchingMode: string, delayTime: number): void {
   // Update mode
-  if (operatingMode === 'window') {
+  if (switchingMode === 'window') {
     modeValue.textContent = 'Window Mode';
   } else {
     modeValue.textContent = 'Global Mode';
@@ -202,19 +201,19 @@ function updateInfoRows(operatingMode: string, delayTime: number): void {
  */
 function updateToggleButton(
   isCurrentWindowEnabled: boolean,
-  operatingMode: string
+  switchingMode: string
 ): void {
   toggleButton.classList.remove('enable', 'disable');
 
   if (isCurrentWindowEnabled) {
-    if (operatingMode === 'window') {
+    if (switchingMode === 'window') {
       toggleButton.textContent = 'Disable This Window';
     } else {
       toggleButton.textContent = 'Disable All Windows';
     }
     toggleButton.classList.add('disable');
   } else {
-    if (operatingMode === 'window') {
+    if (switchingMode === 'window') {
       toggleButton.textContent = 'Enable This Window';
     } else {
       toggleButton.textContent = 'Enable All Windows';
@@ -226,8 +225,8 @@ function updateToggleButton(
 /**
  * Update segmented control UI state
  */
-function updateSegmentedControl(operatingMode: string): void {
-  if (operatingMode === 'window') {
+function updateSegmentedControl(switchingMode: string): void {
+  if (switchingMode === 'window') {
     modeGlobalBtn.classList.remove('active');
     modeWindowBtn.classList.add('active');
   } else {
@@ -239,8 +238,8 @@ function updateSegmentedControl(operatingMode: string): void {
 /**
  * Apply visual theme based on mode
  */
-function applyTheme(operatingMode: string): void {
-  if (operatingMode === 'window') {
+function applyTheme(switchingMode: string): void {
+  if (switchingMode === 'window') {
     document.body.classList.add('window-mode');
     // Update countdown circle gradient if active
     if (header.classList.contains('active')) {
@@ -266,7 +265,7 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
       const currentWindowId = currentWindow.id;
 
       if (currentWindowId === undefined) {
-        console.error('Could not get current window ID');
+        await logger.error('PopupIndex', 'Could not get current window ID (window mode switch)');
         return;
       }
 
@@ -299,7 +298,8 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
       }
 
       await chrome.storage.local.set({
-        operatingMode: 'window',
+        switchingMode: 'window',
+        operatingMode: 'window', // DEPRECATED: Kept for backward compatibility
         windowStates,
       });
     } else {
@@ -308,7 +308,7 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
       const currentWindowId = currentWindow.id;
 
       if (currentWindowId === undefined) {
-        console.error('Could not get current window ID');
+        await logger.error('PopupIndex', 'Could not get current window ID (global mode switch)');
         return;
       }
 
@@ -318,12 +318,15 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
       const wasWindowEnabled = windowStates[currentWindowId]?.enabled ?? false;
 
       await chrome.storage.local.set({
-        operatingMode: 'global',
+        switchingMode: 'global',
+        operatingMode: 'global', // DEPRECATED: Kept for backward compatibility
         enabled: wasWindowEnabled, // Preserve the current window's enabled state
       });
     }
   } catch (error) {
-    console.error('Error switching mode:', error);
+    await logger.error('PopupIndex', 'Error switching mode', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 
@@ -335,32 +338,37 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
 export async function handleToggle(): Promise<void> {
   try {
     const data = await chrome.storage.local.get([
+      'switchingMode',
       'operatingMode',
       'windowMode', // Legacy fallback
       'enabled',
       'windowStates',
     ]) as StorageData;
 
-    // Determine operating mode
-    let operatingMode = data.operatingMode ?? 'global';
-    if (!data.operatingMode && data.windowMode) {
-      operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
-    }
+    // Get switching mode with backward compatibility
+    const switchingMode = getSwitchingMode(data);
 
     const currentWindow = await chrome.windows.getCurrent();
     const currentWindowId = currentWindow.id!;
 
-    if (operatingMode === 'global') {
+    if (switchingMode === 'global') {
       // Global mode: toggle global enabled state
       const currentlyEnabled = data.enabled ?? false;
       const updates: any = { enabled: !currentlyEnabled };
 
-      // BUGFIX: When enabling Global mode, initialize timer by setting lastSwitchTimes
-      // This ensures the countdown starts properly from the current time
+      // BUGFIX: When enabling Global mode, initialize lastSwitchTimes for proper countdown
+      // and ensure switchingMode is explicitly set to prevent any confusion
       if (!currentlyEnabled) {
         const lastSwitchTimes = (await chrome.storage.local.get(['lastSwitchTimes']) as any).lastSwitchTimes || {};
         lastSwitchTimes[currentWindowId] = Date.now();
         updates.lastSwitchTimes = lastSwitchTimes;
+
+        // BUGFIX: Explicitly set switchingMode to 'global' to ensure proper initialization
+        // This prevents any race conditions or undefined state issues on fresh install
+        updates.switchingMode = 'global';
+        updates.operatingMode = 'global'; // DEPRECATED: Kept for backward compatibility
+
+        await logger.info('PopupIndex', 'Initializing Global mode with lastSwitchTimes');
       }
 
       await chrome.storage.local.set(updates);
@@ -383,7 +391,9 @@ export async function handleToggle(): Promise<void> {
 
     // UI will update via storage change listener
   } catch (error) {
-    console.error('Error toggling auto-switch:', error);
+    await logger.error('PopupIndex', 'Error toggling auto-switch', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 
@@ -403,8 +413,9 @@ async function startCountdownTimer(): Promise<void> {
     clearInterval(countdownInterval);
   }
 
-  // Get operating mode and determine which window's timing to show
+  // Get switching mode and determine which window's timing to show
   const data = await chrome.storage.local.get([
+    'switchingMode',
     'operatingMode',
     'windowMode', // Legacy fallback
     'windowStates',
@@ -412,11 +423,8 @@ async function startCountdownTimer(): Promise<void> {
     'lastSwitchTime', // deprecated fallback
   ]) as StorageData;
 
-  // Determine operating mode
-  let operatingMode = data.operatingMode ?? 'global';
-  if (!data.operatingMode && data.windowMode) {
-    operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
-  }
+  // Get switching mode with backward compatibility
+  const switchingMode = getSwitchingMode(data);
 
   // Always show timing for the current window
   const currentWindow = await chrome.windows.getCurrent();
@@ -424,7 +432,7 @@ async function startCountdownTimer(): Promise<void> {
 
   let lastSwitchTime: number | undefined;
 
-  if (operatingMode === 'window') {
+  if (switchingMode === 'window') {
     // In window mode, get this window's last switch time from windowStates
     const windowStates = data.windowStates ?? {};
     lastSwitchTime = windowStates[targetWindowId]?.lastSwitchTime;
@@ -466,6 +474,7 @@ async function updateCountdown(): Promise<void> {
   try {
     const data = await chrome.storage.local.get([
       'enabled',
+      'switchingMode',
       'operatingMode',
       'windowMode', // Legacy fallback
       'windowStates',
@@ -473,18 +482,15 @@ async function updateCountdown(): Promise<void> {
       'lastSwitchTime', // deprecated fallback
     ]) as StorageData;
 
-    // Determine operating mode
-    let operatingMode = data.operatingMode ?? 'global';
-    if (!data.operatingMode && data.windowMode) {
-      operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
-    }
+    // Get switching mode with backward compatibility
+    const switchingMode = getSwitchingMode(data);
 
     const currentWindow = await chrome.windows.getCurrent();
     const currentWindowId = currentWindow.id!;
 
     // Check if current window is enabled
     let isEnabled = false;
-    if (operatingMode === 'global') {
+    if (switchingMode === 'global') {
       isEnabled = data.enabled ?? false;
     } else {
       const windowStates = data.windowStates ?? {};
@@ -501,7 +507,7 @@ async function updateCountdown(): Promise<void> {
     // Get last switch time
     let lastSwitchTime: number | undefined;
 
-    if (operatingMode === 'window') {
+    if (switchingMode === 'window') {
       const windowStates = data.windowStates ?? {};
       lastSwitchTime = windowStates[currentWindowId]?.lastSwitchTime;
     } else {
@@ -549,7 +555,9 @@ async function updateCountdown(): Promise<void> {
     const offset = circumference * (1 - progress);
     countdownCircle.style.strokeDashoffset = String(offset);
   } catch (error) {
-    console.error('Error updating countdown:', error);
+    await logger.error('PopupIndex', 'Error updating countdown', {
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 

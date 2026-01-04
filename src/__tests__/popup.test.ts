@@ -32,6 +32,7 @@ jest.mock('../core/storage', () => ({
   getSettings: jest.fn().mockResolvedValue({}),
   initializeStorage: jest.fn().mockResolvedValue(undefined),
   validateOperatingMode: jest.fn().mockImplementation((mode) => mode),
+  getSwitchingMode: jest.fn().mockImplementation((data) => data.switchingMode || data.operatingMode || 'global'),
   getMinDelayMs: jest.fn().mockReturnValue(2000),
 }));
 
@@ -228,7 +229,7 @@ describe('Popup UI Controller', () => {
     it('should toggle enabled status in storage', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
         enabled: false,
-        operatingMode: 'global'
+        switchingMode: 'global'
       });
       mockChrome.storage.local.set.mockResolvedValue(undefined);
 

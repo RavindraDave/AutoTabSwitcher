@@ -37,7 +37,8 @@ export const MIN_DELAY_MS_PRODUCTION = 2000; // 2 seconds for packed (Chrome Web
 export const DEFAULT_ENABLED = false;
 export const DEFAULT_ENABLE_ON_STARTUP = false;
 export const DEFAULT_WINDOW_MODE = 'global' as const; // Legacy field
-export const DEFAULT_OPERATING_MODE = 'global' as const; // New mode system default
+export const DEFAULT_SWITCHING_MODE = 'global' as const; // Tab switching mode (global or per-window)
+export const DEFAULT_OPERATING_MODE = DEFAULT_SWITCHING_MODE; // @deprecated: Use DEFAULT_SWITCHING_MODE
 export const DEFAULT_PAUSE_ON_ACTIVITY = false;
 export const DEFAULT_PAUSE_DURATION = 30000; // 30 seconds
 

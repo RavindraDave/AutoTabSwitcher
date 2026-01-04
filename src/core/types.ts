@@ -17,8 +17,11 @@ export interface StorageData {
   lastSwitchTimes?: { [windowId: number]: number }; // per-window last switch timestamps
 
   // New fields for enhanced mode system
-  operatingMode?: OperatingMode; // 'global' | 'window' - new mode system
+  switchingMode?: SwitchingMode; // 'global' | 'window' - controls tab switching behavior
   windowStates?: { [windowId: number]: WindowState }; // Per-window states for Window Mode
+
+  // Legacy field migration (for backward compatibility during transition)
+  operatingMode?: SwitchingMode; // DEPRECATED: Use switchingMode instead
 
   // Onboarding
   hasSeenOnboarding?: boolean; // Whether user has completed the onboarding tour
@@ -30,9 +33,17 @@ export interface StorageData {
 export type WindowMode = 'global' | 'current-window';
 
 /**
- * Operating mode type - new enhanced mode system
+ * Switching mode type - controls tab switching behavior
+ * - 'global': All windows controlled together (uses hybrid timer)
+ * - 'window': Per-window independent control (uses window timer manager)
  */
-export type OperatingMode = 'global' | 'window';
+export type SwitchingMode = 'global' | 'window';
+
+/**
+ * @deprecated Use SwitchingMode instead
+ * Operating mode type - old name, kept for backward compatibility
+ */
+export type OperatingMode = SwitchingMode;
 
 /**
  * Per-window state for Window Mode
@@ -49,7 +60,7 @@ export interface WindowState {
 export interface DiagnosticLogEntry {
   timestamp: number;
   event: 'SWITCH' | 'ENABLE' | 'DISABLE' | 'MODE_CHANGE' | 'PAUSE' | 'RESUME';
-  mode?: OperatingMode; // Current operating mode
+  mode?: SwitchingMode; // Current switching mode
   windowId?: number;
   previousTabTitle?: string;
   newTabTitle?: string;

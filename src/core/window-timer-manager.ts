@@ -4,6 +4,8 @@
  * NEW CLASS - Does not modify existing timer implementation
  */
 
+import { logger } from './logger.js';
+
 /**
  * Manages timers for individual windows in Window Mode
  * Uses Chrome alarms API for reliability across service worker suspensions
@@ -37,7 +39,10 @@ export class WindowTimerManager {
     // Track when the timer was started
     this.windowTimers.set(windowId, Date.now());
 
-    console.log(`[WindowTimerManager] Started timer for window ${windowId}, delay: ${delayMs}ms`);
+    await logger.info('WindowTimerManager', 'Started timer for window', {
+      windowId,
+      delayMs
+    });
   }
 
   /**
@@ -56,7 +61,9 @@ export class WindowTimerManager {
 
     if (wasCleared || this.windowTimers.has(windowId)) {
       this.windowTimers.delete(windowId);
-      console.log(`[WindowTimerManager] Stopped timer for window ${windowId}`);
+      await logger.info('WindowTimerManager', 'Stopped timer for window', {
+        windowId
+      });
       return true;
     }
 
@@ -80,7 +87,7 @@ export class WindowTimerManager {
     this.isStoppingAll = false;
     this.stoppingWindows.clear();
 
-    console.log('[WindowTimerManager] Stopped all window timers');
+    await logger.info('WindowTimerManager', 'Stopped all window timers');
   }
 
   /**
@@ -163,7 +170,7 @@ export class WindowTimerManager {
       }
     }
 
-    console.log('[WindowTimerManager] Restored timers for enabled windows');
+    await logger.info('WindowTimerManager', 'Restored timers for enabled windows');
   }
 
   /**
@@ -182,18 +189,24 @@ export class WindowTimerManager {
           const stopped = await this.stopTimer(windowId);
           if (stopped) {
             cleanedCount++;
-            console.log(`[WindowTimerManager] Cleaned up stale timer for closed window ${windowId}`);
+            await logger.info('WindowTimerManager', 'Cleaned up stale timer for closed window', {
+              windowId
+            });
           }
         }
       }
 
       if (cleanedCount > 0) {
-        console.log(`[WindowTimerManager] Cleaned up ${cleanedCount} stale window timer(s)`);
+        await logger.info('WindowTimerManager', 'Cleaned up stale window timers', {
+          cleanedCount
+        });
       }
 
       return cleanedCount;
     } catch (error) {
-      console.error('[WindowTimerManager] Error during cleanup:', error);
+      await logger.error('WindowTimerManager', 'Error during cleanup', {
+        error: error instanceof Error ? error.message : String(error)
+      });
       return 0;
     }
   }

@@ -5,10 +5,20 @@
 
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
+// Mock the logger module
+jest.mock('../core/logger.js', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
 const mockChrome = (global as any).chrome;
 
 describe('Badge Manager', () => {
   let updateBadge: any;
+  let logger: any;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -23,6 +33,10 @@ describe('Badge Manager', () => {
     // Import fresh module
     const badgeModule = await import('../core/badge-manager.js');
     updateBadge = badgeModule.updateBadge;
+
+    // Import logger mock
+    const loggerModule = await import('../core/logger.js');
+    logger = loggerModule.logger;
   });
 
   describe('Global Mode Badge States', () => {
@@ -260,7 +274,7 @@ describe('Badge Manager', () => {
   describe('Window Mode Badge States (New Operating Mode)', () => {
     test('should show ON for enabled window, OFF for disabled windows', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           2: { enabled: false },
@@ -309,7 +323,7 @@ describe('Badge Manager', () => {
 
     test('should show pause (orange) for enabled window when paused', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
         },
@@ -338,7 +352,7 @@ describe('Badge Manager', () => {
 
     test('should show OFF for disabled window even when paused', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: false },
         },
@@ -367,7 +381,7 @@ describe('Badge Manager', () => {
 
     test('should show OFF for window not in windowStates (defaults to disabled)', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           // Window 2 not in windowStates
@@ -404,7 +418,7 @@ describe('Badge Manager', () => {
 
     test('should handle undefined windowStates in window mode', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         // windowStates is undefined
       });
 
@@ -431,7 +445,7 @@ describe('Badge Manager', () => {
 
     test('should update badge for specific tab in window mode', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           2: { enabled: false },
@@ -463,7 +477,7 @@ describe('Badge Manager', () => {
 
     test('should update badge for tab in disabled window', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           2: { enabled: false },
@@ -492,7 +506,7 @@ describe('Badge Manager', () => {
 
     test('should handle multiple windows with mixed states', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           2: { enabled: false },
@@ -539,7 +553,7 @@ describe('Badge Manager', () => {
 
     test('should prioritize operatingMode over legacy windowMode', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window', // New mode
+        switchingMode: 'window', // New mode
         windowMode: 'global', // Legacy mode - should be ignored
         windowStates: {
           1: { enabled: true },
@@ -712,8 +726,6 @@ describe('Badge Manager', () => {
     });
 
     test('should handle chrome API errors gracefully', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
       mockChrome.storage.local.get.mockResolvedValue({
         windowMode: 'global',
       });
@@ -721,11 +733,13 @@ describe('Badge Manager', () => {
 
       await updateBadge(true, false);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error updating badge:',
-        expect.any(Error)
+      expect(logger.error).toHaveBeenCalledWith(
+        'BadgeManager',
+        'Error updating badge',
+        expect.objectContaining({
+          error: expect.any(String)
+        })
       );
-      consoleErrorSpy.mockRestore();
     });
 
     test('should handle empty windows array', async () => {

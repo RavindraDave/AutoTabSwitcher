@@ -270,26 +270,26 @@ describe('Window State Management Tests', () => {
       };
 
       chrome.storage.local.get = jest.fn().mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates,
       });
 
-      const result = await chrome.storage.local.get(['operatingMode', 'windowStates']);
+      const result = await chrome.storage.local.get(['switchingMode', 'windowStates']);
 
-      expect(result.operatingMode).toBe('window');
+      expect(result.switchingMode).toBe('window');
       expect(result.windowStates[1].enabled).toBe(true);
       expect(result.windowStates[3].enabled).toBe(true);
     });
 
     test('should handle missing windowStates on startup', async () => {
       chrome.storage.local.get = jest.fn().mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         // windowStates is missing
       });
 
-      const result = await chrome.storage.local.get(['operatingMode', 'windowStates']);
+      const result = await chrome.storage.local.get(['switchingMode', 'windowStates']);
 
-      expect(result.operatingMode).toBe('window');
+      expect(result.switchingMode).toBe('window');
       expect(result.windowStates).toBeUndefined();
 
       // Should initialize empty windowStates

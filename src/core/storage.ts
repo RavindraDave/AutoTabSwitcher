@@ -2,11 +2,12 @@
  * Storage management helpers
  */
 
-import { StorageData, OperatingMode } from './types.js';
+import { StorageData, SwitchingMode, OperatingMode } from './types.js';
 import {
   DEFAULT_ENABLED,
   DEFAULT_ENABLE_ON_STARTUP,
   DEFAULT_WINDOW_MODE,
+  DEFAULT_SWITCHING_MODE,
   DEFAULT_OPERATING_MODE,
   DEFAULT_PAUSE_ON_ACTIVITY,
   DEFAULT_PAUSE_DURATION,
@@ -14,6 +15,7 @@ import {
   MIN_DELAY_MS_PRODUCTION,
 } from './constants.js';
 import { isPacked } from '../utils/environment.js';
+import { logger } from './logger.js';
 
 /**
  * Get the minimum delay time based on environment
@@ -38,7 +40,11 @@ export function clampDelayTime(delayMs: number): number {
   const clamped = Math.max(delayMs, minDelayMs);
 
   if (clamped !== delayMs) {
-    console.log(`[Storage] Clamped delayTime from ${delayMs}ms to ${clamped}ms (min: ${minDelayMs}ms)`);
+    logger.info('Storage', 'Clamped delayTime to minimum', {
+      originalMs: delayMs,
+      clampedMs: clamped,
+      minDelayMs
+    });
   }
 
   return clamped;
@@ -55,7 +61,10 @@ export function validateOperatingMode(value: any): OperatingMode {
   if (value === 'global' || value === 'window') {
     return value;
   }
-  console.warn(`Invalid operating mode value: ${value}, defaulting to 'global'`);
+  logger.warn('Storage', 'Invalid operating mode value, defaulting to global', {
+    invalidValue: value,
+    defaulting: DEFAULT_OPERATING_MODE
+  });
   return DEFAULT_OPERATING_MODE;
 }
 
@@ -104,7 +113,8 @@ export async function initializeStorage(defaultDelayTime: number): Promise<void>
     enableOnStartup: DEFAULT_ENABLE_ON_STARTUP,
     delayTime: clampedDelayTime,
     windowMode: DEFAULT_WINDOW_MODE, // Legacy field
-    operatingMode: DEFAULT_OPERATING_MODE, // New mode system
+    switchingMode: DEFAULT_SWITCHING_MODE, // Primary mode field
+    operatingMode: DEFAULT_SWITCHING_MODE, // DEPRECATED: Kept for backward compatibility
     selectedWindowId: undefined,
     pauseOnActivity: DEFAULT_PAUSE_ON_ACTIVITY,
     pauseDuration: DEFAULT_PAUSE_DURATION,
@@ -146,21 +156,68 @@ export async function setDelayTime(
 }
 
 /**
- * Migrate existing users to the new operating mode system
- * This ensures backward compatibility by defaulting to 'global' mode
- * NON-BREAKING: Only adds new fields, never modifies existing settings
+ * Get the current switching mode with backward compatibility
+ * Checks switchingMode first, then falls back to operatingMode (old field name), then windowMode (legacy)
+ * BACKWARD COMPATIBLE: Supports switchingMode, operatingMode, and windowMode
+ *
+ * @param data - Storage data that may contain switching mode fields
+ * @returns The current switching mode ('global' or 'window')
  */
-export async function migrateToOperatingMode(): Promise<void> {
-  const data = await chrome.storage.local.get(['operatingMode', 'enabled', 'windowStates']) as StorageData;
+export function getSwitchingMode(data: StorageData): SwitchingMode {
+  // Priority: switchingMode (new) > operatingMode (deprecated) > DEFAULT
+  if (data.switchingMode) {
+    return data.switchingMode;
+  }
+  if (data.operatingMode) {
+    return data.operatingMode;
+  }
+  // Fallback to legacy windowMode if neither new field is set
+  if (data.windowMode) {
+    return data.windowMode === 'current-window' ? 'window' : 'global';
+  }
+  return DEFAULT_SWITCHING_MODE;
+}
 
-  // Only migrate if operatingMode is not set (first time after update)
-  if (data.operatingMode === undefined) {
-    // Default to 'global' mode to preserve current behavior
+/**
+ * Migrate existing users to the new switching mode system
+ * Migrates from operatingMode (old name) or windowMode (legacy) to switchingMode (new name)
+ * NON-BREAKING: Only adds new fields, keeps old fields for backward compatibility
+ */
+export async function migrateToSwitchingMode(): Promise<void> {
+  const data = await chrome.storage.local.get(['switchingMode', 'operatingMode', 'windowMode', 'windowStates']) as StorageData;
+
+  // Only migrate if switchingMode is not set
+  if (data.switchingMode === undefined) {
+    const modeToUse = getSwitchingMode(data);
+
     await chrome.storage.local.set({
-      operatingMode: DEFAULT_OPERATING_MODE,
-      windowStates: data.windowStates || {}, // Initialize if missing
+      switchingMode: modeToUse,
+      operatingMode: modeToUse, // Keep for backward compat
+      windowStates: data.windowStates || {},
     });
 
-    console.log('[AutoTabSwitcher] Migrated to new operating mode system (default: global)');
+    if (data.operatingMode) {
+      await logger.info('Migration', 'Migrated operatingMode to switchingMode', {
+        from: data.operatingMode,
+        to: modeToUse
+      });
+    } else if (data.windowMode) {
+      await logger.info('Migration', 'Migrated windowMode to switchingMode', {
+        from: data.windowMode,
+        to: modeToUse
+      });
+    } else {
+      await logger.info('Migration', 'Initialized switching mode system', {
+        defaultMode: modeToUse
+      });
+    }
   }
+}
+
+/**
+ * @deprecated Use migrateToSwitchingMode instead
+ * Kept for backward compatibility with older code
+ */
+export async function migrateToOperatingMode(): Promise<void> {
+  await migrateToSwitchingMode();
 }

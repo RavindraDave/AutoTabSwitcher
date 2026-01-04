@@ -8,6 +8,7 @@ import {
   exportLogsAsJSON,
   clearLogs,
   getDiagnosticSummary,
+  logger,
   type LogEntry,
 } from '../core/logger.js';
 
@@ -88,7 +89,9 @@ async function loadLogs(): Promise<void> {
       logContainer.innerHTML = logs.map(renderLogEntry).join('');
     }
   } catch (error) {
-    console.error('Error loading logs:', error);
+    await logger.error('DiagnosticsPage', 'Error loading logs', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showAlert('Error loading logs', 'danger');
   }
 }
@@ -157,7 +160,9 @@ async function handleExportText(): Promise<void> {
     downloadFile(text, 'auto-tab-switcher-logs.txt', 'text/plain');
     showAlert('Logs exported successfully', 'success');
   } catch (error) {
-    console.error('Error exporting logs:', error);
+    await logger.error('DiagnosticsPage', 'Error exporting logs as text', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showAlert('Error exporting logs', 'danger');
   }
 }
@@ -171,7 +176,9 @@ async function handleExportJSON(): Promise<void> {
     downloadFile(json, 'auto-tab-switcher-logs.json', 'application/json');
     showAlert('Logs exported successfully', 'success');
   } catch (error) {
-    console.error('Error exporting logs:', error);
+    await logger.error('DiagnosticsPage', 'Error exporting logs as JSON', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showAlert('Error exporting logs', 'danger');
   }
 }
@@ -185,7 +192,9 @@ async function handleCopyToClipboard(): Promise<void> {
     await navigator.clipboard.writeText(text);
     showAlert('Logs copied to clipboard', 'success');
   } catch (error) {
-    console.error('Error copying to clipboard:', error);
+    await logger.error('DiagnosticsPage', 'Error copying to clipboard', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showAlert('Error copying to clipboard', 'danger');
   }
 }
@@ -203,7 +212,9 @@ async function handleClearLogs(): Promise<void> {
     await loadLogs();
     showAlert('Logs cleared successfully', 'success');
   } catch (error) {
-    console.error('Error clearing logs:', error);
+    await logger.error('DiagnosticsPage', 'Error clearing logs', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     showAlert('Error clearing logs', 'danger');
   }
 }
