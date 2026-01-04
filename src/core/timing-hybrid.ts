@@ -21,8 +21,8 @@ let intervalTimerId: number | undefined;
 
 // BUGFIX: In-memory flag to prevent race conditions during disable
 // This provides immediate short-circuit before any async storage operations
+// NOTE: Removed isEnabled flag - now rely on persistent storage to survive service worker suspension
 let isStopping: boolean = false;
-let isEnabled: boolean = false;
 
 /**
  * Start timer using setInterval (for sub-30-second delays)
@@ -37,8 +37,7 @@ async function startIntervalTimer(delayMs: number): Promise<void> {
     intervalTimerId = undefined;
   }
 
-  // BUGFIX: Set in-memory enabled flag
-  isEnabled = true;
+  // BUGFIX: Clear stopping flag
   isStopping = false;
 
   // Store timer state in chrome.storage for restoration after service worker wake
@@ -53,8 +52,9 @@ async function startIntervalTimer(delayMs: number): Promise<void> {
   // Start new interval with pause checking
   intervalTimerId = setInterval(async () => {
     try {
-      // BUGFIX: Immediate guard check before any async operations
-      if (isStopping || !isEnabled) {
+      // BUGFIX: Check storage value instead of in-memory flag to survive service worker suspension
+      // Only check isStopping for synchronous disable operations
+      if (isStopping) {
         return;
       }
 
@@ -62,22 +62,23 @@ async function startIntervalTimer(delayMs: number): Promise<void> {
       await chrome.storage.local.set({ lastIntervalCheck: Date.now() });
 
       // BUGFIX: Re-check after async storage operation
-      if (isStopping || !isEnabled) {
+      if (isStopping) {
         return;
       }
 
       const data = await getSettings(['enabled']);
       const enabled = data.enabled ?? DEFAULT_ENABLED;
 
-      // Short-circuit if disabled
-      if (!enabled || isStopping || !isEnabled) {
+      // Short-circuit if disabled based on persistent storage
+      // BUGFIX: Removed !isEnabled check - it's lost on service worker suspension
+      if (!enabled || isStopping) {
         return;
       }
 
       const paused = await isPaused();
 
-      // BUGFIX: Final check before tab switch
-      if (isStopping || !isEnabled) {
+      // BUGFIX: Final check before tab switch - rely on storage, not in-memory flags
+      if (isStopping) {
         return;
       }
 
@@ -115,9 +116,8 @@ async function startIntervalTimer(delayMs: number): Promise<void> {
  * BUGFIX: Immediately sets stopping flag to prevent any in-flight callbacks
  */
 async function stopIntervalTimer(): Promise<void> {
-  // BUGFIX: Set flags IMMEDIATELY before any async operations
+  // BUGFIX: Set stopping flag IMMEDIATELY before any async operations
   isStopping = true;
-  isEnabled = false;
 
   // Clear interval timer synchronously
   if (intervalTimerId !== undefined) {
@@ -146,8 +146,7 @@ async function stopIntervalTimer(): Promise<void> {
  * @param delayMs - Delay in milliseconds
  */
 async function startAlarmTimer(delayMs: number): Promise<void> {
-  // BUGFIX: Set in-memory enabled flag
-  isEnabled = true;
+  // BUGFIX: Clear stopping flag
   isStopping = false;
 
   // Clear existing alarm
@@ -170,9 +169,8 @@ async function startAlarmTimer(delayMs: number): Promise<void> {
  * BUGFIX: Immediately sets stopping flag to prevent any in-flight alarm callbacks
  */
 async function stopAlarmTimer(): Promise<void> {
-  // BUGFIX: Set flags IMMEDIATELY before any async operations
+  // BUGFIX: Set stopping flag IMMEDIATELY before any async operations
   isStopping = true;
-  isEnabled = false;
 
   await chrome.alarms.clear(ALARM_NAME);
   await logger.info('TimingHybrid', 'Alarm timer stopped');
@@ -228,7 +226,6 @@ export async function toggleHybridTimer(enabled: boolean, delayMs: number, minDe
   // BUGFIX: If disabling, set stopping flag IMMEDIATELY before any async operations
   if (!enabled) {
     isStopping = true;
-    isEnabled = false;
   }
 
   // Stop all timers first
@@ -268,8 +265,9 @@ export async function toggleHybridTimer(enabled: boolean, delayMs: number, minDe
 export function setupAlarmListener(): void {
   chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === ALARM_NAME) {
-      // BUGFIX: Immediate guard check before any async operations
-      if (isStopping || !isEnabled) {
+      // BUGFIX: Check storage value instead of in-memory flag to survive service worker suspension
+      // Only check isStopping for synchronous disable operations
+      if (isStopping) {
         return;
       }
 
@@ -277,16 +275,17 @@ export function setupAlarmListener(): void {
       const data = await getSettings(['enabled']);
       const enabled = data.enabled ?? DEFAULT_ENABLED;
 
-      // Short-circuit if disabled
-      if (!enabled || isStopping || !isEnabled) {
+      // Short-circuit if disabled based on persistent storage
+      // BUGFIX: Removed !isEnabled check - it's lost on service worker suspension
+      if (!enabled || isStopping) {
         return;
       }
 
       // Check if switching is paused due to user activity
       const paused = await isPaused();
 
-      // BUGFIX: Final check before tab switch
-      if (isStopping || !isEnabled) {
+      // BUGFIX: Final check before tab switch - rely on storage, not in-memory flags
+      if (isStopping) {
         return;
       }
 
