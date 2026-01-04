@@ -46,8 +46,8 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       const switchingMode = getSwitchingMode(data);
 
       // LEGACY SUPPORT: Check if this is legacy current-window mode
-      // (has windowMode='current-window' and selectedWindowId)
-      const isLegacyCurrentWindowMode = data.windowMode === 'current-window' && data.selectedWindowId !== undefined;
+      // (has windowMode='current-window')
+      const isLegacyCurrentWindowMode = data.windowMode === 'current-window';
 
       // Determine window mode from switching mode
       if (switchingMode === 'global') {
