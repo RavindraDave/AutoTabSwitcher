@@ -16,6 +16,7 @@ import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globa
 jest.mock('../core/storage.js', () => ({
   getSettings: jest.fn(),
   validateOperatingMode: jest.fn((val) => val === 'window' ? 'window' : 'global'),
+  getSwitchingMode: jest.fn((data) => data.switchingMode || data.operatingMode || 'global'),
   isValidWindowId: jest.fn((id) => typeof id === 'number' && id > 0),
 }));
 

@@ -15,7 +15,7 @@ import {
 } from '../core/constants.js';
 import { StorageData } from '../core/types.js';
 import { validateDelayTime, validatePauseDuration } from '../popup/shared/validation.js';
-import { setDelayTime } from '../core/storage.js';
+import { setDelayTime, getSwitchingMode } from '../core/storage.js';
 
 // Determine minimum delay based on environment
 const MIN_DELAY_SECONDS_ENV = isPacked()
@@ -232,6 +232,7 @@ async function loadSettings(): Promise<void> {
     const data = (await chrome.storage.local.get([
       'delayTime',
       'enabled',
+      'switchingMode',
       'operatingMode',
       'windowMode', // Legacy fallback
       'pauseOnActivity',
@@ -258,25 +259,20 @@ async function loadSettings(): Promise<void> {
       enableOnStartupCheckbox.checked = data.enableOnStartup ?? false;
     }
 
-    // Operating mode (with legacy fallback)
-    let operatingMode = data.operatingMode ?? 'global';
-
-    // Legacy migration: if no operatingMode but has windowMode
-    if (!data.operatingMode && data.windowMode) {
-      operatingMode = data.windowMode === 'current-window' ? 'window' : 'global';
-    }
+    // Get switching mode with backward compatibility
+    const switchingMode = getSwitchingMode(data);
 
     const operatingModeGlobal = document.getElementById('operatingModeGlobal') as HTMLInputElement;
     const operatingModeWindow = document.getElementById('operatingModeWindow') as HTMLInputElement;
 
-    if (operatingMode === 'global' && operatingModeGlobal) {
+    if (switchingMode === 'global' && operatingModeGlobal) {
       operatingModeGlobal.checked = true;
-    } else if (operatingMode === 'window' && operatingModeWindow) {
+    } else if (switchingMode === 'window' && operatingModeWindow) {
       operatingModeWindow.checked = true;
     }
 
     // Apply initial theme and mode indicator
-    handleOperatingModeChange(operatingMode);
+    handleOperatingModeChange(switchingMode);
 
     // Pause on activity
     const pauseOnActivityCheckbox = document.getElementById(
@@ -346,16 +342,18 @@ async function saveSettings(): Promise<void> {
       pauseDuration = pauseDurationInSeconds * 1000; // Convert to milliseconds
     }
 
-    // Get operating mode selection
+    // Get switching mode selection
     const checkedRadio = document.querySelector(
       'input[name="operatingMode"]:checked'
     ) as HTMLInputElement | null;
-    const operatingMode = (checkedRadio?.value as 'global' | 'window') ?? 'global';
+    const switchingMode = (checkedRadio?.value as 'global' | 'window') ?? 'global';
 
     // Save delayTime with automatic clamping using robust helper
+    // Note: setDelayTime still uses operatingMode parameter for now
     const clampedDelayMs = await setDelayTime(delayInSeconds * 1000, {
       enableOnStartup: enableOnStartupCheckbox.checked,
-      operatingMode,
+      switchingMode, // Primary field
+      operatingMode: switchingMode, // DEPRECATED: For backward compatibility
       pauseOnActivity,
       pauseDuration,
     });
@@ -363,7 +361,7 @@ async function saveSettings(): Promise<void> {
     console.log('Settings saved:', {
       delayTime: clampedDelayMs,
       enableOnStartup: enableOnStartupCheckbox.checked,
-      operatingMode,
+      switchingMode,
       pauseOnActivity,
       pauseDuration,
     });
@@ -387,7 +385,8 @@ async function resetToDefaults(): Promise<void> {
     await setDelayTime(DEFAULT_DELAY_SECONDS * 1000, {
       enabled: false,
       enableOnStartup: false,
-      operatingMode: 'global',
+      switchingMode: 'global',
+      operatingMode: 'global', // DEPRECATED: For backward compatibility
       pauseOnActivity: false,
       pauseDuration: DEFAULT_PAUSE_DURATION_SECONDS * 1000,
     });

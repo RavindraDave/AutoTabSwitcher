@@ -40,7 +40,7 @@ describe('Badge Integration Tests', () => {
     test('should update badges when window is enabled in Window mode', async () => {
       // Setup: Window mode with window 1 disabled
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: false },
           2: { enabled: true },
@@ -63,7 +63,7 @@ describe('Badge Integration Tests', () => {
 
       // Simulate enabling window 1
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true }, // Changed from false to true
           2: { enabled: true },
@@ -91,7 +91,7 @@ describe('Badge Integration Tests', () => {
     test('should update badges when window is disabled in Window mode', async () => {
       // Setup: Window mode with window 1 enabled
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
         },
@@ -112,7 +112,7 @@ describe('Badge Integration Tests', () => {
 
       // Simulate disabling window 1
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: false }, // Changed from true to false
         },
@@ -139,7 +139,7 @@ describe('Badge Integration Tests', () => {
     test('should update badges for multiple windows when states change', async () => {
       // Setup: Window mode with multiple windows
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           2: { enabled: false },
@@ -164,7 +164,7 @@ describe('Badge Integration Tests', () => {
 
       // Simulate toggling multiple windows
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: false }, // Changed: ON -> OFF
           2: { enabled: true },  // Changed: OFF -> ON
@@ -207,7 +207,7 @@ describe('Badge Integration Tests', () => {
     test('should update badges when switching from Global to Window mode', async () => {
       // Setup: Global mode, enabled
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'global',
+        switchingMode: 'global',
         enabled: true,
       });
 
@@ -236,7 +236,7 @@ describe('Badge Integration Tests', () => {
 
       // Switch to Window mode with only window 1 enabled
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         enabled: false,
         windowStates: {
           1: { enabled: true },
@@ -271,7 +271,7 @@ describe('Badge Integration Tests', () => {
     test('should update badges when switching from Window to Global mode', async () => {
       // Setup: Window mode with mixed states
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           2: { enabled: false },
@@ -303,7 +303,7 @@ describe('Badge Integration Tests', () => {
 
       // Switch to Global mode, enabled
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'global',
+        switchingMode: 'global',
         enabled: true,
       });
 
@@ -332,7 +332,7 @@ describe('Badge Integration Tests', () => {
     test('should update badges when switching to Window mode with all windows disabled', async () => {
       // Setup: Global mode, enabled
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'global',
+        switchingMode: 'global',
         enabled: true,
       });
 
@@ -351,7 +351,7 @@ describe('Badge Integration Tests', () => {
 
       // Switch to Window mode with all windows disabled
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: false },
           2: { enabled: false },
@@ -377,7 +377,7 @@ describe('Badge Integration Tests', () => {
     test('should update badge immediately when window state changes (no page refresh)', async () => {
       // This test verifies the fix for the bug where badges only updated on page refresh
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: false },
         },
@@ -404,7 +404,7 @@ describe('Badge Integration Tests', () => {
 
       // Change state to enabled (simulating user clicking toggle in popup)
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
         },
@@ -430,7 +430,7 @@ describe('Badge Integration Tests', () => {
 
     test('should update badges for all tabs in window without page refresh', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: false },
         },
@@ -451,7 +451,7 @@ describe('Badge Integration Tests', () => {
 
       // Enable window
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
         },
@@ -480,7 +480,7 @@ describe('Badge Integration Tests', () => {
   describe('Paused State with Window Mode', () => {
     test('should update badges correctly when window is enabled and then paused', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
         },
@@ -519,7 +519,7 @@ describe('Badge Integration Tests', () => {
 
     test('should not show pause for disabled window even when paused=true', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: false },
         },

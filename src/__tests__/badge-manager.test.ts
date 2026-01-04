@@ -260,7 +260,7 @@ describe('Badge Manager', () => {
   describe('Window Mode Badge States (New Operating Mode)', () => {
     test('should show ON for enabled window, OFF for disabled windows', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           2: { enabled: false },
@@ -309,7 +309,7 @@ describe('Badge Manager', () => {
 
     test('should show pause (orange) for enabled window when paused', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
         },
@@ -338,7 +338,7 @@ describe('Badge Manager', () => {
 
     test('should show OFF for disabled window even when paused', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: false },
         },
@@ -367,7 +367,7 @@ describe('Badge Manager', () => {
 
     test('should show OFF for window not in windowStates (defaults to disabled)', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           // Window 2 not in windowStates
@@ -404,7 +404,7 @@ describe('Badge Manager', () => {
 
     test('should handle undefined windowStates in window mode', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         // windowStates is undefined
       });
 
@@ -431,7 +431,7 @@ describe('Badge Manager', () => {
 
     test('should update badge for specific tab in window mode', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           2: { enabled: false },
@@ -463,7 +463,7 @@ describe('Badge Manager', () => {
 
     test('should update badge for tab in disabled window', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           2: { enabled: false },
@@ -492,7 +492,7 @@ describe('Badge Manager', () => {
 
     test('should handle multiple windows with mixed states', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true },
           2: { enabled: false },
@@ -539,7 +539,7 @@ describe('Badge Manager', () => {
 
     test('should prioritize operatingMode over legacy windowMode', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        operatingMode: 'window', // New mode
+        switchingMode: 'window', // New mode
         windowMode: 'global', // Legacy mode - should be ignored
         windowStates: {
           1: { enabled: true },

@@ -3,6 +3,7 @@
  */
 
 import { StorageData } from './types.js';
+import { getSwitchingMode } from './storage.js';
 
 /**
  * Determine badge state for a specific window
@@ -12,7 +13,7 @@ import { StorageData } from './types.js';
  * @param paused - Whether switching is temporarily paused
  * @param windowMode - Legacy window mode setting ('global' or 'current-window')
  * @param selectedWindowId - The selected window ID (for legacy current-window mode)
- * @param operatingMode - New operating mode ('global' or 'window')
+ * @param switchingMode - Current switching mode ('global' or 'window')
  * @param windowStates - Per-window enable/disable states (for window mode)
  * @returns Badge text and color
  */
@@ -22,11 +23,14 @@ function getBadgeForWindow(
   paused: boolean,
   windowMode: 'global' | 'current-window',
   selectedWindowId?: number,
-  operatingMode?: 'global' | 'window',
+  switchingMode?: 'global' | 'window',
   windowStates?: { [windowId: number]: { enabled: boolean } }
 ): { text: string; color: string } {
-  // Check new operating mode first (takes precedence over legacy windowMode)
-  if (operatingMode === 'window') {
+  // Check switching mode first (takes precedence over legacy windowMode)
+  // BUT: Don't use window mode logic for legacy current-window mode
+  const isLegacyCurrentWindowMode = windowMode === 'current-window';
+
+  if (switchingMode === 'window' && !isLegacyCurrentWindowMode) {
     // Window Mode: Each window has independent enable/disable state
     const isWindowEnabled = windowStates?.[windowId]?.enabled ?? false;
 
@@ -79,13 +83,14 @@ export async function updateBadge(enabled: boolean, paused: boolean = false, tab
     const data = await chrome.storage.local.get([
       'windowMode',
       'selectedWindowId',
+      'switchingMode',
       'operatingMode',
       'windowStates'
     ]) as StorageData;
 
     const windowMode = data.windowMode ?? 'global';
     const selectedWindowId = data.selectedWindowId;
-    const operatingMode = data.operatingMode;
+    const switchingMode = getSwitchingMode(data);
     const windowStates = data.windowStates;
 
     // If specific tab requested, update only that tab
@@ -98,7 +103,7 @@ export async function updateBadge(enabled: boolean, paused: boolean = false, tab
           paused,
           windowMode,
           selectedWindowId,
-          operatingMode,
+          switchingMode,
           windowStates
         );
         await chrome.action.setBadgeText({ tabId, text: badge.text });
@@ -119,7 +124,7 @@ export async function updateBadge(enabled: boolean, paused: boolean = false, tab
         paused,
         windowMode,
         selectedWindowId,
-        operatingMode,
+        switchingMode,
         windowStates
       );
 

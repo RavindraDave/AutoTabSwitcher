@@ -20,7 +20,7 @@ describe('Mode Switching Tests', () => {
     test('should preserve enabled state when switching to window mode', async () => {
       // Setup: Global mode, enabled
       const initialState = {
-        operatingMode: 'global',
+        switchingMode: 'global',
         enabled: true,
         delayTime: 60000,
       };
@@ -29,7 +29,7 @@ describe('Mode Switching Tests', () => {
 
       // Switch to window mode
       const newState = {
-        operatingMode: 'window',
+        switchingMode: 'window',
         enabled: false, // Global enabled should be disabled
         windowStates: {}, // Initialize empty window states
       };
@@ -38,7 +38,7 @@ describe('Mode Switching Tests', () => {
 
       expect(chrome.storage.local.set).toHaveBeenCalledWith(
         expect.objectContaining({
-          operatingMode: 'window',
+          switchingMode: 'window',
           windowStates: expect.any(Object),
         })
       );
@@ -46,7 +46,7 @@ describe('Mode Switching Tests', () => {
 
     test('should initialize windowStates on first switch to window mode', async () => {
       const initialState = {
-        operatingMode: 'global',
+        switchingMode: 'global',
         enabled: true,
       };
 
@@ -54,7 +54,7 @@ describe('Mode Switching Tests', () => {
 
       // Switch to window mode
       const newState = {
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {},
       };
 
@@ -71,7 +71,7 @@ describe('Mode Switching Tests', () => {
       // Simulate rapid switching
       for (let i = 0; i < 10; i++) {
         const mode = i % 2 === 0 ? 'global' : 'window';
-        await chrome.storage.local.set({ operatingMode: mode });
+        await chrome.storage.local.set({ switchingMode: mode });
       }
 
       // Should have been called 10 times
@@ -90,7 +90,7 @@ describe('Mode Switching Tests', () => {
     test('should preserve common settings when switching to global mode', async () => {
       // Setup: Window mode with some enabled windows
       const initialState = {
-        operatingMode: 'window',
+        switchingMode: 'window',
         enabled: false,
         delayTime: 60000,
         windowStates: {
@@ -103,7 +103,7 @@ describe('Mode Switching Tests', () => {
 
       // Switch to global mode
       const newState = {
-        operatingMode: 'global',
+        switchingMode: 'global',
         enabled: false, // User needs to manually enable global mode
         delayTime: 60000, // Preserved
         windowStates: initialState.windowStates, // Can be kept for potential future switch back
@@ -113,7 +113,7 @@ describe('Mode Switching Tests', () => {
 
       expect(chrome.storage.local.set).toHaveBeenCalledWith(
         expect.objectContaining({
-          operatingMode: 'global',
+          switchingMode: 'global',
           delayTime: 60000,
         })
       );
@@ -121,7 +121,7 @@ describe('Mode Switching Tests', () => {
 
     test('should handle transition when all windows were disabled', async () => {
       const initialState = {
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: false },
           2: { enabled: false },
@@ -131,18 +131,18 @@ describe('Mode Switching Tests', () => {
       chrome.storage.local.get = jest.fn().mockResolvedValue(initialState);
 
       // Switch to global mode
-      await chrome.storage.local.set({ operatingMode: 'global', enabled: false });
+      await chrome.storage.local.set({ switchingMode: 'global', enabled: false });
 
       expect(chrome.storage.local.set).toHaveBeenCalledWith(
         expect.objectContaining({
-          operatingMode: 'global',
+          switchingMode: 'global',
         })
       );
     });
 
     test('should handle transition when some windows were enabled', async () => {
       const initialState = {
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {
           1: { enabled: true, enabledTimestamp: Date.now() },
           2: { enabled: false },
@@ -153,7 +153,7 @@ describe('Mode Switching Tests', () => {
       chrome.storage.local.get = jest.fn().mockResolvedValue(initialState);
 
       // Switch to global mode - user must explicitly enable
-      await chrome.storage.local.set({ operatingMode: 'global', enabled: false });
+      await chrome.storage.local.set({ switchingMode: 'global', enabled: false });
 
       expect(chrome.storage.local.set).toHaveBeenCalled();
     });
@@ -162,37 +162,37 @@ describe('Mode Switching Tests', () => {
   describe('Mode Persistence', () => {
     test('should persist mode across browser restarts', async () => {
       // Set mode
-      await chrome.storage.local.set({ operatingMode: 'window' });
+      await chrome.storage.local.set({ switchingMode: 'window' });
 
       // Simulate browser restart (clear and reload)
       chrome.storage.local.get = jest.fn().mockResolvedValue({
-        operatingMode: 'window',
+        switchingMode: 'window',
       });
 
-      const result = await chrome.storage.local.get(['operatingMode']);
+      const result = await chrome.storage.local.get(['switchingMode']);
 
-      expect(result.operatingMode).toBe('window');
+      expect(result.switchingMode).toBe('window');
     });
 
     test('should default to global mode on first install', async () => {
       // Simulate first install - no operatingMode set
       chrome.storage.local.get = jest.fn().mockResolvedValue({});
 
-      const result = await chrome.storage.local.get(['operatingMode']);
+      const result = await chrome.storage.local.get(['switchingMode']);
 
       // If not set, default should be used
-      const mode = result.operatingMode ?? DEFAULT_OPERATING_MODE;
+      const mode = result.switchingMode ?? DEFAULT_OPERATING_MODE;
       expect(mode).toBe('global');
     });
 
     test('should handle corrupted mode data', async () => {
       // Simulate corrupted data
       chrome.storage.local.get = jest.fn().mockResolvedValue({
-        operatingMode: 123, // Invalid type
+        switchingMode: 123, // Invalid type
       });
 
-      const result = await chrome.storage.local.get(['operatingMode']);
-      const validatedMode = validateOperatingMode(result.operatingMode);
+      const result = await chrome.storage.local.get(['switchingMode']);
+      const validatedMode = validateOperatingMode(result.switchingMode);
 
       expect(validatedMode).toBe(DEFAULT_OPERATING_MODE);
     });
@@ -201,7 +201,7 @@ describe('Mode Switching Tests', () => {
   describe('Mode-Specific State Management', () => {
     test('global mode should ignore windowStates', async () => {
       const state = {
-        operatingMode: 'global',
+        switchingMode: 'global',
         enabled: true,
         windowStates: {
           1: { enabled: false }, // Should be ignored in global mode
@@ -211,16 +211,16 @@ describe('Mode Switching Tests', () => {
 
       chrome.storage.local.get = jest.fn().mockResolvedValue(state);
 
-      const result = await chrome.storage.local.get(['operatingMode', 'enabled', 'windowStates']);
+      const result = await chrome.storage.local.get(['switchingMode', 'enabled', 'windowStates']);
 
       // In global mode, windowStates exist but are not used
-      expect(result.operatingMode).toBe('global');
+      expect(result.switchingMode).toBe('global');
       expect(result.enabled).toBe(true);
     });
 
     test('window mode should use windowStates', async () => {
       const state = {
-        operatingMode: 'window',
+        switchingMode: 'window',
         enabled: false, // Global enabled is false
         windowStates: {
           1: { enabled: true, enabledTimestamp: Date.now() },
@@ -230,24 +230,24 @@ describe('Mode Switching Tests', () => {
 
       chrome.storage.local.get = jest.fn().mockResolvedValue(state);
 
-      const result = await chrome.storage.local.get(['operatingMode', 'windowStates']);
+      const result = await chrome.storage.local.get(['switchingMode', 'windowStates']);
 
-      expect(result.operatingMode).toBe('window');
+      expect(result.switchingMode).toBe('window');
       expect(result.windowStates).toHaveProperty('1');
       expect(result.windowStates[1].enabled).toBe(true);
     });
 
     test('should handle empty windowStates in window mode', async () => {
       const state = {
-        operatingMode: 'window',
+        switchingMode: 'window',
         windowStates: {}, // No windows enabled
       };
 
       chrome.storage.local.get = jest.fn().mockResolvedValue(state);
 
-      const result = await chrome.storage.local.get(['operatingMode', 'windowStates']);
+      const result = await chrome.storage.local.get(['switchingMode', 'windowStates']);
 
-      expect(result.operatingMode).toBe('window');
+      expect(result.switchingMode).toBe('window');
       expect(Object.keys(result.windowStates)).toHaveLength(0);
     });
   });
@@ -255,20 +255,20 @@ describe('Mode Switching Tests', () => {
   describe('Concurrent Mode Operations', () => {
     test('should handle simultaneous mode reads', async () => {
       chrome.storage.local.get = jest.fn().mockResolvedValue({
-        operatingMode: 'global',
+        switchingMode: 'global',
       });
 
       // Simulate multiple components reading mode at once
       const promises = [
-        chrome.storage.local.get(['operatingMode']),
-        chrome.storage.local.get(['operatingMode']),
-        chrome.storage.local.get(['operatingMode']),
+        chrome.storage.local.get(['switchingMode']),
+        chrome.storage.local.get(['switchingMode']),
+        chrome.storage.local.get(['switchingMode']),
       ];
 
       const results = await Promise.all(promises);
 
       results.forEach(result => {
-        expect(result.operatingMode).toBe('global');
+        expect(result.switchingMode).toBe('global');
       });
 
       expect(chrome.storage.local.get).toHaveBeenCalledTimes(3);
@@ -280,7 +280,7 @@ describe('Mode Switching Tests', () => {
 
       // Only last change should be applied after debounce
       for (const mode of changes) {
-        await chrome.storage.local.set({ operatingMode: mode });
+        await chrome.storage.local.set({ switchingMode: mode });
       }
 
       // All calls should have gone through (debouncing happens in background.ts)
@@ -288,7 +288,7 @@ describe('Mode Switching Tests', () => {
 
       // Last call should be 'window'
       expect(chrome.storage.local.set).toHaveBeenLastCalledWith(
-        expect.objectContaining({ operatingMode: 'window' })
+        expect.objectContaining({ switchingMode: 'window' })
       );
     });
   });
@@ -298,7 +298,7 @@ describe('Mode Switching Tests', () => {
       chrome.storage.local.set = jest.fn().mockRejectedValue(new Error('Storage quota exceeded'));
 
       await expect(
-        chrome.storage.local.set({ operatingMode: 'window' })
+        chrome.storage.local.set({ switchingMode: 'window' })
       ).rejects.toThrow('Storage quota exceeded');
     });
 
@@ -306,17 +306,17 @@ describe('Mode Switching Tests', () => {
       chrome.storage.local.get = jest.fn().mockRejectedValue(new Error('Storage unavailable'));
 
       await expect(
-        chrome.storage.local.get(['operatingMode'])
+        chrome.storage.local.get(['switchingMode'])
       ).rejects.toThrow('Storage unavailable');
     });
 
     test('should validate mode even if storage returns unexpected type', async () => {
       chrome.storage.local.get = jest.fn().mockResolvedValue({
-        operatingMode: { invalid: 'object' },
+        switchingMode: { invalid: 'object' },
       });
 
-      const result = await chrome.storage.local.get(['operatingMode']);
-      const validatedMode = validateOperatingMode(result.operatingMode);
+      const result = await chrome.storage.local.get(['switchingMode']);
+      const validatedMode = validateOperatingMode(result.switchingMode);
 
       expect(validatedMode).toBe(DEFAULT_OPERATING_MODE);
     });
