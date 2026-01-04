@@ -11,7 +11,6 @@ import {
   MIN_PAUSE_DURATION_SECONDS,
   MAX_PAUSE_DURATION_SECONDS,
   DEFAULT_PAUSE_DURATION_SECONDS,
-  MIN_DELAY_MS_PRODUCTION,
 } from '../core/constants.js';
 import { StorageData } from '../core/types.js';
 import { validateDelayTime, validatePauseDuration } from '../popup/shared/validation.js';

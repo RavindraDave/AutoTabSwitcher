@@ -6,7 +6,7 @@
  * All state is persisted in chrome.storage.local.
  */
 
-import { DEFAULT_ENABLED } from './core/constants.js';
+import { DEFAULT_ENABLED, MIN_DELAY_MS_PRODUCTION } from './core/constants.js';
 import { initializeStorage, getSettings, migrateToSwitchingMode, getSwitchingMode, isValidWindowId, windowExists } from './core/storage.js';
 import { setupActivityListeners, isPaused } from './core/activity-tracker.js';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
@@ -55,7 +55,7 @@ async function toggleTabSwitcher(): Promise<void> {
     if (switchingMode === 'global') {
       // GLOBAL MODE: Use existing code path - NO CHANGES to behavior
       // This is the current behavior and remains 100% unchanged
-      await toggleHybridTimer(enabled, delayTime, MIN_DELAY_MS);
+      await toggleHybridTimer(enabled, delayTime, MIN_DELAY_MS_PRODUCTION);
     } else {
       // WINDOW MODE: New feature - per-window control
       // This is a NEW code path, isolated from existing logic
