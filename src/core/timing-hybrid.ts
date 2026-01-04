@@ -82,7 +82,7 @@ async function startIntervalTimer(delayMs: number): Promise<void> {
       }
 
       if (paused) {
-        console.log('Auto-switching paused due to recent user activity');
+        await logger.info('TimingHybrid', 'Auto-switching paused due to user activity');
         await updateBadge(enabled, true);
       } else {
         await updateBadge(enabled, false);
@@ -90,7 +90,6 @@ async function startIntervalTimer(delayMs: number): Promise<void> {
       }
     } catch (error) {
       // CRITICAL: Catch all errors to prevent interval from running in broken state
-      console.error('Error in interval timer callback:', error);
       await logger.error('TimingHybrid', 'Interval callback failed', {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
@@ -105,7 +104,6 @@ async function startIntervalTimer(delayMs: number): Promise<void> {
     periodInMinutes: 1
   });
 
-  console.log(`Interval timer started with ${delayMs}ms delay (with keep-alive)`);
   await logger.info('TimingHybrid', 'Interval timer started with keep-alive', {
     delayMs,
     keepAliveEnabled: true
@@ -125,7 +123,7 @@ async function stopIntervalTimer(): Promise<void> {
   if (intervalTimerId !== undefined) {
     clearInterval(intervalTimerId);
     intervalTimerId = undefined;
-    console.log('Interval timer stopped');
+    await logger.info('TimingHybrid', 'Interval timer stopped');
   }
 
   // Clear keep-alive alarm (async but non-critical)
@@ -162,7 +160,9 @@ async function startAlarmTimer(delayMs: number): Promise<void> {
     periodInMinutes: periodInMinutes,
   });
 
-  console.log(`Alarm timer started with ${delayMs}ms delay`);
+  await logger.info('TimingHybrid', 'Alarm timer started', {
+    delayMs
+  });
 }
 
 /**
@@ -175,7 +175,7 @@ async function stopAlarmTimer(): Promise<void> {
   isEnabled = false;
 
   await chrome.alarms.clear(ALARM_NAME);
-  console.log('Alarm timer stopped');
+  await logger.info('TimingHybrid', 'Alarm timer stopped');
 }
 
 /**
@@ -205,7 +205,6 @@ async function restoreIntervalTimerIfNeeded(): Promise<void> {
 
   // If more than 2 intervals have passed without a check, the timer was likely killed
   if (timeSinceLastCheck > (intervalDelayMs * 2)) {
-    console.warn(`Service worker was suspended! Restoring interval timer. Gap: ${timeSinceLastCheck}ms`);
     await logger.warn('TimingHybrid', 'Service worker suspension detected, restoring interval timer', {
       timeSinceLastCheck,
       expectedInterval: intervalDelayMs,
@@ -249,12 +248,13 @@ export async function toggleHybridTimer(enabled: boolean, delayMs: number, minDe
       await startIntervalTimer(clampedDelayMs);
     }
 
-    console.log(
-      `Tab switcher started: ${clampedDelayMs}ms delay (requested: ${delayMs}ms), ` +
-      `using ${clampedDelayMs >= MIN_ALARM_DELAY_MS ? 'alarms' : 'interval with keep-alive'}`
-    );
+    await logger.info('TimingHybrid', 'Tab switcher started', {
+      clampedDelayMs,
+      requestedDelayMs: delayMs,
+      usingAlarms: clampedDelayMs >= MIN_ALARM_DELAY_MS
+    });
   } else {
-    console.log('Tab switcher stopped');
+    await logger.info('TimingHybrid', 'Tab switcher stopped');
   }
 
   await updateBadge(enabled);
@@ -291,7 +291,7 @@ export function setupAlarmListener(): void {
       }
 
       if (paused) {
-        console.log('Auto-switching paused due to recent user activity');
+        await logger.info('TimingHybrid', 'Auto-switching paused due to user activity');
         await updateBadge(enabled, true);
       } else {
         await updateBadge(enabled, false);
