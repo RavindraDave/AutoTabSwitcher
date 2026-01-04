@@ -411,8 +411,38 @@ For questions or issues:
 
 ---
 
+## 🐛 Bug Fixes (Post-Implementation)
+
+### TypeScript Constant Resolution (January 2026)
+**Branch**: `claude/fix-min-delay-constant-3KGb8`
+**Status**: ✅ Complete
+
+#### Issues Fixed
+1. **Undefined MIN_DELAY_MS constant** in background.ts:58
+   - Fixed by importing and using `MIN_DELAY_MS_PRODUCTION`
+2. **Unused imports cleanup**:
+   - Removed `MIN_DELAY_MS_DEVELOPMENT` from storage.ts
+   - Removed `isPacked` from storage.ts
+   - Removed `MIN_DELAY_MS_PRODUCTION` from options.ts
+
+#### Files Modified: 3
+- `src/background.ts` - Import and usage fix
+- `src/core/storage.ts` - Removed 2 unused imports
+- `src/options/options.ts` - Removed 1 unused import
+
+#### Verification
+- ✅ Build passes with zero TypeScript errors
+- ✅ All tests passing (12 test suites)
+- ✅ Type checking successful
+- ✅ No behavioral changes
+
+**Documentation**: See `.claude/docs/bug-fixes/TYPESCRIPT_CONSTANT_FIXES.md` for detailed analysis.
+
+---
+
 **Implementation Complete**: Phases 1-4
 **Status**: ✅ Ready for testing and release
+**Build Status**: ✅ All TypeScript errors resolved
 **Confidence Level**: HIGH
 **Risk Assessment**: LOW (zero breaking changes)
 

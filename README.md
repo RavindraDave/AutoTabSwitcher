@@ -470,8 +470,11 @@ This TypeScript rewrite fixed critical issues from the JavaScript version:
    - ❌ No type checking
    - ✅ Full TypeScript strict mode
 
-### Recent Fixes
+### Recent Fixes (January 2026)
 
+- ✅ **TypeScript constant resolution** - Fixed MIN_DELAY_MS undefined error
+- ✅ **Import cleanup** - Removed unused MIN_DELAY_MS_DEVELOPMENT and isPacked imports
+- ✅ **Build optimization** - Zero TypeScript errors, clean compilation
 - ✅ Environment-aware minimum delays
 - ✅ Short-circuit logic when disabled (no unnecessary operations)
 - ✅ Proper TypeScript hybrid file type checking
@@ -647,7 +650,18 @@ MIT License - see LICENSE file for details
 
 ## 📝 Changelog
 
-### Version 1.1.0 (Current)
+### Version 1.1.1 (January 2026)
+
+#### Bug Fixes
+- 🐛 **Fixed TypeScript compilation errors**:
+  - Resolved undefined `MIN_DELAY_MS` constant in background.ts
+  - Removed unused `MIN_DELAY_MS_DEVELOPMENT` import from storage.ts
+  - Removed unused `isPacked` import from storage.ts
+  - Removed unused `MIN_DELAY_MS_PRODUCTION` import from options.ts
+- 🐛 **All builds now pass** without TypeScript errors
+- 🐛 **Clean codebase** with no unused imports or references
+
+### Version 1.1.0
 
 #### New Features
 - ✨ Per-window auto-switching mode
