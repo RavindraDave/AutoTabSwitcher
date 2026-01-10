@@ -99,6 +99,15 @@ const windowsMock = {
   WINDOW_ID_NONE: -1,
 };
 
+// Mock chrome.commands API
+const commandsMock = {
+  getAll: jest.fn().mockResolvedValue([]),
+  onCommand: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
+};
+
 // Create global chrome mock
 (global as any).chrome = {
   storage: storageMock,
@@ -107,6 +116,7 @@ const windowsMock = {
   action: actionMock,
   runtime: runtimeMock,
   windows: windowsMock,
+  commands: commandsMock,
 };
 
 // Reset all mocks before each test

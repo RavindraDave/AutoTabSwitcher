@@ -584,16 +584,37 @@ setupActivityListeners();
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === 'toggle-pause') {
     try {
+      // Check if auto-switching is enabled first
+      const data = await getSettings(['enabled', 'switchingMode', 'operatingMode', 'windowStates']);
+      const switchingMode = getSwitchingMode(data);
+      const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+      // In Global Mode: Check if globally enabled
+      // In Window Mode: Check if any window is enabled
+      let isAnythingEnabled = false;
+      if (switchingMode === 'global') {
+        isAnythingEnabled = enabled;
+      } else {
+        // Window Mode: Check if current window or any window is enabled
+        const currentWindow = await chrome.windows.getCurrent();
+        if (currentWindow.id && data.windowStates) {
+          isAnythingEnabled = data.windowStates[currentWindow.id]?.enabled ?? false;
+        }
+      }
+
+      // Only allow pausing if something is actually enabled
+      if (!isAnythingEnabled) {
+        await logger.warn('KeyboardShortcut', 'Cannot pause: auto-switching is not enabled', {
+          mode: switchingMode
+        });
+        return;
+      }
+
       // Import toggleManualPause dynamically to avoid circular dependencies
       const { toggleManualPause } = await import('./core/manual-pause-tracker.js');
 
       // Toggle manual pause state
       const newState = await toggleManualPause();
-
-      // Get current settings to update badge
-      const data = await getSettings(['enabled', 'switchingMode', 'operatingMode']);
-      const switchingMode = getSwitchingMode(data);
-      const enabled = data.enabled ?? DEFAULT_ENABLED;
 
       // Update badge to reflect pause state
       await updateBadge(enabled, newState);
