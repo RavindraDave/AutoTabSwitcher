@@ -732,3 +732,54 @@ body.window-mode .custom-control-input:checked~.custom-control-label {
 #windowModeCard:has(input[type="radio"]:checked) .mode-title {
   color: #20B2AA;
 }
+
+/* Keyboard Shortcuts Section */
+.shortcut-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.shortcut-label {
+  flex: 1;
+  min-width: 200px;
+}
+
+.shortcut-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.current-shortcut {
+  display: flex;
+  align-items: center;
+}
+
+.shortcut-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  letter-spacing: 0.5px;
+}
+
+body.window-mode .shortcut-badge {
+  background: linear-gradient(135deg, #20B2AA 0%, #17a89c 100%);
+  box-shadow: 0 2px 8px rgba(32, 178, 170, 0.2);
+}
+
+#customizeShortcutButton {
+  white-space: nowrap;
+}

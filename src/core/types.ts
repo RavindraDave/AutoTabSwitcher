@@ -25,6 +25,10 @@ export interface StorageData {
 
   // Onboarding
   hasSeenOnboarding?: boolean; // Whether user has completed the onboarding tour
+
+  // Manual pause (keyboard shortcut)
+  manuallyPaused?: boolean; // Global manual pause state (Global Mode)
+  manuallyPausedWindows?: { [windowId: number]: boolean }; // Per-window manual pause states (Window Mode)
 }
 
 /**

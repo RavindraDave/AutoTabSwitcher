@@ -143,6 +143,30 @@ function updatePauseImpact(): void {
 }
 
 /**
+ * Load and display current keyboard shortcuts
+ */
+async function loadKeyboardShortcuts(): Promise<void> {
+  try {
+    const commands = await chrome.commands.getAll();
+    const pauseCommand = commands.find(cmd => cmd.name === 'toggle-pause');
+
+    const shortcutElement = document.getElementById('currentShortcut');
+    if (shortcutElement) {
+      if (pauseCommand?.shortcut) {
+        shortcutElement.textContent = pauseCommand.shortcut;
+      } else {
+        shortcutElement.textContent = 'Not set';
+        shortcutElement.style.opacity = '0.6';
+      }
+    }
+  } catch (error) {
+    await logger.error('OptionsPage', 'Error loading keyboard shortcuts', {
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
+/**
  * Validate input and show feedback
  */
 function validateInput(
@@ -292,6 +316,9 @@ async function loadSettings(): Promise<void> {
       pauseDurationInput.min = String(MIN_PAUSE_DURATION_SECONDS);
       pauseDurationInput.max = String(MAX_PAUSE_DURATION_SECONDS);
     }
+
+    // Load keyboard shortcuts
+    await loadKeyboardShortcuts();
   } catch (error) {
     await logger.error('OptionsPage', 'Error loading settings', {
       error: error instanceof Error ? error.message : String(error)
@@ -485,6 +512,16 @@ function initializeOptionsPage(): void {
     pauseDurationInput.addEventListener('input', () => {
       updatePauseImpact();
       validateAllInputs();
+    });
+  }
+
+  // Keyboard shortcut customization button
+  const customizeShortcutButton = document.getElementById('customizeShortcutButton');
+  if (customizeShortcutButton) {
+    customizeShortcutButton.addEventListener('click', (event: MouseEvent) => {
+      event.preventDefault();
+      // Open Chrome's keyboard shortcuts page
+      chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
     });
   }
 
