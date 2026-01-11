@@ -9,6 +9,7 @@
 import { DEFAULT_ENABLED, MIN_DELAY_MS_PRODUCTION } from './core/constants.js';
 import { initializeStorage, getSettings, migrateToSwitchingMode, getSwitchingMode, isValidWindowId, windowExists } from './core/storage.js';
 import { setupActivityListeners, isPaused } from './core/activity-tracker.js';
+import { isManuallyPaused, clearManualPause } from './core/manual-pause-tracker.js';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
 import { updateBadge } from './core/badge-manager.js';
 import { switchTab } from './core/tab-switcher.js';
@@ -304,6 +305,9 @@ chrome.runtime.onStartup.addListener(async () => {
   await logger.info('Lifecycle', 'Browser started');
 
   try {
+    // Clear manual pause state on browser startup (fresh start)
+    await clearManualPause();
+
     // Check if auto-start on browser startup is enabled
     const data = await getSettings(['enableOnStartup', 'enabled', 'switchingMode', 'operatingMode', 'windowStates']);
     const enableOnStartup = data.enableOnStartup ?? false;
@@ -535,24 +539,32 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
             return;
           }
 
-          // Check if switching is paused due to user activity
-          const paused = await isPaused();
+          // Check both activity pause and manual pause
+          const activityPaused = await isPaused();
+          const manualPaused = await isManuallyPaused(windowId);
+          const isPausedState = activityPaused || manualPaused;
 
           // BUGFIX: Final check before tab switch
           if (windowTimerManager.isStopping(windowId)) {
             return;
           }
 
-          if (!paused) {
+          if (!isPausedState) {
             // Perform tab switch for this window
             const success = await switchTab(windowId);
             if (success) {
               await logger.info('WindowMode', 'Tab switched for window', { windowId });
             }
           } else {
-            await logger.info('WindowMode', 'Auto-switching paused due to user activity', {
-              windowId
-            });
+            if (manualPaused) {
+              await logger.info('WindowMode', 'Auto-switching paused manually (keyboard shortcut)', {
+                windowId
+              });
+            } else {
+              await logger.info('WindowMode', 'Auto-switching paused due to user activity', {
+                windowId
+              });
+            }
           }
         }
       }
@@ -567,6 +579,57 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 // Set up activity detection listeners
 setupActivityListeners();
+
+// Set up keyboard command listener for pause/resume shortcut
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === 'toggle-pause') {
+    try {
+      // Check if auto-switching is enabled first
+      const data = await getSettings(['enabled', 'switchingMode', 'operatingMode', 'windowStates']);
+      const switchingMode = getSwitchingMode(data);
+      const enabled = data.enabled ?? DEFAULT_ENABLED;
+
+      // In Global Mode: Check if globally enabled
+      // In Window Mode: Check if any window is enabled
+      let isAnythingEnabled = false;
+      if (switchingMode === 'global') {
+        isAnythingEnabled = enabled;
+      } else {
+        // Window Mode: Check if current window or any window is enabled
+        const currentWindow = await chrome.windows.getCurrent();
+        if (currentWindow.id && data.windowStates) {
+          isAnythingEnabled = data.windowStates[currentWindow.id]?.enabled ?? false;
+        }
+      }
+
+      // Only allow pausing if something is actually enabled
+      if (!isAnythingEnabled) {
+        await logger.warn('KeyboardShortcut', 'Cannot pause: auto-switching is not enabled', {
+          mode: switchingMode
+        });
+        return;
+      }
+
+      // Import toggleManualPause dynamically to avoid circular dependencies
+      const { toggleManualPause } = await import('./core/manual-pause-tracker.js');
+
+      // Toggle manual pause state
+      const newState = await toggleManualPause();
+
+      // Update badge to reflect pause state
+      await updateBadge(enabled, newState);
+
+      await logger.info('KeyboardShortcut', 'Manual pause toggled', {
+        paused: newState,
+        mode: switchingMode
+      });
+    } catch (error) {
+      await logger.error('KeyboardShortcut', 'Error toggling manual pause', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+});
 
 // Initialize on script load (when service worker starts)
 // Run migration first to ensure switchingMode is set

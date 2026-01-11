@@ -28,9 +28,23 @@ Transform your browser into a powerful automated display system with Auto Tab Sw
 
 ═══════════════════════════════════════════
 
-### 🎉 WHAT'S NEW IN VERSION 1.1.0
+### 🎉 WHAT'S NEW IN VERSION 1.2.0
 
-This major update brings powerful new features and critical bug fixes based on user feedback!
+This update adds the most requested feature: keyboard shortcuts for instant pause/resume!
+
+#### ✨ KEYBOARD SHORTCUT CONTROL
+**⌨️ Instant Pause/Resume with a Keystroke**
+- NEW keyboard shortcut: `Ctrl+Shift+P` (Windows/Linux) or `Command+Shift+P` (Mac)
+- Perfect for interrupting short delays (2-3 seconds) where clicking would be too slow
+- Context-aware: Global Mode pauses all windows, Window Mode pauses current window only
+- Fully customizable via Chrome's keyboard shortcuts settings
+- Smart protection: only works when auto-switching is enabled
+- Toggle behavior: press once to pause, press again to resume
+- Manual pause takes priority over activity-based pause
+
+### PREVIOUS UPDATE - VERSION 1.1.0
+
+Major feature release with powerful new capabilities and critical bug fixes!
 
 #### ✨ NEW FEATURES
 
@@ -126,6 +140,14 @@ This major update brings powerful new features and critical bug fixes based on u
 - Smart activity detection: tab switches, URL changes, window focus, tab updates
 - Visual indicator (🟠 orange pause symbol) when paused
 
+**⌨️ KEYBOARD SHORTCUT CONTROL**
+- Instant pause/resume with `Ctrl+Shift+P` (Windows/Linux) or `Command+Shift+P` (Mac)
+- Fully customizable via Chrome's keyboard shortcuts settings
+- Perfect for quick interruptions without opening the popup
+- Works keyboard-only for accessibility
+- Context-aware (Global/Window mode behavior)
+- Smart protection: only works when switching is enabled
+
 **📊 VISUAL STATUS INDICATORS**
 - Per-window badge system shows real-time status:
   - 🟢 Green "ON" = Active switching
@@ -161,8 +183,12 @@ This major update brings powerful new features and critical bug fixes based on u
 5. Optional: Enable "Pause on Activity" to prevent interruptions during manual browsing
 6. Click "Enable All Windows" (Global) or "Enable This Window" (Window Mode)
 7. Watch the countdown timer—you're live!
+8. **Bonus**: Use `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac) to quickly pause/resume without opening the popup
 
-**Pro Tip**: Start with a 30-second interval and "Pause on Activity" enabled for the best experience.
+**Pro Tips**:
+- Start with a 30-second interval and "Pause on Activity" enabled for the best experience
+- Customize the keyboard shortcut in Settings → Keyboard Shortcuts section
+- For very short delays (2-3 seconds), use the keyboard shortcut for instant pause control
 
 ═══════════════════════════════════════════
 

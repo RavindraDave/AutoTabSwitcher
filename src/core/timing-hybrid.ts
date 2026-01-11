@@ -13,6 +13,7 @@ import { getSettings } from './storage.js';
 import { updateBadge } from './badge-manager.js';
 import { switchTab } from './tab-switcher.js';
 import { isPaused } from './activity-tracker.js';
+import { isManuallyPaused } from './manual-pause-tracker.js';
 import { logger } from './logger.js';
 
 // Timer state (for setInterval approach)
@@ -75,15 +76,22 @@ async function startIntervalTimer(delayMs: number): Promise<void> {
         return;
       }
 
-      const paused = await isPaused();
+      // Check both activity pause and manual pause
+      const activityPaused = await isPaused();
+      const manualPaused = await isManuallyPaused();
+      const isPausedState = activityPaused || manualPaused;
 
       // BUGFIX: Final check before tab switch - rely on storage, not in-memory flags
       if (isStopping) {
         return;
       }
 
-      if (paused) {
-        await logger.info('TimingHybrid', 'Auto-switching paused due to user activity');
+      if (isPausedState) {
+        if (manualPaused) {
+          await logger.info('TimingHybrid', 'Auto-switching paused manually (keyboard shortcut)');
+        } else {
+          await logger.info('TimingHybrid', 'Auto-switching paused due to user activity');
+        }
         await updateBadge(enabled, true);
       } else {
         await updateBadge(enabled, false);
@@ -282,15 +290,22 @@ export function setupAlarmListener(): void {
       }
 
       // Check if switching is paused due to user activity
-      const paused = await isPaused();
+      // Check both activity pause and manual pause
+      const activityPaused = await isPaused();
+      const manualPaused = await isManuallyPaused();
+      const isPausedState = activityPaused || manualPaused;
 
       // BUGFIX: Final check before tab switch - rely on storage, not in-memory flags
       if (isStopping) {
         return;
       }
 
-      if (paused) {
-        await logger.info('TimingHybrid', 'Auto-switching paused due to user activity');
+      if (isPausedState) {
+        if (manualPaused) {
+          await logger.info('TimingHybrid', 'Auto-switching paused manually (keyboard shortcut)');
+        } else {
+          await logger.info('TimingHybrid', 'Auto-switching paused due to user activity');
+        }
         await updateBadge(enabled, true);
       } else {
         await updateBadge(enabled, false);

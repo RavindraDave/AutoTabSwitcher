@@ -22,6 +22,10 @@ jest.mock('../core/activity-tracker.js', () => ({
   isPaused: jest.fn(),
 }));
 
+jest.mock('../core/manual-pause-tracker.js', () => ({
+  isManuallyPaused: jest.fn(),
+}));
+
 jest.mock('../core/logger.js', () => ({
   logger: {
     info: jest.fn(),
@@ -38,6 +42,7 @@ describe('Timing Hybrid', () => {
   let updateBadge: any;
   let switchTab: any;
   let isPaused: any;
+  let isManuallyPaused: any;
   let logger: any;
   let setIntervalSpy: jest.SpyInstance;
   let clearIntervalSpy: jest.SpyInstance;
@@ -67,6 +72,7 @@ describe('Timing Hybrid', () => {
     const badgeModule = await import('../core/badge-manager.js');
     const tabSwitcherModule = await import('../core/tab-switcher.js');
     const activityModule = await import('../core/activity-tracker.js');
+    const manualPauseModule = await import('../core/manual-pause-tracker.js');
     const loggerModule = await import('../core/logger.js');
 
     toggleHybridTimer = timingModule.toggleHybridTimer;
@@ -75,6 +81,7 @@ describe('Timing Hybrid', () => {
     updateBadge = badgeModule.updateBadge;
     switchTab = tabSwitcherModule.switchTab;
     isPaused = activityModule.isPaused;
+    isManuallyPaused = manualPauseModule.isManuallyPaused;
     logger = loggerModule.logger;
 
     // Default mock implementations
@@ -82,6 +89,7 @@ describe('Timing Hybrid', () => {
     (updateBadge as jest.Mock).mockResolvedValue(undefined);
     (switchTab as jest.Mock).mockResolvedValue(undefined);
     (isPaused as jest.Mock).mockResolvedValue(false);
+    (isManuallyPaused as jest.Mock).mockResolvedValue(false);
   });
 
   afterEach(() => {
@@ -297,6 +305,61 @@ describe('Timing Hybrid', () => {
         lastIntervalStart: undefined,
         lastIntervalCheck: undefined,
       });
+    });
+  });
+
+  describe('Manual Pause Integration', () => {
+    test('should not switch when manually paused', async () => {
+      (isManuallyPaused as jest.Mock).mockResolvedValue(true);
+      (isPaused as jest.Mock).mockResolvedValue(false);
+
+      await toggleHybridTimer(true, 10000, 5000);
+
+      const intervalCallback = setIntervalSpy.mock.calls[0][0];
+      await intervalCallback();
+
+      expect(switchTab).not.toHaveBeenCalled();
+      expect(updateBadge).toHaveBeenCalledWith(true, true);
+    });
+
+    test('should not switch when both manually paused and activity paused', async () => {
+      (isManuallyPaused as jest.Mock).mockResolvedValue(true);
+      (isPaused as jest.Mock).mockResolvedValue(true);
+
+      await toggleHybridTimer(true, 10000, 5000);
+
+      const intervalCallback = setIntervalSpy.mock.calls[0][0];
+      await intervalCallback();
+
+      expect(switchTab).not.toHaveBeenCalled();
+      expect(updateBadge).toHaveBeenCalledWith(true, true);
+    });
+
+    test('should switch when manual pause is cleared and activity is not paused', async () => {
+      (isManuallyPaused as jest.Mock).mockResolvedValue(false);
+      (isPaused as jest.Mock).mockResolvedValue(false);
+
+      await toggleHybridTimer(true, 10000, 5000);
+
+      const intervalCallback = setIntervalSpy.mock.calls[0][0];
+      await intervalCallback();
+
+      expect(switchTab).toHaveBeenCalled();
+      expect(updateBadge).toHaveBeenCalledWith(true, false);
+    });
+
+    test('should handle manual pause in alarm listener', async () => {
+      (isManuallyPaused as jest.Mock).mockResolvedValue(true);
+
+      await toggleHybridTimer(true, 60000, 5000);
+
+      setupAlarmListener();
+
+      const listener = mockChrome.alarms.onAlarm.addListener.mock.calls[0][0];
+      await listener({ name: 'tabSwitcher' });
+
+      expect(switchTab).not.toHaveBeenCalled();
+      expect(updateBadge).toHaveBeenCalledWith(true, true);
     });
   });
 
