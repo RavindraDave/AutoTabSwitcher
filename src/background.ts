@@ -9,7 +9,7 @@
 import { DEFAULT_ENABLED, MIN_DELAY_MS_PRODUCTION } from './core/constants.js';
 import { initializeStorage, getSettings, migrateToSwitchingMode, getSwitchingMode, isValidWindowId, windowExists } from './core/storage.js';
 import { setupActivityListeners, isPaused } from './core/activity-tracker.js';
-import { isManuallyPaused, clearManualPause } from './core/manual-pause-tracker.js';
+import { isManuallyPaused, clearManualPause, toggleManualPause } from './core/manual-pause-tracker.js';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
 import { updateBadge } from './core/badge-manager.js';
 import { switchTab } from './core/tab-switcher.js';
@@ -609,9 +609,6 @@ chrome.commands.onCommand.addListener(async (command) => {
         });
         return;
       }
-
-      // Import toggleManualPause dynamically to avoid circular dependencies
-      const { toggleManualPause } = await import('./core/manual-pause-tracker.js');
 
       // Toggle manual pause state
       const newState = await toggleManualPause();
