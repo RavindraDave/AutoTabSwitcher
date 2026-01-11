@@ -249,7 +249,7 @@ function validateAllInputs(): boolean {
 /**
  * Load all settings from storage
  */
-async function loadSettings(): Promise<void> {
+export async function loadSettings(): Promise<void> {
   try {
     const data = (await chrome.storage.local.get([
       'delayTime',
@@ -330,7 +330,7 @@ async function loadSettings(): Promise<void> {
 /**
  * Save all settings to storage
  */
-async function saveSettings(): Promise<void> {
+export async function saveSettings(): Promise<void> {
   try {
     // Get form values
     const defaultDelayInput = document.getElementById('defaultDelayInput') as HTMLInputElement;
@@ -353,6 +353,22 @@ async function saveSettings(): Promise<void> {
     if (!delayValidation.valid) {
       showError(delayValidation.error || 'Invalid delay time');
       return;
+    }
+
+    // Warn user about very low delay times (< 5 seconds)
+    if (delayInSeconds < 5) {
+      const confirmed = confirm(
+        `⚠️ Warning: Very Low Delay Time (${delayInSeconds} seconds)\n\n` +
+        `You are about to set the delay to ${delayInSeconds} seconds. This may cause issues:\n\n` +
+        `• Very fast switching can be difficult to stop\n` +
+        `• May cause performance issues with rapid tab changes\n` +
+        `• Could make the extension feel unresponsive\n\n` +
+        `Are you absolutely sure you want to continue?`
+      );
+
+      if (!confirmed) {
+        return; // User cancelled
+      }
     }
 
     // Validate pause duration if pause on activity is enabled
@@ -404,7 +420,7 @@ async function saveSettings(): Promise<void> {
 /**
  * Reset all settings to defaults
  */
-async function resetToDefaults(): Promise<void> {
+export async function resetToDefaults(): Promise<void> {
   if (!confirm('Are you sure you want to reset all settings to defaults?')) {
     return;
   }
