@@ -290,10 +290,11 @@ Contact: ravindra@r2dsolutions.com
 
 ### 📋 VERSION HISTORY
 
-#### **Version 1.1.0** (Current - January 2026)
-**Major Update - New Features & Critical Bug Fixes**
+#### **Version 1.2.0** (Current - January 2026)
+**Major Update - Keyboard Shortcuts & Feature Enhancements**
 
 **New Features:**
+- ⌨️ **Keyboard shortcut for instant pause/resume** (Ctrl+Shift+P / Cmd+Shift+P)
 - ✨ Per-window control mode with independent timers
 - ✨ Pause on activity detection system
 - ✨ Professional diagnostics and logging system
@@ -356,7 +357,7 @@ Auto Tab Switcher is designed for legitimate professional and personal use cases
 
 Join professionals worldwide who've automated their browsing workflow!
 
-**Updated**: January 2026 | **Version**: 1.1.0 | **Security Rating**: 87/100
+**Updated**: January 2026 | **Version**: 1.2.0 | **Security Rating**: 87/100
 
 ═══════════════════════════════════════════
 
@@ -387,7 +388,7 @@ Join professionals worldwide who've automated their browsing workflow!
 ## Metadata
 
 - **Extension ID**: mophipfldpoeeimgjfmcnidafjggmiko
-- **Current Version**: 1.1.0
+- **Current Version**: 1.2.0
 - **Last Updated**: January 2026
 - **Category**: Productivity
 - **Manifest Version**: 3
