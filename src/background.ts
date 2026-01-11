@@ -9,7 +9,7 @@
 import { DEFAULT_ENABLED, MIN_DELAY_MS_PRODUCTION } from './core/constants.js';
 import { initializeStorage, getSettings, migrateToSwitchingMode, getSwitchingMode, isValidWindowId, windowExists } from './core/storage.js';
 import { setupActivityListeners, isPaused } from './core/activity-tracker.js';
-import { isManuallyPaused, clearManualPause } from './core/manual-pause-tracker.js';
+import { isManuallyPaused, clearManualPause, toggleManualPause } from './core/manual-pause-tracker.js';
 import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
 import { updateBadge } from './core/badge-manager.js';
 import { switchTab } from './core/tab-switcher.js';
@@ -108,8 +108,16 @@ async function handleSettingsChange(changes: any): Promise<void> {
     });
 
     // Update badge when switching mode changes
-    const data = await chrome.storage.local.get(['enabled']);
-    await updateBadge(data['enabled'] ?? false, false);
+    // Check for manual pause state to ensure badge reflects pause correctly
+    const data = await chrome.storage.local.get(['enabled', 'manuallyPaused', 'manuallyPausedWindows']);
+    const manuallyPaused = data['manuallyPaused'] ?? false;
+    const manuallyPausedWindows = data['manuallyPausedWindows'] ?? {};
+
+    // Check if any window is manually paused (for window mode badge updates)
+    const anyWindowPaused = Object.values(manuallyPausedWindows).some(paused => paused === true);
+    const isPaused = manuallyPaused || anyWindowPaused;
+
+    await updateBadge(data['enabled'] ?? false, isPaused);
   }
 
   // Enhanced logging for window state changes
@@ -135,11 +143,20 @@ async function handleSettingsChange(changes: any): Promise<void> {
     }
 
     // Update badge when window states change in Window mode
-    const data = await chrome.storage.local.get(['switchingMode', 'operatingMode']);
+    const data = await chrome.storage.local.get(['switchingMode', 'operatingMode', 'manuallyPaused', 'manuallyPausedWindows']);
     const mode = getSwitchingMode(data);
     if (mode === 'window') {
+      // Check for manual pause state to ensure badge reflects pause correctly
+      const manuallyPaused = data['manuallyPaused'] ?? false;
+      const manuallyPausedWindows = data['manuallyPausedWindows'] ?? {};
+
+      // Check if any window is manually paused (for window mode badge updates)
+      const anyWindowPaused = Object.values(manuallyPausedWindows).some(paused => paused === true);
+      const isPaused = manuallyPaused || anyWindowPaused;
+
       // Update all badges to reflect new window states
-      await updateBadge(false, false); // enabled param is ignored in window mode
+      // enabled param is ignored in window mode (each window has independent state)
+      await updateBadge(false, isPaused);
     }
   }
 
@@ -609,9 +626,6 @@ chrome.commands.onCommand.addListener(async (command) => {
         });
         return;
       }
-
-      // Import toggleManualPause dynamically to avoid circular dependencies
-      const { toggleManualPause } = await import('./core/manual-pause-tracker.js');
 
       // Toggle manual pause state
       const newState = await toggleManualPause();

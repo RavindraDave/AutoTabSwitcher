@@ -3,6 +3,40 @@
  * Provides comprehensive mocks for Chrome APIs
  */
 
+// Track all timers to ensure cleanup
+const activeTimers = new Set<NodeJS.Timeout>();
+const activeIntervals = new Set<NodeJS.Timeout>();
+const originalSetTimeout = global.setTimeout;
+const originalClearTimeout = global.clearTimeout;
+const originalSetInterval = global.setInterval;
+const originalClearInterval = global.clearInterval;
+
+// Override setTimeout to track timers
+(global as any).setTimeout = function(callback: any, delay?: number, ...args: any[]) {
+  const timer = originalSetTimeout(callback, delay, ...args);
+  activeTimers.add(timer);
+  return timer;
+};
+
+// Override clearTimeout to untrack timers
+(global as any).clearTimeout = function(timer: NodeJS.Timeout) {
+  activeTimers.delete(timer);
+  return originalClearTimeout(timer);
+};
+
+// Override setInterval to track intervals
+(global as any).setInterval = function(callback: any, delay?: number, ...args: any[]) {
+  const interval = originalSetInterval(callback, delay, ...args);
+  activeIntervals.add(interval);
+  return interval;
+};
+
+// Override clearInterval to untrack intervals
+(global as any).clearInterval = function(interval: NodeJS.Timeout) {
+  activeIntervals.delete(interval);
+  return originalClearInterval(interval);
+};
+
 // Mock chrome.storage API
 const storageMock = {
   local: {
@@ -122,4 +156,37 @@ const commandsMock = {
 // Reset all mocks before each test
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+// Clean up after each test
+afterEach(() => {
+  // Clear all tracked timers
+  activeTimers.forEach(timer => {
+    originalClearTimeout(timer);
+  });
+  activeTimers.clear();
+
+  // Clear all tracked intervals
+  activeIntervals.forEach(interval => {
+    originalClearInterval(interval);
+  });
+  activeIntervals.clear();
+});
+
+// Final cleanup after all tests to ensure Jest can exit
+afterAll(async () => {
+  // Clear any remaining timers
+  activeTimers.forEach(timer => {
+    originalClearTimeout(timer);
+  });
+  activeTimers.clear();
+
+  // Clear any remaining intervals
+  activeIntervals.forEach(interval => {
+    originalClearInterval(interval);
+  });
+  activeIntervals.clear();
+
+  // Give any pending promises time to resolve
+  await new Promise(resolve => originalSetTimeout(resolve, 100));
 });
