@@ -108,8 +108,16 @@ async function handleSettingsChange(changes: any): Promise<void> {
     });
 
     // Update badge when switching mode changes
-    const data = await chrome.storage.local.get(['enabled']);
-    await updateBadge(data['enabled'] ?? false, false);
+    // Check for manual pause state to ensure badge reflects pause correctly
+    const data = await chrome.storage.local.get(['enabled', 'manuallyPaused', 'manuallyPausedWindows']);
+    const manuallyPaused = data['manuallyPaused'] ?? false;
+    const manuallyPausedWindows = data['manuallyPausedWindows'] ?? {};
+
+    // Check if any window is manually paused (for window mode badge updates)
+    const anyWindowPaused = Object.values(manuallyPausedWindows).some(paused => paused === true);
+    const isPaused = manuallyPaused || anyWindowPaused;
+
+    await updateBadge(data['enabled'] ?? false, isPaused);
   }
 
   // Enhanced logging for window state changes
@@ -135,11 +143,20 @@ async function handleSettingsChange(changes: any): Promise<void> {
     }
 
     // Update badge when window states change in Window mode
-    const data = await chrome.storage.local.get(['switchingMode', 'operatingMode']);
+    const data = await chrome.storage.local.get(['switchingMode', 'operatingMode', 'manuallyPaused', 'manuallyPausedWindows']);
     const mode = getSwitchingMode(data);
     if (mode === 'window') {
+      // Check for manual pause state to ensure badge reflects pause correctly
+      const manuallyPaused = data['manuallyPaused'] ?? false;
+      const manuallyPausedWindows = data['manuallyPausedWindows'] ?? {};
+
+      // Check if any window is manually paused (for window mode badge updates)
+      const anyWindowPaused = Object.values(manuallyPausedWindows).some(paused => paused === true);
+      const isPaused = manuallyPaused || anyWindowPaused;
+
       // Update all badges to reflect new window states
-      await updateBadge(false, false); // enabled param is ignored in window mode
+      // enabled param is ignored in window mode (each window has independent state)
+      await updateBadge(false, isPaused);
     }
   }
 

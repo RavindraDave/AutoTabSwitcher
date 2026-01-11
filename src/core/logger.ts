@@ -55,7 +55,12 @@ export async function log(
     const isDev = !chrome.runtime.getManifest().update_url;
     if (isDev) {
       const consoleMethod = level === 'ERROR' ? 'error' : level === 'WARN' ? 'warn' : 'log';
-      console[consoleMethod](`[${category}] ${message}`, data || '');
+      // Properly format data object for console output
+      if (data && Object.keys(data).length > 0) {
+        console[consoleMethod](`[${category}] ${message}`, data);
+      } else {
+        console[consoleMethod](`[${category}] ${message}`);
+      }
     }
   } catch (error) {
     console.error('Failed to write log entry:', error);

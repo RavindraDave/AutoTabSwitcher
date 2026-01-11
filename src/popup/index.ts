@@ -7,6 +7,7 @@
 
 import { StorageData } from '../core/types.js';
 import { isPaused } from '../core/activity-tracker.js';
+import { isManuallyPaused } from '../core/manual-pause-tracker.js';
 import { getMinDelayMs, getSwitchingMode } from '../core/storage.js';
 import { logger } from '../core/logger.js';
 
@@ -101,7 +102,12 @@ async function updateUI(): Promise<void> {
 
     // Get current window
     const currentWindow = await chrome.windows.getCurrent();
-    const currentWindowId = currentWindow.id!;
+    const currentWindowId = currentWindow.id;
+
+    if (!currentWindowId) {
+      await logger.error('PopupIndex', 'Could not get current window ID in updateUI');
+      return;
+    }
 
     // Determine if current window is enabled
     let isCurrentWindowEnabled = false;
@@ -114,17 +120,22 @@ async function updateUI(): Promise<void> {
       isCurrentWindowEnabled = windowStates[currentWindowId]?.enabled ?? false;
     }
 
-    // Check if paused
-    const paused = isCurrentWindowEnabled && (await isPaused());
+    // Check if paused (both activity-based and manual pause)
+    // Note: Manual pause is triggered by keyboard shortcut (Ctrl+Shift+P)
+    // Activity pause is automatic when user interacts with tabs
+    const activityPaused = isCurrentWindowEnabled && (await isPaused());
+    const manualPaused = isCurrentWindowEnabled && (await isManuallyPaused(currentWindowId));
+    // Combined pause state: either type of pause will pause switching
+    const paused = activityPaused || manualPaused;
 
     // Update state classes and content
-    updateState(isCurrentWindowEnabled, paused);
+    updateState(isCurrentWindowEnabled, paused, manualPaused);
 
     // Update info rows
     updateInfoRows(switchingMode, delayTime);
 
     // Update toggle button
-    updateToggleButton(isCurrentWindowEnabled, switchingMode);
+    updateToggleButton(isCurrentWindowEnabled, switchingMode, manualPaused);
 
     // Update segmented control state
     updateSegmentedControl(switchingMode);
@@ -141,7 +152,7 @@ async function updateUI(): Promise<void> {
 /**
  * Update state-dependent UI elements
  */
-function updateState(enabled: boolean, paused: boolean): void {
+function updateState(enabled: boolean, paused: boolean, manualPaused: boolean = false): void {
   // Remove all state classes
   header.classList.remove('active', 'paused', 'inactive');
   statusCard.classList.remove('active', 'paused', 'inactive');
@@ -160,9 +171,19 @@ function updateState(enabled: boolean, paused: boolean): void {
     statusCard.classList.add('paused');
     statusBadge.textContent = 'PAUSED';
     statusIcon.textContent = '⏸️';
-    statusText.textContent = 'Paused due to activity';
+
+    // Distinguish between manual pause and activity pause
+    // Manual pause takes priority in UI display (explicit user action)
+    // Even if both are active, we show "Paused by keyboard shortcut"
+    if (manualPaused) {
+      statusText.textContent = 'Paused by keyboard shortcut';
+      countdownLabel.textContent = 'paused'; // Manual pause requires explicit resume
+    } else {
+      statusText.textContent = 'Paused due to activity';
+      countdownLabel.textContent = 'resuming'; // Activity pause auto-resumes after inactivity
+    }
+
     countdownRing.classList.remove('hidden');
-    countdownLabel.textContent = 'resuming';
     countdownCircle.style.stroke = 'url(#gradient-paused)';
     pulse.style.display = 'none';
   } else {
@@ -201,11 +222,20 @@ function updateInfoRows(switchingMode: string, delayTime: number): void {
  */
 function updateToggleButton(
   isCurrentWindowEnabled: boolean,
-  switchingMode: string
+  switchingMode: string,
+  manualPaused: boolean = false
 ): void {
-  toggleButton.classList.remove('enable', 'disable');
+  toggleButton.classList.remove('enable', 'disable', 'resume');
 
-  if (isCurrentWindowEnabled) {
+  if (manualPaused) {
+    // When manually paused, show "Resume" button
+    if (switchingMode === 'window') {
+      toggleButton.textContent = 'Resume This Window';
+    } else {
+      toggleButton.textContent = 'Resume All Windows';
+    }
+    toggleButton.classList.add('resume');
+  } else if (isCurrentWindowEnabled) {
     if (switchingMode === 'window') {
       toggleButton.textContent = 'Disable This Window';
     } else {
@@ -269,10 +299,11 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
         return;
       }
 
-      // Get current states
-      const data = await chrome.storage.local.get(['windowStates', 'enabled']) as StorageData;
+      // Get current states including manual pause state
+      const data = await chrome.storage.local.get(['windowStates', 'enabled', 'manuallyPaused']) as StorageData;
       const windowStates = data.windowStates ?? {};
       const wasGloballyEnabled = data.enabled ?? false;
+      const wasManuallyPaused = data.manuallyPaused ?? false;
 
       // Get all windows
       const allWindows = await chrome.windows.getAll();
@@ -297,11 +328,26 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
         };
       }
 
+      // Preserve manual pause state when switching modes
+      const manuallyPausedWindows: { [windowId: number]: boolean } = {};
+      if (wasGloballyEnabled && wasManuallyPaused) {
+        // Transfer global manual pause to current window's manual pause
+        manuallyPausedWindows[currentWindowId] = true;
+      }
+
       await chrome.storage.local.set({
         switchingMode: 'window',
         operatingMode: 'window', // DEPRECATED: Kept for backward compatibility
         windowStates,
+        manuallyPaused: false, // Clear global manual pause when switching to window mode
+        manuallyPausedWindows, // Set window-specific pause if was paused in global mode
       });
+
+      if (wasManuallyPaused) {
+        await logger.info('PopupIndex', 'Switched to Window Mode, preserved manual pause state for current window');
+      } else {
+        await logger.info('PopupIndex', 'Switched to Window Mode');
+      }
     } else {
       // Switch to Global Mode
       const currentWindow = await chrome.windows.getCurrent();
@@ -312,16 +358,26 @@ async function handleModeSwitch(targetMode: 'global' | 'window'): Promise<void> 
         return;
       }
 
-      // Get current window state to preserve enabled status
-      const data = await chrome.storage.local.get(['windowStates']) as StorageData;
+      // Get current window state to preserve enabled status and manual pause
+      const data = await chrome.storage.local.get(['windowStates', 'manuallyPausedWindows']) as StorageData;
       const windowStates = data.windowStates ?? {};
+      const manuallyPausedWindows = data.manuallyPausedWindows ?? {};
       const wasWindowEnabled = windowStates[currentWindowId]?.enabled ?? false;
+      const wasWindowManuallyPaused = manuallyPausedWindows[currentWindowId] ?? false;
 
       await chrome.storage.local.set({
         switchingMode: 'global',
         operatingMode: 'global', // DEPRECATED: Kept for backward compatibility
         enabled: wasWindowEnabled, // Preserve the current window's enabled state
+        manuallyPaused: wasWindowManuallyPaused, // Preserve manual pause state from window mode
+        manuallyPausedWindows: {}, // Clear all window-specific manual pauses when switching to global mode
       });
+
+      if (wasWindowManuallyPaused) {
+        await logger.info('PopupIndex', 'Switched to Global Mode, preserved manual pause state from current window');
+      } else {
+        await logger.info('PopupIndex', 'Switched to Global Mode');
+      }
     }
   } catch (error) {
     await logger.error('PopupIndex', 'Error switching mode', {
@@ -343,13 +399,53 @@ export async function handleToggle(): Promise<void> {
       'windowMode', // Legacy fallback
       'enabled',
       'windowStates',
+      'manuallyPaused',
+      'manuallyPausedWindows',
     ]) as StorageData;
 
     // Get switching mode with backward compatibility
     const switchingMode = getSwitchingMode(data);
 
     const currentWindow = await chrome.windows.getCurrent();
-    const currentWindowId = currentWindow.id!;
+    const currentWindowId = currentWindow.id;
+
+    if (!currentWindowId) {
+      await logger.error('PopupIndex', 'Could not get current window ID in handleToggle');
+      return;
+    }
+
+    // Check if manually paused
+    // In Window Mode: check per-window pause state
+    // In Global Mode: check global pause state
+    const manualPaused = switchingMode === 'window'
+      ? (data.manuallyPausedWindows?.[currentWindowId] ?? false)
+      : (data.manuallyPaused ?? false);
+
+    // If manually paused, the toggle button becomes a "Resume" button
+    // Clicking it will clear the manual pause and auto-switching will resume immediately
+    if (manualPaused) {
+      try {
+        // Clear manual pause state
+        if (switchingMode === 'window') {
+          const pausedWindows = data.manuallyPausedWindows ?? {};
+          pausedWindows[currentWindowId] = false;
+          await chrome.storage.local.set({ manuallyPausedWindows: pausedWindows });
+          await logger.info('PopupIndex', 'Resumed manual pause for window', { windowId: currentWindowId });
+        } else {
+          await chrome.storage.local.set({ manuallyPaused: false });
+          await logger.info('PopupIndex', 'Resumed manual pause globally');
+        }
+
+        // UI will update via storage change listener
+        return;
+      } catch (error) {
+        await logger.error('PopupIndex', 'Failed to resume from manual pause', {
+          error: error instanceof Error ? error.message : String(error),
+          switchingMode
+        });
+        // Fall through to normal toggle logic as fallback
+      }
+    }
 
     if (switchingMode === 'global') {
       // Global mode: toggle global enabled state
@@ -367,6 +463,9 @@ export async function handleToggle(): Promise<void> {
         // This prevents any race conditions or undefined state issues on fresh install
         updates.switchingMode = 'global';
         updates.operatingMode = 'global'; // DEPRECATED: Kept for backward compatibility
+
+        // Clear manual pause when enabling (user expects "Enable" to start working immediately)
+        updates.manuallyPaused = false;
 
         await logger.info('PopupIndex', 'Initializing Global mode with lastSwitchTimes');
       }
@@ -386,7 +485,17 @@ export async function handleToggle(): Promise<void> {
         lastSwitchTime: !isCurrentlyEnabled ? Date.now() : (currentWindowState?.lastSwitchTime ?? Date.now()),
       };
 
-      await chrome.storage.local.set({ windowStates });
+      // Clear manual pause for this window when enabling
+      if (!isCurrentlyEnabled) {
+        const pausedWindows = data.manuallyPausedWindows ?? {};
+        pausedWindows[currentWindowId] = false;
+        await chrome.storage.local.set({
+          windowStates,
+          manuallyPausedWindows: pausedWindows
+        });
+      } else {
+        await chrome.storage.local.set({ windowStates });
+      }
     }
 
     // UI will update via storage change listener
@@ -428,7 +537,18 @@ async function startCountdownTimer(): Promise<void> {
 
   // Always show timing for the current window
   const currentWindow = await chrome.windows.getCurrent();
-  const targetWindowId = currentWindow.id!;
+  const targetWindowId = currentWindow.id;
+
+  if (!targetWindowId) {
+    await logger.error('PopupIndex', 'Could not get current window ID in startCountdownTimer');
+    // Use fallback: estimate based on current time
+    nextSwitchTime = Date.now() + switchIntervalMs;
+    countdownInterval = setInterval(() => {
+      updateCountdown();
+    }, 1000) as unknown as number;
+    updateCountdown();
+    return;
+  }
 
   let lastSwitchTime: number | undefined;
 
@@ -480,13 +600,21 @@ async function updateCountdown(): Promise<void> {
       'windowStates',
       'lastSwitchTimes',
       'lastSwitchTime', // deprecated fallback
+      'manuallyPaused',
+      'manuallyPausedWindows',
     ]) as StorageData;
 
     // Get switching mode with backward compatibility
     const switchingMode = getSwitchingMode(data);
 
     const currentWindow = await chrome.windows.getCurrent();
-    const currentWindowId = currentWindow.id!;
+    const currentWindowId = currentWindow.id;
+
+    if (!currentWindowId) {
+      // Fallback: show placeholder
+      countdownNumber.textContent = '--';
+      return;
+    }
 
     // Check if current window is enabled
     let isEnabled = false;
@@ -499,6 +627,18 @@ async function updateCountdown(): Promise<void> {
 
     if (!isEnabled) {
       countdownNumber.textContent = '--';
+      return;
+    }
+
+    // Check if manually paused
+    const manualPaused = switchingMode === 'window'
+      ? (data.manuallyPausedWindows?.[currentWindowId] ?? false)
+      : (data.manuallyPaused ?? false);
+
+    // If manually paused, freeze the countdown display
+    if (manualPaused) {
+      countdownNumber.textContent = '⏸';
+      countdownCircle.style.strokeDashoffset = '0';
       return;
     }
 

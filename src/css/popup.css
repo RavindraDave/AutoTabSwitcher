@@ -230,6 +230,17 @@ body.window-mode .toggle-button.enable {
   box-shadow: 0 4px 12px rgba(158, 158, 158, 0.3);
 }
 
+.toggle-button.resume {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.toggle-button.resume:hover {
+  background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+}
+
 .toggle-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
