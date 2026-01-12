@@ -20,7 +20,7 @@
 
 ## Overview
 
-This document outlines the implementation plan for six premium features that will transform AutoTabSwitcher from a simple tab rotation tool into a sophisticated workflow automation extension.
+This document outlines the implementation plan for seven premium features that will transform AutoTabSwitcher from a simple tab rotation tool into a sophisticated workflow automation and session management extension.
 
 ### Premium Features Summary
 
@@ -28,10 +28,11 @@ This document outlines the implementation plan for six premium features that wil
 |---|---------|----------|------------|--------|
 | 1 | Custom Tab Sequences & Rotation Patterns | High | Medium | High |
 | 2 | Skip Specific Tabs/Websites | High | Low | High |
-| 3 | Tab Grouping & Categorization | Medium | High | Very High |
+| 3 | Tab Grouping & Categorization + Session Management | High | High | Very High |
 | 4 | Different Intervals per Window | High | Low | Medium |
 | 5 | Advanced Scheduling | Medium | Medium | High |
 | 6 | Import/Export Configuration | High | Low | Medium |
+| 7 | Smart Auto-Refresh (Preemptive & Post-Switch) | High | Medium | Very High |
 
 ### Architecture Philosophy
 
@@ -117,18 +118,21 @@ This document outlines the implementation plan for six premium features that wil
 
 ---
 
-### Feature 3: Tab Grouping & Categorization
+### Feature 3: Tab Grouping & Categorization + Session Management
 
-**Description:** Create named groups of tabs with independent rotation settings.
+**Description:** Create named groups of tabs with independent rotation settings AND save/restore tab sessions for quick workspace setup.
 
 #### User Stories
 - As a user, I want to group related tabs (e.g., "Work", "Personal", "Research")
 - As a user, I want each group to have different rotation intervals
 - As a user, I want to rotate only within a specific group
 - As a user, I want to switch between groups easily
+- **NEW:** As a user, I want to save my current tabs as a named session
+- **NEW:** As a user, I want to launch a saved session on Chrome startup
+- **NEW:** As a user, I want to quickly restore my "Work Setup" with all project tabs
 
 #### Capabilities
-1. **Tab Groups:**
+1. **Tab Groups (Dynamic):**
    - Named groups with custom colors/icons
    - Multiple tabs per group
    - Tabs can belong to multiple groups (tags approach)
@@ -152,13 +156,50 @@ This document outlines the implementation plan for six premium features that wil
    - **Sequential Groups:** Cycle through all tabs in Group A, then Group B, etc.
    - **Independent:** Each group rotates independently with own timer
 
+5. **NEW: Session Management (Saved Tab Lists):**
+   - **Save Current Tabs:** Capture all tabs in a group as a saved session
+   - **Save Entire Window:** Save all tabs in current window as a session
+   - **Save Selected Tabs:** Manually select tabs to save to a session
+   - **Session Metadata:** Name, description, icon, creation date, last used
+   - **Snapshot vs Live:**
+     - Snapshot: Save URLs as they are now (static)
+     - Live: Save tab matchers (dynamic - always current tabs)
+
+6. **NEW: Session Launcher:**
+   - **Manual Launch:** Click to open all tabs from a saved session
+   - **Auto-Launch on Startup:** Configure sessions to auto-open when Chrome starts
+   - **Launch in New Window:** Open session tabs in a dedicated window
+   - **Launch in Current Window:** Add session tabs to current window
+   - **Replace Current Tabs:** Close current tabs and open session (switch workspace)
+   - **Smart Duplicate Detection:** Skip tabs that are already open
+
+7. **NEW: Session Templates:**
+   - Pre-built session templates for common workflows:
+     - "Developer Morning Routine" (GitHub, Jira, Slack, Docs)
+     - "Social Media Manager" (Twitter, LinkedIn, Facebook, Instagram, Analytics)
+     - "Monitoring Dashboard" (Grafana, Prometheus, CloudWatch, Logs)
+     - "Research Mode" (Google Scholar, Library, Notes, Reference Manager)
+   - One-click import from template library
+   - Share custom sessions as JSON
+
+8. **NEW: Session Scheduling:**
+   - Launch specific sessions at specific times
+   - "Open Work Session at 9 AM on weekdays"
+   - "Open Monitoring Session on weekends"
+   - Integration with Advanced Scheduling feature
+
 #### Technical Approach
-- `TabGroup` interface with metadata
-- `GroupManager` class to manage group lifecycle
+- `TabGroup` interface with metadata (for dynamic groups)
+- **NEW:** `SavedSession` interface for static tab lists
+- `GroupManager` class to manage both groups and sessions
+- **NEW:** `SessionManager` class for session lifecycle
 - Store groups in `tabGroups` array with tab matchers
+- **NEW:** Store sessions in `savedSessions` array with URLs
 - New `GroupRotationEngine` for group-aware rotation
 - Integration with Chrome's native `chrome.tabGroups` API
 - Multiple timer support for independent group rotation
+- **NEW:** `chrome.tabs.create()` API for session restoration
+- **NEW:** Startup listener to auto-launch sessions
 
 ---
 
@@ -295,23 +336,215 @@ This document outlines the implementation plan for six premium features that wil
 
 ---
 
+### Feature 7: Smart Auto-Refresh (Preemptive & Post-Switch)
+
+**Description:** Automatically refresh tabs before or after switching to them, ensuring users always see fresh content. INNOVATIVE APPROACH: Preemptive refresh loads the next tab BEFORE switching so it's already fresh when displayed.
+
+#### User Stories
+- As a user, I want tabs to automatically refresh so I always see current data
+- As a user, I want my monitoring dashboards to show live data when I switch to them
+- **INNOVATIVE:** As a user, I want the next tab to be refreshed BEFORE I switch to it, so I never see stale content
+- As a user, I want to refresh tabs after switching to avoid interrupting the current view
+- As a user, I want different refresh strategies for different tabs/groups
+- As a user, I want to set refresh intervals independent of rotation intervals
+
+#### Capabilities
+
+1. **Refresh Strategies:**
+   - **Preemptive Refresh (Before Switch):**
+     - Refresh the NEXT tab in rotation ~1-2 seconds before switching to it
+     - User sees fresh content immediately upon switch (no loading spinner!)
+     - Calculates next tab based on current pattern
+     - Prefetches in background using `chrome.tabs.reload()`
+   - **Post-Switch Refresh (After Switch):**
+     - Refresh tab immediately after switching to it
+     - Simple, traditional approach
+     - User may see brief loading state
+   - **Manual Refresh Only:**
+     - No auto-refresh, user controls refreshes
+   - **Hybrid Mode:**
+     - Preemptive for fast-loading tabs
+     - Post-switch for slow-loading tabs
+
+2. **Refresh Timing Control:**
+   - **Global Refresh Interval:** Apply to all tabs in rotation
+   - **Per-Tab Refresh Interval:** Different tabs refresh at different rates
+   - **Per-Group Refresh Interval:** Groups have independent refresh settings
+   - **Refresh Independent of Rotation:**
+     - Rotate every 5 seconds, but refresh every 30 seconds
+     - OR rotate every 30 seconds, but refresh every 5 seconds
+   - **Smart Timing:**
+     - Preemptive refresh triggered at: `(rotationInterval - preloadTime)` before switch
+     - Default preload time: 2 seconds (configurable 0.5-5 seconds)
+
+3. **Selective Refresh:**
+   - **Refresh Rules (similar to Skip Rules):**
+     - Refresh only specific URLs/domains
+     - Skip refresh for certain tabs (e.g., forms, video players)
+     - Regex patterns for flexible matching
+   - **Conditional Refresh:**
+     - Only refresh if tab was last loaded > X minutes ago
+     - Only refresh during specific time windows
+     - Only refresh when tab is in focus (post-switch only)
+   - **Resource-Aware:**
+     - Pause auto-refresh on low battery (optional)
+     - Pause auto-refresh when CPU > 80% (optional)
+
+4. **Refresh Modes Per Tab:**
+   - **Always:** Refresh every time before/after switch
+   - **Interval-Based:** Refresh only if last refresh > X seconds ago
+   - **Time-Based:** Refresh only at specific times (hourly, every 5 min, etc.)
+   - **Event-Based:** Refresh on specific triggers (schedule activated, group changed, etc.)
+   - **Cache-Aware:** Use HTTP cache headers to determine if refresh needed
+
+5. **UI Indicators:**
+   - Visual indicator showing when tab was last refreshed
+   - "Refreshing next..." notification (optional)
+   - Refresh countdown timer for next preemptive refresh
+   - Refresh history log per tab
+
+6. **Advanced Preemptive Features:**
+   - **Predictive Preloading:** If pattern is known, preload next 2-3 tabs
+   - **Smart Prefetch:** Monitor which tabs user manually switches to and prefetch those
+   - **Bandwidth Awareness:** Reduce prefetch aggressiveness on slow connections
+   - **Memory Management:** Limit number of concurrent preloads to avoid memory bloat
+
+7. **Refresh Override Controls:**
+   - Keyboard shortcut to force refresh current tab
+   - Popup quick toggle: "Disable refresh for this tab"
+   - Context menu: "Refresh this tab now"
+   - Pause all auto-refresh (emergency stop)
+
+#### Technical Approach
+
+**Core Components:**
+
+1. **`RefreshManager` Class:**
+   - Manages all refresh logic and scheduling
+   - Tracks last refresh time per tab
+   - Calculates next refresh target based on strategy
+   - Coordinates with RotationEngine to predict next tab
+
+2. **Preemptive Refresh Algorithm:**
+   ```
+   1. RotationEngine calculates next tab in sequence
+   2. Calculate preemptive refresh time:
+      triggerTime = nextSwitchTime - preloadTime
+   3. Set alarm/timer for triggerTime
+   4. When alarm fires:
+         - Verify tab still exists
+         - Verify rotation still enabled
+         - Execute: chrome.tabs.reload(nextTabId, {bypassCache: optional})
+   5. Log refresh event with timestamp
+   6. When actual switch occurs, content is already fresh!
+   ```
+
+3. **Post-Switch Refresh Algorithm:**
+   ```
+   1. Tab switch occurs (existing logic)
+   2. Check if tab needs refresh based on rules
+   3. If yes, immediately execute:
+      chrome.tabs.reload(currentTabId, {bypassCache: optional})
+   4. Log refresh event
+   ```
+
+4. **Storage Schema:**
+   ```typescript
+   {
+     refreshSettings: {
+       enabled: boolean,
+       strategy: 'preemptive' | 'post-switch' | 'manual' | 'hybrid',
+       globalRefreshInterval: number, // ms
+       preloadTime: number, // ms before switch (for preemptive)
+       bypassCache: boolean, // force full reload vs cache-aware
+       smartPrefetch: boolean, // enable predictive preloading
+     },
+     refreshRules: RefreshRule[], // Similar to SkipRule
+     tabRefreshStates: {
+       [tabId]: {
+         lastRefreshTime: number,
+         refreshCount: number,
+         customInterval?: number,
+       }
+     },
+     groupRefreshSettings: {
+       [groupId]: {
+         refreshInterval: number,
+         strategy: string,
+       }
+     }
+   }
+   ```
+
+5. **Integration Points:**
+   - **RotationEngine:** Provide next tab prediction for preemptive refresh
+   - **GroupManager:** Per-group refresh settings
+   - **ScheduleManager:** Schedule-based refresh rules
+   - **Tab Switcher:** Hook into tab switch events for post-switch refresh
+
+6. **Chrome APIs Used:**
+   - `chrome.tabs.reload(tabId, options)` - Refresh tab
+   - `chrome.alarms` - Schedule preemptive refreshes
+   - `chrome.tabs.onActivated` - Detect tab switches for post-refresh
+   - `chrome.webNavigation.onCompleted` - Detect when refresh completes
+
+7. **Performance Optimizations:**
+   - Debounce rapid tab switches to avoid refresh spam
+   - Cancel pending preemptive refresh if user manually switches tabs
+   - Throttle refresh rate to max 1 refresh per tab per 2 seconds
+   - Use `requestIdleCallback` equivalent for non-critical refreshes
+   - Batch multiple pending refreshes if system is under load
+
+8. **Error Handling:**
+   - Gracefully handle tab closed before preemptive refresh
+   - Handle network errors (retry with exponential backoff)
+   - Handle permissions errors (some tabs can't be refreshed)
+   - Log errors to diagnostics but don't break rotation
+
+#### Innovation Highlights
+
+🚀 **Preemptive Refresh Innovation:**
+- **Industry First:** No other tab switcher prefetches content before displaying it
+- **Seamless Experience:** Users never see loading spinners or stale content
+- **Smart Prediction:** Uses rotation pattern to know exactly which tab is next
+- **Configurable Preload:** Users control how far in advance to refresh (0.5-5 seconds)
+
+🧠 **Intelligent Refresh:**
+- **Pattern-Aware:** Knows rotation sequence, refreshes in optimal order
+- **Resource-Conscious:** Adapts to system load and network conditions
+- **Conflict-Free:** Refresh intervals independent of rotation intervals
+- **Group-Aware:** Different groups can have different refresh strategies
+
+⚡ **Performance-First:**
+- **Minimal Overhead:** Preemptive refresh uses idle time before switch
+- **Memory-Safe:** Limits concurrent preloads to prevent memory bloat
+- **Bandwidth-Aware:** Adjusts prefetch aggressiveness based on connection
+- **Cache-Smart:** Can honor HTTP cache headers to avoid unnecessary reloads
+
+---
+
 ## Architecture Design
 
 ### High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Background Service Worker                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ Rotation     │  │ Schedule     │  │ Group            │  │
-│  │ Engine       │  │ Manager      │  │ Manager          │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-│                                                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ Skip Rule    │  │ Pattern      │  │ Config           │  │
-│  │ Engine       │  │ Resolver     │  │ Manager          │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Background Service Worker                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐          │
+│  │ Rotation     │  │ Schedule     │  │ Group/Session    │          │
+│  │ Engine       │  │ Manager      │  │ Manager          │          │
+│  └──────────────┘  └──────────────┘  └──────────────────┘          │
+│                                                                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐          │
+│  │ Skip Rule    │  │ Pattern      │  │ Config           │          │
+│  │ Engine       │  │ Resolver     │  │ Manager          │          │
+│  └──────────────┘  └──────────────┘  └──────────────────┘          │
+│                                                                       │
+│  ┌──────────────┐  ┌──────────────┐                                 │
+│  │ Refresh      │  │ Session      │  ← NEW                          │
+│  │ Manager      │  │ Launcher     │                                 │
+│  └──────────────┘  └──────────────┘                                 │
+└─────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
                    ┌──────────────────────┐
@@ -320,13 +553,13 @@ This document outlines the implementation plan for six premium features that wil
                    └──────────────────────┘
                               │
                               ▼
-        ┌────────────────────────────────────────┐
-        │              UI Layer                   │
-        │  ┌────────┐  ┌────────┐  ┌──────────┐ │
-        │  │ Popup  │  │Options │  │ Groups   │ │
-        │  │        │  │ Page   │  │ Manager  │ │
-        │  └────────┘  └────────┘  └──────────┘ │
-        └────────────────────────────────────────┘
+        ┌────────────────────────────────────────────────┐
+        │              UI Layer                           │
+        │  ┌────────┐  ┌────────┐  ┌──────────┐         │
+        │  │ Popup  │  │Options │  │ Groups & │         │
+        │  │        │  │ Page   │  │ Sessions │         │
+        │  └────────┘  └────────┘  └──────────┘         │
+        └────────────────────────────────────────────────┘
 ```
 
 ### New Core Modules
@@ -431,6 +664,63 @@ class ConfigManager {
 
 ---
 
+#### 6. Session Manager (`src/core/session-manager.ts`)
+Session save/restore functionality.
+
+```typescript
+class SessionManager {
+  // Get all saved sessions
+  getSessions(): Promise<SavedSession[]>;
+
+  // Save current tabs as session
+  saveSession(name: string, tabs: Tab[], options?: SaveSessionOptions): Promise<string>;
+
+  // Launch session (restore tabs)
+  launchSession(sessionId: string, mode: 'new-window' | 'current' | 'replace'): Promise<void>;
+
+  // Delete session
+  deleteSession(sessionId: string): Promise<void>;
+
+  // Auto-launch sessions on startup
+  autoLaunchSessions(): Promise<void>;
+
+  // Get session templates
+  getTemplates(): Promise<SessionTemplate[]>;
+}
+```
+
+---
+
+#### 7. Refresh Manager (`src/core/refresh-manager.ts`)
+Smart auto-refresh functionality with preemptive loading.
+
+```typescript
+class RefreshManager {
+  // Initialize refresh manager
+  initialize(): Promise<void>;
+
+  // Schedule preemptive refresh for next tab
+  schedulePreemptiveRefresh(nextTabId: number, delayMs: number): Promise<void>;
+
+  // Execute post-switch refresh
+  executePostSwitchRefresh(tabId: number): Promise<void>;
+
+  // Check if tab needs refresh
+  shouldRefreshTab(tabId: number): Promise<boolean>;
+
+  // Get refresh settings for tab/group
+  getRefreshSettings(tabId: number): Promise<RefreshSettings>;
+
+  // Cancel pending refreshes
+  cancelPendingRefreshes(): Promise<void>;
+
+  // Track refresh event
+  trackRefresh(tabId: number): Promise<void>;
+}
+```
+
+---
+
 ## Data Structures & Type Definitions
 
 ### Extended StorageData Interface
@@ -463,11 +753,16 @@ export interface StorageData {
   skipRules?: SkipRule[];
   skipPinnedTabs?: boolean;
 
-  // Feature 3: Tab Groups
+  // Feature 3: Tab Groups & Session Management
   tabGroups?: TabGroup[];
   activeGroupId?: string; // Currently active group
   groupRotationMode?: GroupRotationMode;
   windowActiveGroups?: { [windowId: number]: string }; // Per-window active group
+
+  // NEW: Session Management
+  savedSessions?: SavedSession[]; // Saved tab sessions
+  autoLaunchSessionIds?: string[]; // Sessions to auto-launch on startup
+  lastLaunchedSessions?: { [sessionId: string]: number }; // Timestamp of last launch
 
   // Feature 4: Per-Window Intervals (extend existing WindowState)
   // Already supported in windowStates, needs UI exposure
@@ -481,6 +776,12 @@ export interface StorageData {
   configVersion?: string; // e.g., "2.0.0"
   lastBackupTime?: number;
   autoBackupEnabled?: boolean;
+
+  // Feature 7: Smart Auto-Refresh
+  refreshSettings?: RefreshSettings; // Global refresh settings
+  refreshRules?: RefreshRule[]; // Refresh filtering rules
+  tabRefreshStates?: { [tabId: number]: TabRefreshState }; // Per-tab refresh tracking
+  groupRefreshSettings?: { [groupId: string]: GroupRefreshSettings }; // Per-group refresh settings
 
   // Premium license (for future use)
   premiumEnabled?: boolean;
@@ -625,7 +926,7 @@ export interface Schedule {
  * Scheduled action
  */
 export interface ScheduledAction {
-  type: 'enable' | 'disable' | 'set-interval' | 'set-pattern' | 'set-group' | 'set-mode';
+  type: 'enable' | 'disable' | 'set-interval' | 'set-pattern' | 'set-group' | 'set-mode' | 'launch-session';
 
   // Action parameters
   params?: {
@@ -635,7 +936,138 @@ export interface ScheduledAction {
     groupId?: string;
     switchingMode?: SwitchingMode;
     windowId?: number; // Apply to specific window only
+    sessionId?: string; // NEW: For launch-session action
   };
+}
+
+/**
+ * Saved session definition (Feature 7)
+ */
+export interface SavedSession {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string; // Emoji or icon identifier
+
+  // Session tabs
+  tabs: SavedTab[];
+
+  // Session metadata
+  createdAt: number;
+  updatedAt?: number;
+  lastLaunched?: number;
+  launchCount?: number;
+
+  // Launch settings
+  autoLaunchOnStartup?: boolean;
+  launchMode?: 'new-window' | 'current' | 'replace'; // Default launch mode
+
+  // Session type
+  type: 'snapshot' | 'live'; // Snapshot = saved URLs, Live = uses matchers
+  matchers?: TabMatcher[]; // For live sessions
+}
+
+/**
+ * Saved tab in a session
+ */
+export interface SavedTab {
+  url: string;
+  title?: string;
+  favIconUrl?: string;
+  pinned?: boolean;
+  index?: number; // Original index for ordering
+}
+
+/**
+ * Session template for quick setup
+ */
+export interface SessionTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon?: string;
+  category: 'developer' | 'monitoring' | 'social' | 'research' | 'productivity';
+  tabs: Array<{
+    url: string;
+    title: string;
+  }>;
+}
+
+/**
+ * Save session options
+ */
+export interface SaveSessionOptions {
+  includeUrls?: boolean; // Default: true
+  includeTitles?: boolean; // Default: true
+  includeFavicons?: boolean; // Default: true
+  includePinnedState?: boolean; // Default: true
+  type?: 'snapshot' | 'live'; // Default: snapshot
+}
+
+/**
+ * Refresh settings (Feature 8)
+ */
+export interface RefreshSettings {
+  enabled: boolean;
+  strategy: 'preemptive' | 'post-switch' | 'manual' | 'hybrid';
+
+  // Global refresh interval (ms)
+  globalRefreshInterval?: number;
+
+  // Preemptive refresh timing
+  preloadTime: number; // How many ms before switch to refresh (default: 2000)
+
+  // Refresh options
+  bypassCache: boolean; // Force full reload vs cache-aware (default: false)
+  smartPrefetch: boolean; // Enable predictive preloading (default: false)
+  prefetchCount: number; // How many next tabs to prefetch (default: 1)
+
+  // Resource awareness
+  pauseOnLowBattery?: boolean; // Pause refresh when battery < 20%
+  pauseOnHighCPU?: boolean; // Pause when CPU > 80%
+
+  // Refresh interval independence
+  refreshIndependentOfRotation: boolean; // If true, refresh has its own timing
+}
+
+/**
+ * Refresh rule (like skip rule but for refresh)
+ */
+export interface RefreshRule {
+  id: string;
+  type: 'url' | 'domain' | 'regex' | 'title';
+  pattern: string;
+  action: 'refresh' | 'skip-refresh'; // Whitelist or blacklist
+  enabled: boolean;
+  description?: string;
+
+  // Advanced options
+  matchOptions?: {
+    caseSensitive?: boolean;
+    exactMatch?: boolean;
+  };
+
+  createdAt?: number;
+}
+
+/**
+ * Per-tab refresh state tracking
+ */
+export interface TabRefreshState {
+  lastRefreshTime: number; // Timestamp of last refresh
+  refreshCount: number; // Total number of refreshes
+  customInterval?: number; // Override global refresh interval
+  lastRefreshDuration?: number; // How long the refresh took (ms)
+  strategy?: 'preemptive' | 'post-switch' | 'manual'; // Override global strategy
+}
+
+/**
+ * Per-group refresh settings
+ */
+export interface GroupRefreshSettings {
+  refreshInterval?: number; // Override global interval
+  strategy?: 'preemptive' | 'post-switch' | 'manual';
+  enabled?: boolean; // Can disable refresh for entire group
 }
 
 /**

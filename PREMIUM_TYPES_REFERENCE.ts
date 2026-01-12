@@ -48,11 +48,16 @@ export interface StorageData {
   skipRules?: SkipRule[];
   skipPinnedTabs?: boolean;
 
-  // Feature 3: Tab Groups
+  // Feature 3: Tab Groups & Session Management
   tabGroups?: TabGroup[];
   activeGroupId?: string; // Currently active group
   groupRotationMode?: GroupRotationMode;
   windowActiveGroups?: { [windowId: number]: string }; // Per-window active group
+
+  // NEW: Session Management
+  savedSessions?: SavedSession[]; // Saved tab sessions
+  autoLaunchSessionIds?: string[]; // Sessions to auto-launch on startup
+  lastLaunchedSessions?: { [sessionId: string]: number }; // Timestamp of last launch
 
   // Feature 4: Per-Window Intervals
   // Already supported in windowStates.customDelayTime, needs UI exposure
@@ -66,6 +71,12 @@ export interface StorageData {
   configVersion?: string; // e.g., "2.0.0"
   lastBackupTime?: number;
   autoBackupEnabled?: boolean;
+
+  // Feature 7: Smart Auto-Refresh
+  refreshSettings?: RefreshSettings; // Global refresh settings
+  refreshRules?: RefreshRule[]; // Refresh filtering rules
+  tabRefreshStates?: { [tabId: number]: TabRefreshState }; // Per-tab refresh tracking
+  groupRefreshSettings?: { [groupId: string]: GroupRefreshSettings }; // Per-group refresh settings
 
   // Premium license (for future use)
   premiumEnabled?: boolean;
@@ -571,6 +582,150 @@ export interface Paginated<T> {
 
 /**
  * ============================================================================
+ * SESSION MANAGEMENT (Feature 3 Extension)
+ * ============================================================================
+ */
+
+/**
+ * Saved session definition
+ * Allows users to save tab lists and restore them
+ */
+export interface SavedSession {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string; // Emoji or icon identifier
+
+  // Session tabs
+  tabs: SavedTab[];
+
+  // Session metadata
+  createdAt: number;
+  updatedAt?: number;
+  lastLaunched?: number;
+  launchCount?: number;
+
+  // Launch settings
+  autoLaunchOnStartup?: boolean;
+  launchMode?: 'new-window' | 'current' | 'replace'; // Default launch mode
+
+  // Session type
+  type: 'snapshot' | 'live'; // Snapshot = saved URLs, Live = uses matchers
+  matchers?: TabMatcher[]; // For live sessions (dynamic)
+}
+
+/**
+ * Saved tab in a session
+ */
+export interface SavedTab {
+  url: string;
+  title?: string;
+  favIconUrl?: string;
+  pinned?: boolean;
+  index?: number; // Original index for ordering
+}
+
+/**
+ * Session template for quick setup
+ */
+export interface SessionTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon?: string;
+  category: 'developer' | 'monitoring' | 'social' | 'research' | 'productivity';
+  tabs: Array<{
+    url: string;
+    title: string;
+  }>;
+}
+
+/**
+ * Save session options
+ */
+export interface SaveSessionOptions {
+  includeUrls?: boolean; // Default: true
+  includeTitles?: boolean; // Default: true
+  includeFavicons?: boolean; // Default: true
+  includePinnedState?: boolean; // Default: true
+  type?: 'snapshot' | 'live'; // Default: snapshot
+}
+
+/**
+ * ============================================================================
+ * SMART AUTO-REFRESH (Feature 7)
+ * ============================================================================
+ */
+
+/**
+ * Refresh settings
+ * Controls auto-refresh behavior
+ */
+export interface RefreshSettings {
+  enabled: boolean;
+  strategy: 'preemptive' | 'post-switch' | 'manual' | 'hybrid';
+
+  // Global refresh interval (ms)
+  globalRefreshInterval?: number;
+
+  // Preemptive refresh timing
+  preloadTime: number; // How many ms before switch to refresh (default: 2000)
+
+  // Refresh options
+  bypassCache: boolean; // Force full reload vs cache-aware (default: false)
+  smartPrefetch: boolean; // Enable predictive preloading (default: false)
+  prefetchCount: number; // How many next tabs to prefetch (default: 1)
+
+  // Resource awareness
+  pauseOnLowBattery?: boolean; // Pause refresh when battery < 20%
+  pauseOnHighCPU?: boolean; // Pause when CPU > 80%
+
+  // Refresh interval independence
+  refreshIndependentOfRotation: boolean; // If true, refresh has its own timing
+}
+
+/**
+ * Refresh rule (like skip rule but for refresh)
+ */
+export interface RefreshRule {
+  id: string;
+  type: 'url' | 'domain' | 'regex' | 'title';
+  pattern: string;
+  action: 'refresh' | 'skip-refresh'; // Whitelist or blacklist
+  enabled: boolean;
+  description?: string;
+
+  // Advanced options
+  matchOptions?: {
+    caseSensitive?: boolean;
+    exactMatch?: boolean;
+  };
+
+  createdAt?: number;
+}
+
+/**
+ * Per-tab refresh state tracking
+ */
+export interface TabRefreshState {
+  lastRefreshTime: number; // Timestamp of last refresh
+  refreshCount: number; // Total number of refreshes
+  customInterval?: number; // Override global refresh interval
+  lastRefreshDuration?: number; // How long the refresh took (ms)
+  strategy?: 'preemptive' | 'post-switch' | 'manual'; // Override global strategy
+}
+
+/**
+ * Per-group refresh settings
+ */
+export interface GroupRefreshSettings {
+  refreshInterval?: number; // Override global interval
+  strategy?: 'preemptive' | 'post-switch' | 'manual';
+  enabled?: boolean; // Can disable refresh for entire group
+}
+
+/**
+ * ============================================================================
  * CONFIGURATION TEMPLATES
  * ============================================================================
  */
@@ -744,6 +899,88 @@ export interface IConfigManager {
 
   // Apply template
   applyTemplate(templateId: string): Promise<void>;
+}
+
+/**
+ * Session Manager API
+ */
+export interface ISessionManager {
+  // Get all saved sessions
+  getSessions(): Promise<SavedSession[]>;
+
+  // Get session by ID
+  getSession(sessionId: string): Promise<SavedSession | null>;
+
+  // Save current tabs as session
+  saveSession(name: string, tabs: Tab[], options?: SaveSessionOptions): Promise<string>;
+
+  // Update session
+  updateSession(sessionId: string, updates: Partial<SavedSession>): Promise<void>;
+
+  // Delete session
+  deleteSession(sessionId: string): Promise<void>;
+
+  // Launch session (restore tabs)
+  launchSession(sessionId: string, mode: 'new-window' | 'current' | 'replace'): Promise<void>;
+
+  // Auto-launch sessions on startup
+  autoLaunchSessions(): Promise<void>;
+
+  // Get session templates
+  getTemplates(): Promise<SessionTemplate[]>;
+
+  // Apply template as new session
+  applyTemplate(templateId: string): Promise<string>;
+
+  // Check for duplicate tabs before launch
+  findDuplicateTabs(session: SavedSession): Promise<Tab[]>;
+}
+
+/**
+ * Refresh Manager API
+ */
+export interface IRefreshManager {
+  // Initialize refresh manager
+  initialize(): Promise<void>;
+
+  // Schedule preemptive refresh for next tab
+  schedulePreemptiveRefresh(nextTabId: number, delayMs: number): Promise<void>;
+
+  // Execute post-switch refresh
+  executePostSwitchRefresh(tabId: number): Promise<void>;
+
+  // Check if tab needs refresh
+  shouldRefreshTab(tabId: number): Promise<boolean>;
+
+  // Get refresh settings for tab/group
+  getRefreshSettings(tabId: number): Promise<RefreshSettings>;
+
+  // Update refresh settings
+  updateRefreshSettings(settings: Partial<RefreshSettings>): Promise<void>;
+
+  // Add refresh rule
+  addRefreshRule(rule: RefreshRule): Promise<void>;
+
+  // Remove refresh rule
+  removeRefreshRule(ruleId: string): Promise<void>;
+
+  // Get all refresh rules
+  getRefreshRules(): Promise<RefreshRule[]>;
+
+  // Cancel pending refreshes
+  cancelPendingRefreshes(): Promise<void>;
+
+  // Cancel refresh for specific tab
+  cancelTabRefresh(tabId: number): Promise<void>;
+
+  // Track refresh event
+  trackRefresh(tabId: number): Promise<void>;
+
+  // Get refresh history for tab
+  getRefreshHistory(tabId: number): Promise<TabRefreshState | null>;
+
+  // Clear refresh history
+  clearRefreshHistory(): Promise<void>;
 }
 
 /**

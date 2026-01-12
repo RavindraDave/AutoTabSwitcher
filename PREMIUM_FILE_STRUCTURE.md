@@ -14,8 +14,10 @@ AutoTabSwitcher/
 │   │   ├── rotation-engine.ts          # ✨ NEW - Feature 1
 │   │   ├── skip-rule-engine.ts         # ✨ NEW - Feature 2
 │   │   ├── group-manager.ts            # ✨ NEW - Feature 3
+│   │   ├── session-manager.ts          # ✨ NEW - Feature 3 (Sessions)
 │   │   ├── schedule-manager.ts         # ✨ NEW - Feature 5
 │   │   ├── config-manager.ts           # ✨ NEW - Feature 6
+│   │   ├── refresh-manager.ts          # ✨ NEW - Feature 7
 │   │   └── pattern-resolver.ts         # ✨ NEW - Helper for rotation patterns
 │   │
 │   ├── background.ts                   # ✏️ EXTEND - Initialize premium features
@@ -31,21 +33,28 @@ AutoTabSwitcher/
 │   │   ├── patterns-tab.ts             # ✨ NEW - Rotation patterns UI
 │   │   ├── skip-rules-tab.ts           # ✨ NEW - Skip rules UI
 │   │   ├── groups-tab.ts               # ✨ NEW - Tab groups UI
+│   │   ├── sessions-tab.ts             # ✨ NEW - Session management UI
 │   │   ├── schedules-tab.ts            # ✨ NEW - Schedules UI
+│   │   ├── refresh-tab.ts              # ✨ NEW - Auto-refresh settings UI
 │   │   ├── import-export-tab.ts        # ✨ NEW - Import/export UI
 │   │   └── components/                 # ✨ NEW - Reusable UI components
 │   │       ├── pattern-editor.ts
 │   │       ├── rule-editor.ts
 │   │       ├── group-editor.ts
+│   │       ├── session-editor.ts       # NEW - Session save/edit UI
+│   │       ├── session-launcher.ts     # NEW - Session launch UI
 │   │       ├── schedule-editor.ts
 │   │       ├── visual-calendar.ts
+│   │       ├── refresh-settings.ts     # NEW - Refresh configuration UI
 │   │       └── config-preview.ts
 │   │
 │   ├── css/                            # Stylesheets
 │   │   ├── premium.css                 # ✨ NEW - Premium feature styles
 │   │   ├── patterns.css                # ✨ NEW - Pattern editor styles
 │   │   ├── groups.css                  # ✨ NEW - Groups UI styles
-│   │   └── schedules.css               # ✨ NEW - Schedule calendar styles
+│   │   ├── sessions.css                # ✨ NEW - Sessions UI styles
+│   │   ├── schedules.css               # ✨ NEW - Schedule calendar styles
+│   │   └── refresh.css                 # ✨ NEW - Refresh settings UI styles
 │   │
 │   ├── utils/                          # Utility functions
 │   │   ├── validation.ts               # ✨ NEW - Validation helpers
@@ -58,13 +67,17 @@ AutoTabSwitcher/
 │       │   ├── rotation-engine.test.ts       # ✨ NEW
 │       │   ├── skip-rule-engine.test.ts      # ✨ NEW
 │       │   ├── group-manager.test.ts         # ✨ NEW
+│       │   ├── session-manager.test.ts       # ✨ NEW
 │       │   ├── schedule-manager.test.ts      # ✨ NEW
 │       │   ├── config-manager.test.ts        # ✨ NEW
+│       │   ├── refresh-manager.test.ts       # ✨ NEW
 │       │   └── pattern-resolver.test.ts      # ✨ NEW
 │       │
 │       ├── integration/
 │       │   ├── rotation-with-skip.test.ts    # ✨ NEW
 │       │   ├── groups-with-patterns.test.ts  # ✨ NEW
+│       │   ├── sessions-workflow.test.ts     # ✨ NEW
+│       │   ├── refresh-integration.test.ts   # ✨ NEW
 │       │   ├── schedules-integration.test.ts # ✨ NEW
 │       │   └── import-export.test.ts         # ✨ NEW
 │       │
@@ -72,7 +85,9 @@ AutoTabSwitcher/
 │       │   ├── patterns-tab.test.ts          # ✨ NEW
 │       │   ├── skip-rules-tab.test.ts        # ✨ NEW
 │       │   ├── groups-tab.test.ts            # ✨ NEW
+│       │   ├── sessions-tab.test.ts          # ✨ NEW
 │       │   ├── schedules-tab.test.ts         # ✨ NEW
+│       │   ├── refresh-tab.test.ts           # ✨ NEW
 │       │   └── import-export-tab.test.ts     # ✨ NEW
 │       │
 │       └── performance/
@@ -723,29 +738,35 @@ Pre-configured templates for quick setup:
 ## Summary Statistics
 
 ### New Files
-- **Core Logic:** 6 files (~2,450 lines)
-- **UI Components:** 11 files (~3,550 lines)
+- **Core Logic:** 8 files (~3,200 lines)
+  - rotation-engine, skip-rule-engine, group-manager, session-manager, schedule-manager, config-manager, refresh-manager, pattern-resolver
+- **UI Components:** 16 files (~5,200 lines)
+  - 7 tabs (patterns, skip-rules, groups, sessions, schedules, refresh, import-export)
+  - 9 components (pattern-editor, rule-editor, group-editor, session-editor, session-launcher, schedule-editor, visual-calendar, refresh-settings, config-preview)
 - **Utilities:** 4 files (~800 lines)
-- **CSS:** 4 files (~1,050 lines)
-- **Tests:** 15 files (~3,500 lines)
-- **Documentation:** 11 files (~N/A)
+- **CSS:** 6 files (~1,350 lines)
+  - premium, patterns, groups, sessions, schedules, refresh
+- **Tests:** 21 files (~5,000 lines)
+  - 8 core tests, 6 integration tests, 7 UI tests
+- **Documentation:** 13 files (~N/A)
+  - Added sessions and refresh docs
 - **Templates:** 4 files (~N/A)
 
-**Total New Files:** ~55 files
-**Total New Code:** ~11,350 lines
+**Total New Files:** ~72 files
+**Total New Code:** ~15,550 lines
 
 ### Modified Files
-- **Core:** 3 files (~380 lines added)
-- **Background:** 1 file (~150 lines added)
-- **Popup:** 2 files (~250 lines added)
-- **Options:** 2 files (~200 lines added)
+- **Core:** 3 files (~450 lines added)
+- **Background:** 1 file (~200 lines added)
+- **Popup:** 2 files (~300 lines added)
+- **Options:** 2 files (~250 lines added)
 
 **Total Modified Files:** 8 files
-**Total Code Added:** ~980 lines
+**Total Code Added:** ~1,200 lines
 
 ### Grand Total
-**Total Files:** 63 files (55 new + 8 modified)
-**Total Lines of Code:** ~12,330 lines
+**Total Files:** 80 files (72 new + 8 modified)
+**Total Lines of Code:** ~16,750 lines
 
 ---
 
