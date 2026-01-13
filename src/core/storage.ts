@@ -223,3 +223,271 @@ export async function migrateToSwitchingMode(): Promise<void> {
 export async function migrateToOperatingMode(): Promise<void> {
   await migrateToSwitchingMode();
 }
+
+// ============================================================================
+// PREMIUM FEATURES - PHASE 1 STORAGE HELPERS
+// ============================================================================
+
+/**
+ * Session Management Storage Helpers
+ */
+
+/**
+ * Get all saved sessions
+ */
+export async function getSavedSessions(): Promise<import('./types.js').SavedSession[]> {
+  const data = await chrome.storage.local.get('savedSessions') as StorageData;
+  return data.savedSessions || [];
+}
+
+/**
+ * Save a session
+ */
+export async function saveSession(session: import('./types.js').SavedSession): Promise<void> {
+  const sessions = await getSavedSessions();
+  const existingIndex = sessions.findIndex(s => s.id === session.id);
+
+  if (existingIndex >= 0) {
+    sessions[existingIndex] = session;
+  } else {
+    sessions.push(session);
+  }
+
+  await chrome.storage.local.set({ savedSessions: sessions });
+}
+
+/**
+ * Delete a session
+ */
+export async function deleteSession(sessionId: string): Promise<void> {
+  const sessions = await getSavedSessions();
+  const filtered = sessions.filter(s => s.id !== sessionId);
+  await chrome.storage.local.set({ savedSessions: filtered });
+}
+
+/**
+ * Get auto-launch session IDs
+ */
+export async function getAutoLaunchSessionIds(): Promise<string[]> {
+  const data = await chrome.storage.local.get('autoLaunchSessionIds') as StorageData;
+  return data.autoLaunchSessionIds || [];
+}
+
+/**
+ * Set auto-launch session IDs
+ */
+export async function setAutoLaunchSessionIds(sessionIds: string[]): Promise<void> {
+  await chrome.storage.local.set({ autoLaunchSessionIds: sessionIds });
+}
+
+/**
+ * Smart Auto-Refresh Storage Helpers
+ */
+
+/**
+ * Get refresh settings
+ */
+export async function getRefreshSettings(): Promise<import('./types.js').RefreshSettings | null> {
+  const data = await chrome.storage.local.get('refreshSettings') as StorageData;
+  return data.refreshSettings || null;
+}
+
+/**
+ * Set refresh settings
+ */
+export async function setRefreshSettings(settings: import('./types.js').RefreshSettings): Promise<void> {
+  await chrome.storage.local.set({ refreshSettings: settings });
+}
+
+/**
+ * Get refresh rules
+ */
+export async function getRefreshRules(): Promise<import('./types.js').RefreshRule[]> {
+  const data = await chrome.storage.local.get('refreshRules') as StorageData;
+  return data.refreshRules || [];
+}
+
+/**
+ * Save a refresh rule
+ */
+export async function saveRefreshRule(rule: import('./types.js').RefreshRule): Promise<void> {
+  const rules = await getRefreshRules();
+  const existingIndex = rules.findIndex(r => r.id === rule.id);
+
+  if (existingIndex >= 0) {
+    rules[existingIndex] = rule;
+  } else {
+    rules.push(rule);
+  }
+
+  await chrome.storage.local.set({ refreshRules: rules });
+}
+
+/**
+ * Delete a refresh rule
+ */
+export async function deleteRefreshRule(ruleId: string): Promise<void> {
+  const rules = await getRefreshRules();
+  const filtered = rules.filter(r => r.id !== ruleId);
+  await chrome.storage.local.set({ refreshRules: filtered });
+}
+
+/**
+ * Get tab refresh state
+ */
+export async function getTabRefreshState(tabId: number): Promise<import('./types.js').TabRefreshState | null> {
+  const data = await chrome.storage.local.get('tabRefreshStates') as StorageData;
+  return data.tabRefreshStates?.[tabId] || null;
+}
+
+/**
+ * Set tab refresh state
+ */
+export async function setTabRefreshState(tabId: number, state: import('./types.js').TabRefreshState): Promise<void> {
+  const data = await chrome.storage.local.get('tabRefreshStates') as StorageData;
+  const states = data.tabRefreshStates || {};
+  states[tabId] = state;
+  await chrome.storage.local.set({ tabRefreshStates: states });
+}
+
+/**
+ * Skip Rules Storage Helpers
+ */
+
+/**
+ * Get skip rules
+ */
+export async function getSkipRules(): Promise<import('./types.js').SkipRule[]> {
+  const data = await chrome.storage.local.get('skipRules') as StorageData;
+  return data.skipRules || [];
+}
+
+/**
+ * Save a skip rule
+ */
+export async function saveSkipRule(rule: import('./types.js').SkipRule): Promise<void> {
+  const rules = await getSkipRules();
+  const existingIndex = rules.findIndex(r => r.id === rule.id);
+
+  if (existingIndex >= 0) {
+    rules[existingIndex] = rule;
+  } else {
+    rules.push(rule);
+  }
+
+  await chrome.storage.local.set({ skipRules: rules });
+}
+
+/**
+ * Delete a skip rule
+ */
+export async function deleteSkipRule(ruleId: string): Promise<void> {
+  const rules = await getSkipRules();
+  const filtered = rules.filter(r => r.id !== ruleId);
+  await chrome.storage.local.set({ skipRules: filtered });
+}
+
+/**
+ * Get skip pinned tabs setting
+ */
+export async function getSkipPinnedTabs(): Promise<boolean> {
+  const data = await chrome.storage.local.get('skipPinnedTabs') as StorageData;
+  return data.skipPinnedTabs || false;
+}
+
+/**
+ * Set skip pinned tabs setting
+ */
+export async function setSkipPinnedTabs(skip: boolean): Promise<void> {
+  await chrome.storage.local.set({ skipPinnedTabs: skip });
+}
+
+/**
+ * Import/Export Storage Helpers
+ */
+
+/**
+ * Get config version
+ */
+export async function getConfigVersion(): Promise<string> {
+  const data = await chrome.storage.local.get('configVersion') as StorageData;
+  return data.configVersion || '1.0.0';
+}
+
+/**
+ * Set config version
+ */
+export async function setConfigVersion(version: string): Promise<void> {
+  await chrome.storage.local.set({ configVersion: version });
+}
+
+/**
+ * Create a backup of current configuration
+ */
+export async function createConfigBackup(reason: 'manual' | 'pre-import' | 'scheduled'): Promise<import('./types.js').ConfigBackup> {
+  const data = await chrome.storage.local.get(null) as StorageData;
+  const now = Date.now();
+
+  const backup: import('./types.js').ConfigBackup = {
+    id: `backup-${now}`,
+    timestamp: now,
+    config: {
+      version: await getConfigVersion(),
+      exportDate: now,
+      settings: {
+        delayTime: data.delayTime,
+        switchingMode: data.switchingMode,
+        pauseOnActivity: data.pauseOnActivity,
+        pauseDuration: data.pauseDuration,
+        enableOnStartup: data.enableOnStartup,
+        skipPinnedTabs: data.skipPinnedTabs,
+      },
+      savedSessions: data.savedSessions,
+      refreshSettings: data.refreshSettings,
+      refreshRules: data.refreshRules,
+      skipRules: data.skipRules,
+    },
+    reason,
+    autoBackup: reason !== 'manual',
+  };
+
+  await chrome.storage.local.set({ lastBackupTime: now });
+
+  return backup;
+}
+
+/**
+ * Premium Feature Flags
+ */
+
+/**
+ * Check if premium features are enabled
+ */
+export async function isPremiumEnabled(): Promise<boolean> {
+  const data = await chrome.storage.local.get('premiumEnabled') as StorageData;
+  return data.premiumEnabled || false;
+}
+
+/**
+ * Set premium enabled status
+ */
+export async function setPremiumEnabled(enabled: boolean): Promise<void> {
+  await chrome.storage.local.set({ premiumEnabled: enabled });
+  logger.info('Premium', `Premium features ${enabled ? 'enabled' : 'disabled'}`);
+}
+
+/**
+ * Get license key
+ */
+export async function getLicenseKey(): Promise<string | null> {
+  const data = await chrome.storage.local.get('licenseKey') as StorageData;
+  return data.licenseKey || null;
+}
+
+/**
+ * Set license key
+ */
+export async function setLicenseKey(key: string): Promise<void> {
+  await chrome.storage.local.set({ licenseKey: key });
+  logger.info('Premium', 'License key updated');
+}
