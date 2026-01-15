@@ -11,7 +11,10 @@
     "typecheck": "tsc --project tsconfig.build.json --noEmit",
     "build:ts": "tsc --project tsconfig.build.json",
     "build:assets": "node scripts/copy-assets.js",
+    "build:minify": "node scripts/minify.js",
     "build": "npm run build:ts && npm run build:assets",
+    "build:free": "BUILD_PREMIUM=false BUILD_TYPE=production-free node scripts/generate-build-config.js && npm run build && npm run build:minify",
+    "build:premium": "BUILD_PREMIUM=true BUILD_TYPE=production-premium node scripts/generate-build-config.js && npm run build && npm run build:minify",
     "watch": "tsc --project tsconfig.build.json --watch",
     "dev": "npm run build && npm run watch"
   },
@@ -19,9 +22,11 @@
     "@jest/globals": "^29.7.0",
     "@types/chrome": "^0.0.254",
     "@types/jest": "^29.5.11",
+    "glob": "^10.3.10",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "rimraf": "^6.1.0",
+    "terser": "^5.27.0",
     "ts-jest": "^29.1.1",
     "typescript": "^5.3.3"
   },
