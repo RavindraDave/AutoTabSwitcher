@@ -12,11 +12,12 @@
     "build:ts": "tsc --project tsconfig.build.json",
     "build:assets": "node scripts/copy-assets.js",
     "build:minify": "node scripts/minify.js",
-    "build": "npm run build:ts && npm run build:assets",
-    "build:free": "BUILD_PREMIUM=false BUILD_TYPE=production-free node scripts/generate-build-config.js && npm run build && npm run build:minify",
-    "build:premium": "BUILD_PREMIUM=true BUILD_TYPE=production-premium node scripts/generate-build-config.js && npm run build && npm run build:minify",
+    "build:compile": "npm run build:ts && npm run build:assets",
+    "build": "node scripts/interactive-build.js",
+    "build:free": "BUILD_PREMIUM=false BUILD_TYPE=production-free node scripts/generate-build-config.js && npm run build:compile && npm run build:minify",
+    "build:premium": "BUILD_PREMIUM=true BUILD_TYPE=production-premium node scripts/generate-build-config.js && npm run build:compile && npm run build:minify",
     "watch": "tsc --project tsconfig.build.json --watch",
-    "dev": "npm run build && npm run watch"
+    "dev": "BUILD_PREMIUM=true BUILD_TYPE=development node scripts/generate-build-config.js && npm run build:compile && npm run watch"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
