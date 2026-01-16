@@ -23,9 +23,101 @@ let sessions = [];
 let refreshRules = [];
 let skipRules = [];
 
+// ===== Vanilla JS Modal Functions =====
+
+/**
+ * Show a modal dialog
+ * @param {string} modalId - The ID of the modal element
+ */
+function showModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  // Create backdrop if it doesn't exist
+  let backdrop = document.querySelector('.modal-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop fade';
+    document.body.appendChild(backdrop);
+  }
+
+  // Show modal and backdrop
+  modal.style.display = 'block';
+  modal.classList.add('show');
+  backdrop.classList.add('show');
+  document.body.classList.add('modal-open');
+
+  // Force reflow for animation
+  modal.offsetHeight;
+
+  // Add fade-in class
+  modal.classList.add('fade-in');
+}
+
+/**
+ * Hide a modal dialog
+ * @param {string} modalId - The ID of the modal element
+ */
+function hideModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  const backdrop = document.querySelector('.modal-backdrop');
+
+  // Remove show classes
+  modal.classList.remove('show', 'fade-in');
+  if (backdrop) {
+    backdrop.classList.remove('show');
+  }
+
+  // Wait for animation to complete before hiding
+  setTimeout(() => {
+    modal.style.display = 'none';
+    if (backdrop) {
+      backdrop.remove();
+    }
+    document.body.classList.remove('modal-open');
+  }, 150); // Bootstrap's default transition time
+}
+
+/**
+ * Setup modal event listeners for close buttons and backdrop clicks
+ */
+function setupModalHandlers() {
+  // Close button handlers
+  document.querySelectorAll('.modal .close, .modal [data-dismiss="modal"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const modal = e.target.closest('.modal');
+      if (modal) {
+        hideModal(modal.id);
+      }
+    });
+  });
+
+  // Backdrop click handlers
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        hideModal(modal.id);
+      }
+    });
+  });
+
+  // ESC key handler
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const openModal = document.querySelector('.modal.show');
+      if (openModal) {
+        hideModal(openModal.id);
+      }
+    }
+  });
+}
+
 // Initialize UI
 document.addEventListener('DOMContentLoaded', async () => {
   try {
+    setupModalHandlers(); // Setup modal handlers first
     await initializePremiumStatus();
     await loadAllData();
     setupEventListeners();
@@ -123,7 +215,7 @@ function setupEventListeners() {
 
   // Session management
   document.getElementById('saveCurrentSessionBtn')?.addEventListener('click', () => {
-    $('#saveSessionModal').modal('show');
+    showModal('saveSessionModal');
   });
   document.getElementById('confirmSaveSessionBtn')?.addEventListener('click', handleSaveSession);
 
@@ -150,7 +242,7 @@ function setupEventListeners() {
     document.getElementById('importFileInput').click();
   });
   document.getElementById('importFromTextBtn')?.addEventListener('click', () => {
-    $('#importTextModal').modal('show');
+    showModal('importTextModal');
   });
   document.getElementById('importFileInput')?.addEventListener('change', handleImportFile);
   document.getElementById('confirmImportTextBtn')?.addEventListener('click', handleImportText);
@@ -281,7 +373,7 @@ async function handleSaveSession() {
       icon: icon || undefined
     });
 
-    $('#saveSessionModal').modal('hide');
+    hideModal('saveSessionModal');
     showSuccess('Session saved successfully!');
     await loadSessions();
 
@@ -533,7 +625,6 @@ async function handleSkipPinnedChange(e) {
 // ===== Rule Management =====
 
 function showAddRuleModal(type) {
-  const modal = $('#addRuleModal');
   const actionGroup = document.getElementById('ruleActionGroup');
 
   // Show/hide action select for refresh rules
@@ -552,7 +643,7 @@ function showAddRuleModal(type) {
     document.getElementById('ruleActionSelect').value = 'refresh';
   }
 
-  modal.modal('show');
+  showModal('addRuleModal');
 }
 
 async function handleAddRule() {
@@ -584,7 +675,7 @@ async function handleAddRule() {
       await loadSkipStatistics();
     }
 
-    $('#addRuleModal').modal('hide');
+    hideModal('addRuleModal');
     showSuccess('Rule added successfully!');
   } catch (error) {
     logger.error('PremiumUI', 'Failed to add rule', { error });
@@ -742,7 +833,7 @@ async function handleImportText() {
     const result = await configManager.importFromJSON(text, { merge });
 
     if (result.success) {
-      $('#importTextModal').modal('hide');
+      hideModal('importTextModal');
       showSuccess('Configuration imported successfully!');
       await loadAllData();
       document.getElementById('importJsonTextarea').value = '';

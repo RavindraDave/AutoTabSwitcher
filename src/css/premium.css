@@ -426,13 +426,59 @@
 }
 
 /* Modals */
+
+/* Modal base styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1050;
+  display: none;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  outline: 0;
+}
+
+.modal.show {
+  display: block;
+}
+
+.modal.fade-in .modal-dialog {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+.modal-dialog {
+  position: relative;
+  width: auto;
+  margin: 1.75rem auto;
+  max-width: 500px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(0, -50px);
+  transition: opacity 0.15s linear, transform 0.15s ease-out;
+}
+
 .modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  pointer-events: auto;
+  background-color: #fff;
+  background-clip: padding-box;
   border-radius: 12px;
   border: none;
+  outline: 0;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -442,12 +488,21 @@
 
 .modal-title {
   font-weight: 600;
+  margin: 0;
+  line-height: 1.5;
 }
 
 .modal-header .close {
+  padding: 0;
+  background-color: transparent;
+  border: 0;
   color: white;
   opacity: 0.8;
   text-shadow: none;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .modal-header .close:hover {
@@ -455,12 +510,48 @@
 }
 
 .modal-body {
+  position: relative;
+  flex: 1 1 auto;
   padding: 24px;
 }
 
 .modal-footer {
-  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  border-bottom-right-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.modal-footer > * {
+  margin-left: 0.25rem;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1040;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+}
+
+.modal-backdrop.fade {
+  opacity: 0;
+  transition: opacity 0.15s linear;
+}
+
+.modal-backdrop.show {
+  opacity: 0.5;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
 }
 
 /* Responsive Design */
