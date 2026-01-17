@@ -213,8 +213,13 @@ export class RefreshManager {
       const settings = await getRefreshSettings();
       return settings?.refreshNonMatchingTabs !== false;
     } catch (error) {
-      logger.error('RefreshManager', 'Error checking refresh rules', { tabId, error });
-      return false;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('RefreshManager', 'Error checking refresh rules', {
+        tabId,
+        error: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error
+      });
+      return false; // Don't refresh on error
     }
   }
 
@@ -258,8 +263,23 @@ export class RefreshManager {
         duration
       });
     } catch (error) {
-      logger.error('RefreshManager', 'Failed to refresh tab', { tabId, error });
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorDetails = {
+        tabId,
+        strategy: strategy || 'default',
+        error: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        duration: Date.now() - startTime
+      };
+
+      logger.error('RefreshManager', 'Failed to refresh tab', errorDetails);
+
+      // Re-throw with enhanced error message
+      const enhancedError = new Error(
+        `Failed to refresh tab ${tabId}: ${errorMessage}`
+      );
+      enhancedError.cause = error;
+      throw enhancedError;
     }
   }
 

@@ -157,8 +157,13 @@ export class SkipRuleEngine {
 
       return false;
     } catch (error) {
-      logger.error('SkipRuleEngine', 'Error checking skip rules', { tabId, error });
-      return false; // Don't skip on error
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('SkipRuleEngine', 'Error checking skip rules', {
+        tabId,
+        error: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error
+      });
+      return false; // Don't skip on error - safer to include tab in rotation
     }
   }
 

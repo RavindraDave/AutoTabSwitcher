@@ -181,10 +181,14 @@ export class ConfigManager {
         await createConfigBackup('pre-import');
         logger.info('ConfigManager', 'Backup created before import');
       } catch (error) {
-        logger.error('ConfigManager', 'Failed to create backup', { error });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('ConfigManager', 'Failed to create backup before import', {
+          error: errorMessage,
+          errorType: error instanceof Error ? error.constructor.name : typeof error
+        });
         return {
           success: false,
-          errors: ['Failed to create backup before import'],
+          errors: [`Failed to create backup before import: ${errorMessage}`],
           imported: {}
         };
       }
@@ -236,9 +240,14 @@ export class ConfigManager {
         imported: result.imported
       });
     } catch (error) {
-      logger.error('ConfigManager', 'Import failed', { error });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('ConfigManager', 'Import failed', {
+        error: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        partialImport: result.imported
+      });
       result.success = false;
-      result.errors = [error instanceof Error ? error.message : 'Unknown error'];
+      result.errors = [`Configuration import failed: ${errorMessage}`];
     }
 
     return result;
