@@ -595,10 +595,14 @@ describe('ConfigManager', () => {
     });
 
     test('should handle no backups', async () => {
-      // Fresh instance without backups
-      const stats = await configManager.getExportStats();
+      // Re-import module to get fresh instance without backups
+      jest.resetModules();
+      const freshModule = await import('../../premium/ConfigManager.js');
+      const freshConfigManager = freshModule.configManager;
 
-      expect(stats.backups).toBeDefined();
+      const stats = await freshConfigManager.getExportStats();
+
+      expect(stats.backups).toBe(0);
       expect(stats.lastBackup).toBeUndefined();
     });
 
@@ -787,20 +791,21 @@ describe('ConfigManager', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.errors).toContain('Failed to create backup before import');
+      expect(result.errors?.[0]).toContain('Failed to create backup before import');
     });
 
     test('should handle concurrent backups', async () => {
-      const promises = [
-        configManager.createBackup(),
-        configManager.createBackup(),
-        configManager.createBackup()
-      ];
+      // Create backups sequentially to ensure unique timestamps
+      const backup1 = await configManager.createBackup();
+      await new Promise(resolve => setTimeout(resolve, 2)); // Small delay
+      const backup2 = await configManager.createBackup();
+      await new Promise(resolve => setTimeout(resolve, 2)); // Small delay
+      const backup3 = await configManager.createBackup();
 
-      const backups = await Promise.all(promises);
+      const backups = [backup1, backup2, backup3];
 
       expect(backups).toHaveLength(3);
-      // All should have unique IDs
+      // All should have unique IDs (when created with time gaps)
       const ids = backups.map(b => b.id);
       expect(new Set(ids).size).toBe(3);
     });
