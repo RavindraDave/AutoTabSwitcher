@@ -26,6 +26,9 @@ Thumbs.db
 *.swo
 *~
 
+# Claude Code CLI (user-specific)
+.claude/
+
 # Extension packages
 *.crx
 *.pem
