@@ -31,6 +31,69 @@ import { MAX_SESSIONS, MAX_TABS_PER_SESSION, SESSION_TEMPLATE_IDS } from '../cor
  */
 export class SessionManager {
   /**
+   * Retry an operation with exponential backoff
+   * @param operation - The async operation to retry
+   * @param maxRetries - Maximum number of retry attempts (default: 3)
+   * @param initialDelay - Initial delay in ms (default: 100)
+   */
+  private async retryOperation<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    initialDelay: number = 100
+  ): Promise<T> {
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Don't retry on the last attempt
+        if (attempt === maxRetries) {
+          break;
+        }
+
+        // Check if error is retryable (network errors, temporary failures)
+        const isRetryable = this.isRetryableError(lastError);
+        if (!isRetryable) {
+          // Don't retry non-retryable errors (e.g., invalid arguments)
+          throw lastError;
+        }
+
+        // Exponential backoff: 100ms, 200ms, 400ms, etc.
+        const delay = initialDelay * Math.pow(2, attempt);
+        logger.debug('SessionManager', 'Retrying operation', {
+          attempt: attempt + 1,
+          maxRetries,
+          delay,
+          error: lastError.message
+        });
+
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    throw lastError || new Error('Operation failed after retries');
+  }
+
+  /**
+   * Check if an error is retryable
+   */
+  private isRetryableError(error: Error): boolean {
+    const retryableMessages = [
+      'network',
+      'timeout',
+      'temporarily unavailable',
+      'quota',
+      'rate limit'
+    ];
+
+    const errorMessage = error.message.toLowerCase();
+    return retryableMessages.some(msg => errorMessage.includes(msg));
+  }
+
+  /**
    * Save current window tabs as a session
    */
   async saveCurrentWindow(
@@ -69,14 +132,33 @@ export class SessionManager {
       throw new Error(`Maximum number of sessions (${MAX_SESSIONS}) reached. Please delete some sessions first.`);
     }
 
-    // Convert tabs to SavedTab format
-    const savedTabs: SavedTab[] = tabs.map((tab, index) => ({
-      url: tab.url || 'about:blank',
-      title: saveOptions.includeTitles !== false ? tab.title : undefined,
-      favIconUrl: saveOptions.includeFavicons !== false ? tab.favIconUrl : undefined,
-      pinned: saveOptions.includePinnedState !== false ? tab.pinned : undefined,
-      index: index
-    }));
+    // Convert tabs to SavedTab format, filtering out invalid tabs
+    const savedTabs: SavedTab[] = [];
+    for (let i = 0; i < tabs.length; i++) {
+      const tab = tabs[i];
+
+      // Skip tabs without URLs or with chrome:// URLs (can't be restored)
+      if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        logger.debug('SessionManager', 'Skipping non-restorable tab', {
+          url: tab.url,
+          title: tab.title
+        });
+        continue;
+      }
+
+      savedTabs.push({
+        url: tab.url,
+        title: saveOptions.includeTitles !== false ? tab.title : undefined,
+        favIconUrl: saveOptions.includeFavicons !== false ? tab.favIconUrl : undefined,
+        pinned: saveOptions.includePinnedState !== false ? tab.pinned : undefined,
+        index: savedTabs.length // Use actual index in saved array
+      });
+    }
+
+    // Verify we have at least one valid tab after filtering
+    if (savedTabs.length === 0) {
+      throw new Error('No restorable tabs found in window (only chrome:// URLs or invalid tabs)');
+    }
 
     // Create session object
     const session: SavedSession = {
@@ -199,21 +281,48 @@ export class SessionManager {
       throw new Error('Failed to create new window');
     }
 
-    // Add remaining tabs
+    // Add remaining tabs with error handling and retry logic
+    let successCount = 1; // First tab already created
     for (let i = 1; i < sortedTabs.length; i++) {
       const tab = sortedTabs[i];
-      await chrome.tabs.create({
-        windowId: newWindow.id,
-        url: tab.url,
-        pinned: tab.pinned || false,
-        active: false
-      });
+      try {
+        // Verify window still exists before creating tab
+        await chrome.windows.get(newWindow.id);
+
+        // Use retry logic for tab creation
+        await this.retryOperation(async () => {
+          return await chrome.tabs.create({
+            windowId: newWindow.id,
+            url: tab.url,
+            pinned: tab.pinned || false,
+            active: false
+          });
+        });
+        successCount++;
+      } catch (error) {
+        logger.warn('SessionManager', 'Failed to create tab in new window', {
+          tabIndex: i,
+          url: tab.url,
+          error
+        });
+        // Continue with remaining tabs
+      }
     }
 
-    // Pin the first tab if needed
+    // Pin the first tab if needed (with error handling)
     if (firstTab.pinned && newWindow.tabs?.[0]?.id) {
-      await chrome.tabs.update(newWindow.tabs[0].id, { pinned: true });
+      try {
+        await chrome.tabs.update(newWindow.tabs[0].id, { pinned: true });
+      } catch (error) {
+        logger.warn('SessionManager', 'Failed to pin first tab', { error });
+        // Non-critical error, continue
+      }
     }
+
+    logger.info('SessionManager', 'Session restored in new window', {
+      totalTabs: sortedTabs.length,
+      successfulTabs: successCount
+    });
   }
 
   /**
@@ -228,15 +337,36 @@ export class SessionManager {
     // Sort tabs by index
     const sortedTabs = [...session.tabs].sort((a, b) => (a.index || 0) - (b.index || 0));
 
-    // Add tabs to current window
+    // Add tabs to current window with error handling and retry logic
+    let successCount = 0;
     for (const tab of sortedTabs) {
-      await chrome.tabs.create({
-        windowId: currentWindow.id,
-        url: tab.url,
-        pinned: tab.pinned || false,
-        active: false
-      });
+      try {
+        // Verify window still exists before creating tab
+        await chrome.windows.get(currentWindow.id);
+
+        // Use retry logic for tab creation
+        await this.retryOperation(async () => {
+          return await chrome.tabs.create({
+            windowId: currentWindow.id,
+            url: tab.url,
+            pinned: tab.pinned || false,
+            active: false
+          });
+        });
+        successCount++;
+      } catch (error) {
+        logger.warn('SessionManager', 'Failed to create tab in current window', {
+          url: tab.url,
+          error
+        });
+        // Continue with remaining tabs
+      }
     }
+
+    logger.info('SessionManager', 'Session restored in current window', {
+      totalTabs: sortedTabs.length,
+      successfulTabs: successCount
+    });
   }
 
   /**
@@ -248,34 +378,64 @@ export class SessionManager {
       throw new Error('No current window');
     }
 
-    // Get current tabs
+    // Get current tabs and store their IDs for later removal
     const currentTabs = await chrome.tabs.query({ windowId: currentWindow.id });
+    const tabIdsToRemove = currentTabs.map(tab => tab.id).filter((id): id is number => id !== undefined);
 
-    // Create new tabs from session
+    // Create new tabs from session with error handling and retry logic
     const sortedTabs = [...session.tabs].sort((a, b) => (a.index || 0) - (b.index || 0));
+    let successCount = 0;
 
     for (const tab of sortedTabs) {
-      await chrome.tabs.create({
-        windowId: currentWindow.id,
-        url: tab.url,
-        pinned: tab.pinned || false,
-        active: false
-      });
-    }
+      try {
+        // Verify window still exists
+        await chrome.windows.get(currentWindow.id);
 
-    // Close old tabs (except the last one to keep window open)
-    for (let i = 0; i < currentTabs.length - 1; i++) {
-      const tab = currentTabs[i];
-      if (tab.id) {
-        await chrome.tabs.remove(tab.id);
+        // Use retry logic for tab creation
+        await this.retryOperation(async () => {
+          return await chrome.tabs.create({
+            windowId: currentWindow.id,
+            url: tab.url,
+            pinned: tab.pinned || false,
+            active: false
+          });
+        });
+        successCount++;
+      } catch (error) {
+        logger.warn('SessionManager', 'Failed to create replacement tab', {
+          url: tab.url,
+          error
+        });
+        // Continue with remaining tabs
       }
     }
 
-    // Close the last old tab
-    const lastTab = currentTabs[currentTabs.length - 1];
-    if (lastTab.id) {
-      await chrome.tabs.remove(lastTab.id);
+    // Close old tabs with error handling (tabs might already be closed)
+    // Process in reverse to handle potential index shifts
+    let removedCount = 0;
+    for (let i = tabIdsToRemove.length - 1; i >= 0; i--) {
+      const tabId = tabIdsToRemove[i];
+      try {
+        // Verify tab still exists before trying to remove
+        await chrome.tabs.get(tabId);
+        await chrome.tabs.remove(tabId);
+        removedCount++;
+      } catch (error) {
+        // Tab might already be closed - this is not a critical error
+        logger.debug('SessionManager', 'Tab already closed or unavailable', {
+          tabId,
+          error
+        });
+        // Continue with remaining tabs
+      }
     }
+
+    logger.info('SessionManager', 'Session replaced in current window', {
+      totalNewTabs: sortedTabs.length,
+      successfulNewTabs: successCount,
+      totalOldTabs: tabIdsToRemove.length,
+      removedOldTabs: removedCount
+    });
   }
 
   /**

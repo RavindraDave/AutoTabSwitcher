@@ -222,6 +222,8 @@ function setupEventListeners() {
   // Refresh settings
   document.getElementById('refreshEnabledCheckbox')?.addEventListener('change', handleRefreshEnabledChange);
   document.getElementById('refreshStrategySelect')?.addEventListener('change', handleRefreshStrategyChange);
+  document.getElementById('refreshIntervalInput')?.addEventListener('change', handleRefreshIntervalChange);
+  document.getElementById('preemptiveOffsetInput')?.addEventListener('change', handlePreemptiveOffsetChange);
   document.getElementById('addRefreshRuleBtn')?.addEventListener('click', () => {
     currentRuleType = 'refresh';
     showAddRuleModal('refresh');
@@ -431,9 +433,28 @@ async function handleSaveSession() {
   const description = document.getElementById('sessionDescriptionInput').value.trim();
   const icon = document.getElementById('sessionIconInput').value.trim();
 
+  // Validation
   if (!name) {
     showError('Please enter a session name');
     return;
+  }
+
+  if (name.length > 100) {
+    showError('Session name is too long (maximum 100 characters)');
+    return;
+  }
+
+  if (description && description.length > 500) {
+    showError('Description is too long (maximum 500 characters)');
+    return;
+  }
+
+  // Check for duplicate session names
+  const existingSessions = await sessionManager.getAllSessions();
+  if (existingSessions.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+    if (!confirm('A session with this name already exists. Do you want to create it anyway?')) {
+      return;
+    }
   }
 
   try {
@@ -596,6 +617,75 @@ async function handleRefreshStrategyChange(e) {
   }
 }
 
+async function handleRefreshIntervalChange(e) {
+  const input = e.target;
+  const valueInSeconds = parseFloat(input.value);
+
+  // Validation: Must be a number
+  if (isNaN(valueInSeconds)) {
+    showError('Please enter a valid number for refresh interval');
+    input.value = '';
+    return;
+  }
+
+  const valueInMs = valueInSeconds * 1000;
+
+  // Validation: MIN_REFRESH_INTERVAL = 5000ms (5 seconds)
+  if (valueInMs < 5000) {
+    showError('Refresh interval must be at least 5 seconds');
+    input.value = '5';
+    return;
+  }
+
+  // Validation: MAX_REFRESH_INTERVAL = 3600000ms (1 hour)
+  if (valueInMs > 3600000) {
+    showError('Refresh interval cannot exceed 1 hour (3600 seconds)');
+    input.value = '3600';
+    return;
+  }
+
+  try {
+    await refreshManager.updateSettings({ globalRefreshInterval: valueInMs });
+    showSuccess('Refresh interval updated');
+  } catch (error) {
+    logger.error('PremiumUI', 'Failed to update refresh interval', { error });
+    showError(`Failed to update refresh interval: ${error.message || 'Unknown error'}`);
+  }
+}
+
+async function handlePreemptiveOffsetChange(e) {
+  const input = e.target;
+  const valueInMs = parseInt(input.value);
+
+  // Validation: Must be a number
+  if (isNaN(valueInMs)) {
+    showError('Please enter a valid number for preemptive offset');
+    input.value = '2000';
+    return;
+  }
+
+  // Validation: Must be between 0 and 60000ms (0-60 seconds)
+  if (valueInMs < 0) {
+    showError('Preemptive offset cannot be negative');
+    input.value = '0';
+    return;
+  }
+
+  if (valueInMs > 60000) {
+    showError('Preemptive offset cannot exceed 60 seconds (60000ms)');
+    input.value = '60000';
+    return;
+  }
+
+  try {
+    await refreshManager.updateSettings({ preemptiveRefreshOffset: valueInMs });
+    showSuccess('Preemptive offset updated');
+  } catch (error) {
+    logger.error('PremiumUI', 'Failed to update preemptive offset', { error });
+    showError(`Failed to update preemptive offset: ${error.message || 'Unknown error'}`);
+  }
+}
+
 async function loadRefreshRules() {
   try {
     refreshRules = await refreshManager.getRules();
@@ -740,9 +830,67 @@ async function handleAddRule() {
   const description = document.getElementById('ruleDescriptionInput').value.trim();
   const enabled = document.getElementById('ruleEnabledCheckbox').checked;
 
+  // Validation: Pattern is required
   if (!pattern) {
     showError('Please enter a pattern');
     return;
+  }
+
+  // Validation: Pattern length (MAX_RULE_PATTERN_LENGTH = 500)
+  if (pattern.length > 500) {
+    showError('Pattern is too long (maximum 500 characters)');
+    return;
+  }
+
+  // Validation: Description length
+  if (description && description.length > 500) {
+    showError('Description is too long (maximum 500 characters)');
+    return;
+  }
+
+  // Validation: Regex pattern syntax
+  if (type === 'regex') {
+    try {
+      new RegExp(pattern);
+    } catch (error) {
+      showError(`Invalid regex pattern: ${error.message}`);
+      return;
+    }
+
+    // Warn about potentially dangerous patterns
+    const dangerousPatterns = [
+      { pattern: /(\w\+)\+/, message: 'nested quantifiers like (a+)+' },
+      { pattern: /(\w\*)\*/, message: 'nested quantifiers like (a*)*' },
+      { pattern: /(\(.*\+.*\)\+)/, message: 'nested repetition' },
+      { pattern: /(\(.*\*.*\)\*)/, message: 'nested repetition' }
+    ];
+
+    for (const check of dangerousPatterns) {
+      if (check.pattern.test(pattern)) {
+        if (!confirm(`Warning: This regex pattern contains ${check.message}, which may cause performance issues. Continue anyway?`)) {
+          return;
+        }
+        break;
+      }
+    }
+  }
+
+  // Validation: Domain pattern format
+  if (type === 'domain') {
+    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?)*$/;
+    if (!domainRegex.test(pattern)) {
+      showError('Invalid domain pattern. Please enter a valid domain (e.g., example.com)');
+      return;
+    }
+  }
+
+  // Validation: URL pattern should contain valid characters
+  if (type === 'url') {
+    // Check for control characters or obviously invalid URL patterns
+    if (/[\x00-\x1F\x7F]/.test(pattern)) {
+      showError('URL pattern contains invalid characters');
+      return;
+    }
   }
 
   const ruleData = {
@@ -929,9 +1077,67 @@ async function handleImportFile(e) {
 async function handleImportText() {
   const text = document.getElementById('importJsonTextarea').value.trim();
 
+  // Validation: Text is required
   if (!text) {
     showError('Please paste JSON configuration');
     return;
+  }
+
+  // Validation: Size limit (5MB to prevent memory issues)
+  const MAX_IMPORT_SIZE = 5 * 1024 * 1024; // 5MB
+  if (text.length > MAX_IMPORT_SIZE) {
+    showError('Import data is too large (maximum 5MB)');
+    return;
+  }
+
+  // Validation: Must be valid JSON
+  let parsedConfig;
+  try {
+    parsedConfig = JSON.parse(text);
+  } catch (error) {
+    showError(`Invalid JSON format: ${error.message}`);
+    return;
+  }
+
+  // Validation: Must be an object
+  if (typeof parsedConfig !== 'object' || parsedConfig === null || Array.isArray(parsedConfig)) {
+    showError('Invalid configuration format: expected a JSON object');
+    return;
+  }
+
+  // Validation: Basic structure check
+  const validKeys = ['settings', 'sessions', 'refreshSettings', 'refreshRules', 'skipRules', 'version', 'exportedAt'];
+  const configKeys = Object.keys(parsedConfig);
+  const hasValidKey = configKeys.some(key => validKeys.includes(key));
+
+  if (!hasValidKey) {
+    showError('Invalid configuration: no recognized data sections found');
+    return;
+  }
+
+  // Validation: Check for reasonable data sizes
+  if (parsedConfig.sessions && Array.isArray(parsedConfig.sessions)) {
+    if (parsedConfig.sessions.length > 1000) {
+      if (!confirm(`Warning: This configuration contains ${parsedConfig.sessions.length} sessions, which may take a while to import. Continue?`)) {
+        return;
+      }
+    }
+  }
+
+  if (parsedConfig.refreshRules && Array.isArray(parsedConfig.refreshRules)) {
+    if (parsedConfig.refreshRules.length > 500) {
+      if (!confirm(`Warning: This configuration contains ${parsedConfig.refreshRules.length} refresh rules. Continue?`)) {
+        return;
+      }
+    }
+  }
+
+  if (parsedConfig.skipRules && Array.isArray(parsedConfig.skipRules)) {
+    if (parsedConfig.skipRules.length > 500) {
+      if (!confirm(`Warning: This configuration contains ${parsedConfig.skipRules.length} skip rules. Continue?`)) {
+        return;
+      }
+    }
   }
 
   try {
@@ -948,7 +1154,7 @@ async function handleImportText() {
     }
   } catch (error) {
     logger.error('PremiumUI', 'Failed to import text', { error });
-    showError('Failed to import configuration');
+    showError(`Failed to import configuration: ${error.message || 'Unknown error'}`);
   }
 }
 
