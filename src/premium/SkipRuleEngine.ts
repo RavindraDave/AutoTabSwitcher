@@ -21,6 +21,10 @@ import {
 import { requirePremiumLicense } from '../core/premium-access.js';
 import { logger } from '../core/logger.js';
 import { MAX_SKIP_RULES } from '../core/constants.js';
+import {
+  validateRegexPattern,
+  safeCompileRegex
+} from '../core/regex-validator.js';
 
 /**
  * Skip Rule Engine class
@@ -234,7 +238,11 @@ export class SkipRuleEngine {
 
         case 'regex': {
           if (!tab.url) return false;
-          const regex = new RegExp(rule.pattern, 'i');
+          const regex = safeCompileRegex(rule.pattern, 'i');
+          if (!regex) {
+            logger.error('SkipRuleEngine', 'Failed to compile regex', { pattern: rule.pattern });
+            return false;
+          }
           return regex.test(tab.url);
         }
 
@@ -262,10 +270,16 @@ export class SkipRuleEngine {
     }
 
     if (rule.type === 'regex') {
-      try {
-        new RegExp(rule.pattern);
-      } catch (error) {
-        throw new Error('Invalid regex pattern');
+      const validation = validateRegexPattern(rule.pattern);
+      if (!validation.valid) {
+        throw new Error(validation.error || 'Invalid regex pattern');
+      }
+
+      if (validation.warning) {
+        logger.warn('SkipRuleEngine', 'Regex pattern warning', {
+          pattern: rule.pattern,
+          warning: validation.warning
+        });
       }
     }
 

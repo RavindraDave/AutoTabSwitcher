@@ -32,6 +32,11 @@ import {
   DEFAULT_REFRESH_INTERVAL,
   MAX_REFRESH_RULES
 } from '../core/constants.js';
+import {
+  validateRegexPattern,
+  safeCompileRegex,
+  regexCache
+} from '../core/regex-validator.js';
 
 /**
  * Refresh Manager class
@@ -440,7 +445,11 @@ export class RefreshManager {
         }
 
         case 'regex': {
-          const regex = new RegExp(rule.pattern, 'i');
+          const regex = safeCompileRegex(rule.pattern, 'i');
+          if (!regex) {
+            logger.error('RefreshManager', 'Failed to compile regex', { pattern: rule.pattern });
+            return false;
+          }
           return regex.test(url);
         }
 
@@ -485,10 +494,16 @@ export class RefreshManager {
     }
 
     if (rule.type === 'regex') {
-      try {
-        new RegExp(rule.pattern);
-      } catch (error) {
-        throw new Error('Invalid regex pattern');
+      const validation = validateRegexPattern(rule.pattern);
+      if (!validation.valid) {
+        throw new Error(validation.error || 'Invalid regex pattern');
+      }
+
+      if (validation.warning) {
+        logger.warn('RefreshManager', 'Regex pattern warning', {
+          pattern: rule.pattern,
+          warning: validation.warning
+        });
       }
     }
   }

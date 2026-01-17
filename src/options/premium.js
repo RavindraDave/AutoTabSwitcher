@@ -247,6 +247,75 @@ function setupEventListeners() {
   document.getElementById('importFileInput')?.addEventListener('change', handleImportFile);
   document.getElementById('confirmImportTextBtn')?.addEventListener('click', handleImportText);
   document.getElementById('createBackupBtn')?.addEventListener('click', handleCreateBackup);
+
+  // Event delegation for session actions
+  document.addEventListener('click', handleDelegatedClick);
+}
+
+/**
+ * Handle delegated click events for dynamically created elements
+ * This prevents XSS by avoiding inline event handlers
+ */
+function handleDelegatedClick(e) {
+  const target = e.target.closest('button, .template-card');
+  if (!target) return;
+
+  // Restore session
+  if (target.classList.contains('restore-session')) {
+    const sessionId = target.dataset.sessionId;
+    const mode = target.dataset.mode || 'new-window';
+    if (sessionId) handleRestoreSession(sessionId, mode);
+    return;
+  }
+
+  // Edit session
+  if (target.classList.contains('edit-session')) {
+    const sessionId = target.dataset.sessionId;
+    if (sessionId) handleEditSession(sessionId);
+    return;
+  }
+
+  // Delete session
+  if (target.classList.contains('delete-session')) {
+    const sessionId = target.dataset.sessionId;
+    if (sessionId) handleDeleteSession(sessionId);
+    return;
+  }
+
+  // Create from template
+  if (target.classList.contains('create-from-template')) {
+    const templateId = target.dataset.templateId;
+    if (templateId) handleCreateFromTemplate(templateId);
+    return;
+  }
+
+  // Toggle refresh rule
+  if (target.classList.contains('toggle-refresh-rule')) {
+    const ruleId = target.dataset.ruleId;
+    if (ruleId) handleToggleRefreshRule(ruleId);
+    return;
+  }
+
+  // Delete refresh rule
+  if (target.classList.contains('delete-refresh-rule')) {
+    const ruleId = target.dataset.ruleId;
+    if (ruleId) handleDeleteRefreshRule(ruleId);
+    return;
+  }
+
+  // Toggle skip rule
+  if (target.classList.contains('toggle-skip-rule')) {
+    const ruleId = target.dataset.ruleId;
+    if (ruleId) handleToggleSkipRule(ruleId);
+    return;
+  }
+
+  // Delete skip rule
+  if (target.classList.contains('delete-skip-rule')) {
+    const ruleId = target.dataset.ruleId;
+    if (ruleId) handleDeleteSkipRule(ruleId);
+    return;
+  }
 }
 
 // ===== License Management =====
@@ -316,8 +385,8 @@ function renderSessionList() {
   }
 
   sessionList.innerHTML = sessions.map(session => `
-    <div class="session-item" data-session-id="${session.id}">
-      <div class="session-icon">${session.icon || '📋'}</div>
+    <div class="session-item" data-session-id="${escapeHtml(session.id)}">
+      <div class="session-icon">${escapeHtml(session.icon || '📋')}</div>
       <div class="session-info">
         <div class="session-name">${escapeHtml(session.name)}</div>
         <div class="session-meta">
@@ -327,13 +396,13 @@ function renderSessionList() {
         </div>
       </div>
       <div class="session-actions">
-        <button class="btn btn-sm btn-primary" onclick="restoreSession('${session.id}', 'new-window')">
+        <button class="btn btn-sm btn-primary restore-session" data-session-id="${escapeHtml(session.id)}" data-mode="new-window">
           🚀 Restore
         </button>
-        <button class="btn btn-sm btn-outline-secondary" onclick="editSession('${session.id}')">
+        <button class="btn btn-sm btn-outline-secondary edit-session" data-session-id="${escapeHtml(session.id)}">
           ✏️
         </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteSession('${session.id}')">
+        <button class="btn btn-sm btn-outline-danger delete-session" data-session-id="${escapeHtml(session.id)}">
           🗑️
         </button>
       </div>
@@ -346,9 +415,9 @@ async function loadTemplates() {
   const templateGrid = document.getElementById('templateGrid');
 
   templateGrid.innerHTML = templates.map(template => `
-    <div class="template-card" onclick="createFromTemplate('${template.id}')">
+    <div class="template-card create-from-template" data-template-id="${escapeHtml(template.id)}">
       <div class="template-header">
-        <div class="template-icon">${template.icon}</div>
+        <div class="template-icon">${escapeHtml(template.icon)}</div>
         <div class="template-name">${escapeHtml(template.name)}</div>
       </div>
       <div class="template-description">${escapeHtml(template.description)}</div>
@@ -387,37 +456,56 @@ async function handleSaveSession() {
   }
 }
 
-// Global functions for session actions
-window.restoreSession = async (sessionId, mode) => {
+/**
+ * Handle session restoration (called via event delegation)
+ */
+async function handleRestoreSession(sessionId, mode) {
   try {
     await sessionManager.restoreSession(sessionId, mode);
     showSuccess('Session restored successfully!');
   } catch (error) {
     logger.error('PremiumUI', 'Failed to restore session', { error });
-    showError('Failed to restore session');
+    showError(`Failed to restore session: ${error.message || 'Unknown error'}`);
   }
-};
+}
 
-window.deleteSession = async (sessionId) => {
+/**
+ * Handle session editing (called via event delegation)
+ */
+async function handleEditSession(sessionId) {
+  // TODO: Implement session editing modal
+  showError('Session editing not yet implemented');
+}
+
+/**
+ * Handle session deletion (called via event delegation)
+ */
+async function handleDeleteSession(sessionId) {
   if (!confirm('Are you sure you want to delete this session?')) {
     return;
   }
 
   try {
     await sessionManager.deleteSession(sessionId);
-    showSuccess('Session deleted');
+    showSuccess('Session deleted successfully');
     await loadSessions();
   } catch (error) {
     logger.error('PremiumUI', 'Failed to delete session', { error });
-    showError('Failed to delete session');
+    showError(`Failed to delete session: ${error.message || 'Unknown error'}`);
   }
-};
+}
 
-window.createFromTemplate = async (templateId) => {
+/**
+ * Handle template instantiation (called via event delegation)
+ */
+async function handleCreateFromTemplate(templateId) {
   const templates = sessionManager.getTemplates();
   const template = templates.find(t => t.id === templateId);
 
-  if (!template) return;
+  if (!template) {
+    showError('Template not found');
+    return;
+  }
 
   try {
     await sessionManager.createFromTemplate(template);
@@ -425,9 +513,9 @@ window.createFromTemplate = async (templateId) => {
     await loadSessions();
   } catch (error) {
     logger.error('PremiumUI', 'Failed to create from template', { error });
-    showError('Failed to create session from template');
+    showError(`Failed to create session: ${error.message || 'Unknown error'}`);
   }
-};
+}
 
 // ===== Refresh Settings =====
 
@@ -531,17 +619,17 @@ function renderRefreshRules() {
   }
 
   ruleList.innerHTML = refreshRules.map(rule => `
-    <div class="rule-item ${rule.enabled ? 'enabled' : 'disabled'}" data-rule-id="${rule.id}">
-      <span class="rule-type-badge">${rule.type}</span>
+    <div class="rule-item ${rule.enabled ? 'enabled' : 'disabled'}" data-rule-id="${escapeHtml(rule.id)}">
+      <span class="rule-type-badge">${escapeHtml(rule.type)}</span>
       <div class="rule-info">
         <div class="rule-pattern">${escapeHtml(rule.pattern)}</div>
         ${rule.description ? `<div class="rule-description">${escapeHtml(rule.description)}</div>` : ''}
       </div>
       <div class="rule-actions">
-        <button class="btn btn-sm btn-outline-primary" onclick="toggleRefreshRule('${rule.id}')">
+        <button class="btn btn-sm btn-outline-primary toggle-refresh-rule" data-rule-id="${escapeHtml(rule.id)}">
           ${rule.enabled ? '⏸️ Disable' : '▶️ Enable'}
         </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteRefreshRule('${rule.id}')">
+        <button class="btn btn-sm btn-outline-danger delete-refresh-rule" data-rule-id="${escapeHtml(rule.id)}">
           🗑️
         </button>
       </div>
@@ -577,17 +665,17 @@ function renderSkipRules() {
   }
 
   ruleList.innerHTML = skipRules.map(rule => `
-    <div class="rule-item ${rule.enabled ? 'enabled' : 'disabled'}" data-rule-id="${rule.id}">
-      <span class="rule-type-badge">${rule.type}</span>
+    <div class="rule-item ${rule.enabled ? 'enabled' : 'disabled'}" data-rule-id="${escapeHtml(rule.id)}">
+      <span class="rule-type-badge">${escapeHtml(rule.type)}</span>
       <div class="rule-info">
         <div class="rule-pattern">${escapeHtml(rule.pattern)}</div>
         ${rule.description ? `<div class="rule-description">${escapeHtml(rule.description)}</div>` : ''}
       </div>
       <div class="rule-actions">
-        <button class="btn btn-sm btn-outline-primary" onclick="toggleSkipRule('${rule.id}')">
+        <button class="btn btn-sm btn-outline-primary toggle-skip-rule" data-rule-id="${escapeHtml(rule.id)}">
           ${rule.enabled ? '⏸️ Disable' : '▶️ Enable'}
         </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteSkipRule('${rule.id}')">
+        <button class="btn btn-sm btn-outline-danger delete-skip-rule" data-rule-id="${escapeHtml(rule.id)}">
           🗑️
         </button>
       </div>
@@ -684,59 +772,77 @@ async function handleAddRule() {
 }
 
 // Global functions for rule actions
-window.toggleRefreshRule = async (ruleId) => {
+/**
+ * Handle refresh rule toggle (called via event delegation)
+ */
+async function handleToggleRefreshRule(ruleId) {
   try {
-    // Find and toggle
     const rule = refreshRules.find(r => r.id === ruleId);
-    if (!rule) return;
+    if (!rule) {
+      showError('Rule not found');
+      return;
+    }
 
     await refreshManager.addRule({ ...rule, enabled: !rule.enabled });
     await loadRefreshRules();
-    showSuccess('Rule updated');
+    showSuccess('Refresh rule updated successfully');
   } catch (error) {
     logger.error('PremiumUI', 'Failed to toggle refresh rule', { error });
-    showError('Failed to update rule');
+    showError(`Failed to update rule: ${error.message || 'Unknown error'}`);
   }
-};
+}
 
-window.deleteRefreshRule = async (ruleId) => {
-  if (!confirm('Are you sure you want to delete this rule?')) return;
+/**
+ * Handle refresh rule deletion (called via event delegation)
+ */
+async function handleDeleteRefreshRule(ruleId) {
+  if (!confirm('Are you sure you want to delete this refresh rule?')) {
+    return;
+  }
 
   try {
     await refreshManager.removeRule(ruleId);
     await loadRefreshRules();
-    showSuccess('Rule deleted');
+    showSuccess('Refresh rule deleted successfully');
   } catch (error) {
     logger.error('PremiumUI', 'Failed to delete refresh rule', { error });
-    showError('Failed to delete rule');
+    showError(`Failed to delete rule: ${error.message || 'Unknown error'}`);
   }
-};
+}
 
-window.toggleSkipRule = async (ruleId) => {
+/**
+ * Handle skip rule toggle (called via event delegation)
+ */
+async function handleToggleSkipRule(ruleId) {
   try {
     await skipRuleEngine.toggleRule(ruleId);
     await loadSkipRules();
     await loadSkipStatistics();
-    showSuccess('Rule updated');
+    showSuccess('Skip rule updated successfully');
   } catch (error) {
     logger.error('PremiumUI', 'Failed to toggle skip rule', { error });
-    showError('Failed to update rule');
+    showError(`Failed to update rule: ${error.message || 'Unknown error'}`);
   }
-};
+}
 
-window.deleteSkipRule = async (ruleId) => {
-  if (!confirm('Are you sure you want to delete this rule?')) return;
+/**
+ * Handle skip rule deletion (called via event delegation)
+ */
+async function handleDeleteSkipRule(ruleId) {
+  if (!confirm('Are you sure you want to delete this skip rule?')) {
+    return;
+  }
 
   try {
     await skipRuleEngine.removeRule(ruleId);
     await loadSkipRules();
     await loadSkipStatistics();
-    showSuccess('Rule deleted');
+    showSuccess('Skip rule deleted successfully');
   } catch (error) {
     logger.error('PremiumUI', 'Failed to delete skip rule', { error });
-    showError('Failed to delete rule');
+    showError(`Failed to delete rule: ${error.message || 'Unknown error'}`);
   }
-};
+}
 
 // ===== Import/Export =====
 
