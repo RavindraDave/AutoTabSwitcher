@@ -4,19 +4,6 @@
  */
 
 /**
- * Dangerous regex patterns that could cause exponential backtracking
- * These patterns are known to be problematic and should be rejected
- */
-const DANGEROUS_PATTERNS = [
-  /(\w+)+/,          // Nested quantifiers
-  /(a+)+/,           // Classic ReDoS pattern
-  /(a|a)+/,          // Alternation with overlap
-  /(a|ab)+/,         // Overlapping alternation
-  /([a-zA-Z]+)*\s/, // Star after plus
-  /(x+x+)+y/,        // Repeated repetition
-];
-
-/**
  * Maximum regex pattern length to prevent excessive memory usage
  */
 const MAX_PATTERN_LENGTH = 1000;
@@ -48,7 +35,9 @@ class RegexCache {
     // Evict oldest entry if cache is full
     if (this.cache.size >= this.maxSize) {
       const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
     }
 
     this.cache.set(key, regex);
@@ -153,19 +142,17 @@ export function validateRegexPattern(pattern: string): RegexValidationResult {
  * @returns true if pattern matches, false otherwise
  * @throws Error if regex execution times out
  */
-export function safeRegexTest(
+export async function safeRegexTest(
   pattern: string,
   testString: string,
   flags: string = 'i',
   timeout: number = MAX_REGEX_TIMEOUT
-): boolean {
+): Promise<boolean> {
   let timeoutId: NodeJS.Timeout | null = null;
-  let timedOut = false;
 
   // Create a promise that rejects after timeout
   const timeoutPromise = new Promise<boolean>((_, reject) => {
     timeoutId = setTimeout(() => {
-      timedOut = true;
       reject(new Error(`Regex execution exceeded ${timeout}ms timeout`));
     }, timeout);
   });

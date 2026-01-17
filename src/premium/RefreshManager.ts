@@ -34,8 +34,7 @@ import {
 } from '../core/constants.js';
 import {
   validateRegexPattern,
-  safeCompileRegex,
-  regexCache
+  safeCompileRegex
 } from '../core/regex-validator.js';
 
 /**
@@ -275,11 +274,9 @@ export class RefreshManager {
       logger.error('RefreshManager', 'Failed to refresh tab', errorDetails);
 
       // Re-throw with enhanced error message
-      const enhancedError = new Error(
+      throw new Error(
         `Failed to refresh tab ${tabId}: ${errorMessage}`
       );
-      enhancedError.cause = error;
-      throw enhancedError;
     }
   }
 

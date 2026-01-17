@@ -322,8 +322,7 @@ export class SkipRuleEngine {
           type,
           pattern,
           description: description || `Auto-generated ${type} rule`,
-          enabled: true,
-          priority: 0
+          enabled: true
         });
         rules.push(rule);
       } catch (error) {
@@ -406,6 +405,7 @@ export class SkipRuleEngine {
       highlighted: false,
       active: false,
       incognito: false,
+      selected: false,
       windowId: -1,
       id: -1,
       discarded: false,

@@ -136,6 +136,7 @@ export class SessionManager {
     const savedTabs: SavedTab[] = [];
     for (let i = 0; i < tabs.length; i++) {
       const tab = tabs[i];
+      if (!tab) continue; // Skip if undefined
 
       // Skip tabs without URLs or with chrome:// URLs (can't be restored)
       if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
@@ -194,7 +195,7 @@ export class SessionManager {
 
     for (let i = 0; i < windows.length; i++) {
       const window = windows[i];
-      if (!window.id || !window.tabs || window.tabs.length === 0) {
+      if (!window || !window.id || !window.tabs || window.tabs.length === 0) {
         continue;
       }
 
@@ -272,6 +273,10 @@ export class SessionManager {
 
     // Create new window with first tab
     const firstTab = sortedTabs[0];
+    if (!firstTab) {
+      throw new Error('No tabs to restore');
+    }
+
     const newWindow = await chrome.windows.create({
       url: firstTab.url,
       focused: true
@@ -285,6 +290,8 @@ export class SessionManager {
     let successCount = 1; // First tab already created
     for (let i = 1; i < sortedTabs.length; i++) {
       const tab = sortedTabs[i];
+      if (!tab) continue; // Skip if undefined
+
       try {
         // Verify window still exists before creating tab
         await chrome.windows.get(newWindow.id);
@@ -415,6 +422,8 @@ export class SessionManager {
     let removedCount = 0;
     for (let i = tabIdsToRemove.length - 1; i >= 0; i--) {
       const tabId = tabIdsToRemove[i];
+      if (tabId === undefined) continue; // Skip if undefined
+
       try {
         // Verify tab still exists before trying to remove
         await chrome.tabs.get(tabId);

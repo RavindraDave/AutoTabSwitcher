@@ -147,14 +147,16 @@ export class ConfigManager {
   /**
    * Import configuration from JSON
    */
-  async importConfig(config: ConfigExport, options: ImportOptions = {}): Promise<ImportResult> {
+  async importConfig(config: ConfigExport, options: ImportOptions = { mode: 'replace' }): Promise<ImportResult> {
     await requirePremiumLicense();
 
     const {
-      merge = false,
+      mode = 'replace',
       validateOnly = false,
       createBackup: shouldBackup = true
     } = options;
+
+    const merge = mode === 'merge';
 
     // Validate configuration
     const validation = this.validateConfig(config);
@@ -264,7 +266,7 @@ export class ConfigManager {
   /**
    * Import configuration from JSON string
    */
-  async importFromJSON(jsonString: string, options: ImportOptions = {}): Promise<ImportResult> {
+  async importFromJSON(jsonString: string, options: ImportOptions = { mode: 'replace' }): Promise<ImportResult> {
     try {
       const config: ConfigExport = JSON.parse(jsonString);
       return await this.importConfig(config, options);
@@ -352,7 +354,7 @@ export class ConfigManager {
 
     // Import configuration from backup (don't create another backup)
     return await this.importConfig(backup.config, {
-      merge: false,
+      mode: 'replace',
       createBackup: false
     });
   }
@@ -581,7 +583,7 @@ export class ConfigManager {
       skipRules: (await getSkipRules()).length,
       backups: this.backups.length,
       lastBackup: this.backups.length > 0 ?
-        this.backups[this.backups.length - 1].timestamp :
+        this.backups[this.backups.length - 1]?.timestamp :
         undefined
     };
   }

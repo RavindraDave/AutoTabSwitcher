@@ -179,19 +179,21 @@ export interface RefreshSettings {
   globalRefreshInterval?: number;
 
   // Preemptive refresh timing
-  preloadTime: number; // How many ms before switch to refresh (default: 2000)
+  preloadTime?: number; // How many ms before switch to refresh (default: 2000)
+  preemptiveRefreshOffset?: number; // Alias for preloadTime (deprecated, use preloadTime)
 
   // Refresh options
-  bypassCache: boolean; // Force full reload vs cache-aware (default: false)
-  smartPrefetch: boolean; // Enable predictive preloading (default: false)
-  prefetchCount: number; // How many next tabs to prefetch (default: 1)
+  bypassCache?: boolean; // Force full reload vs cache-aware (default: false)
+  smartPrefetch?: boolean; // Enable predictive preloading (default: false)
+  prefetchCount?: number; // How many next tabs to prefetch (default: 1)
+  refreshNonMatchingTabs?: boolean; // Whether to refresh tabs that don't match any rule (default: true)
 
   // Resource awareness
   pauseOnLowBattery?: boolean; // Pause refresh when battery < 20%
   pauseOnHighCPU?: boolean; // Pause when CPU > 80%
 
   // Refresh interval independence
-  refreshIndependentOfRotation: boolean; // If true, refresh has its own timing
+  refreshIndependentOfRotation?: boolean; // If true, refresh has its own timing
 }
 
 /**
