@@ -142,7 +142,7 @@ describe('RefreshManager', () => {
     });
 
     test('should stop timers when disabling', async () => {
-      await refreshManager.enable({ globalRefreshInterval: 1000 });
+      await refreshManager.enable({ globalRefreshInterval: 5000 });
       await refreshManager.disable();
 
       // Timers should be cleared (internal state)
@@ -335,7 +335,7 @@ describe('RefreshManager', () => {
           action: 'refresh',
           enabled: true
         })
-      ).rejects.toThrow('Invalid regex pattern');
+      ).rejects.toThrow('Invalid regex syntax');
     });
 
     test('should remove rule', async () => {
@@ -788,8 +788,10 @@ describe('RefreshManager', () => {
       };
 
       mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (typeof keys === 'object' && keys !== null && 'tabRefreshStates' in keys) {
+        if (keys === 'tabRefreshStates' || (typeof keys === 'object' && keys !== null && 'tabRefreshStates' in keys)) {
           return Promise.resolve({
+            premiumEnabled: true,
+            licenseKey: 'TEST-KEY',
             tabRefreshStates: { 1: mockState }
           });
         }
@@ -909,7 +911,29 @@ describe('RefreshManager', () => {
 
       mockChrome.storage.local.get.mockImplementation((keys) => {
         if (keys === 'refreshRules') {
-          return Promise.resolve({ refreshRules: [rule] });
+          return Promise.resolve({
+            premiumEnabled: true,
+            licenseKey: 'TEST-KEY',
+            refreshRules: [rule],
+            refreshSettings: {
+              enabled: true,
+              strategy: 'hybrid',
+              globalRefreshInterval: 30000,
+              refreshNonMatchingTabs: false // Don't refresh tabs that don't match rules
+            }
+          });
+        }
+        if (keys === 'refreshSettings' || (Array.isArray(keys) && keys.includes('refreshSettings'))) {
+          return Promise.resolve({
+            premiumEnabled: true,
+            licenseKey: 'TEST-KEY',
+            refreshSettings: {
+              enabled: true,
+              strategy: 'hybrid',
+              globalRefreshInterval: 30000,
+              refreshNonMatchingTabs: false
+            }
+          });
         }
         return Promise.resolve({
           premiumEnabled: true,
@@ -1026,8 +1050,10 @@ describe('RefreshManager', () => {
 
       // Simulate existing state
       mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (typeof keys === 'object' && keys !== null && 'tabRefreshStates' in keys) {
+        if (keys === 'tabRefreshStates' || (typeof keys === 'object' && keys !== null && 'tabRefreshStates' in keys)) {
           return Promise.resolve({
+            premiumEnabled: true,
+            licenseKey: 'TEST-KEY',
             tabRefreshStates: {
               1: {
                 lastRefreshTime: Date.now(),

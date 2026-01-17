@@ -282,7 +282,7 @@ describe('SkipRuleEngine', () => {
           enabled: true,
           priority: 0
         })
-      ).rejects.toThrow('Invalid regex pattern');
+      ).rejects.toThrow('Invalid regex syntax');
     });
 
     test('should validate domain pattern', async () => {
@@ -522,7 +522,19 @@ describe('SkipRuleEngine', () => {
 
       mockChrome.storage.local.get.mockImplementation((keys) => {
         if (keys === 'skipRules') {
-          return Promise.resolve({ skipRules: [rule] });
+          return Promise.resolve({
+            premiumEnabled: true,
+            licenseKey: 'TEST-KEY',
+            skipRules: [rule],
+            skipPinnedTabs: false
+          });
+        }
+        if (keys === 'skipPinnedTabs') {
+          return Promise.resolve({
+            premiumEnabled: true,
+            licenseKey: 'TEST-KEY',
+            skipPinnedTabs: false
+          });
         }
         return Promise.resolve({
           premiumEnabled: true,
@@ -610,7 +622,19 @@ describe('SkipRuleEngine', () => {
 
       mockChrome.storage.local.get.mockImplementation((keys) => {
         if (keys === 'skipRules') {
-          return Promise.resolve({ skipRules: [rule] });
+          return Promise.resolve({
+            premiumEnabled: true,
+            licenseKey: 'TEST-KEY',
+            skipRules: [rule],
+            skipPinnedTabs: false // Don't skip via setting, let rule match instead
+          });
+        }
+        if (keys === 'skipPinnedTabs') {
+          return Promise.resolve({
+            premiumEnabled: true,
+            licenseKey: 'TEST-KEY',
+            skipPinnedTabs: false
+          });
         }
         return Promise.resolve({
           premiumEnabled: true,
