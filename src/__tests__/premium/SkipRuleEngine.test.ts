@@ -520,27 +520,9 @@ describe('SkipRuleEngine', () => {
         priority: 0
       };
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'skipRules') {
-          return Promise.resolve({
-            premiumEnabled: true,
-            licenseKey: 'TEST-KEY',
-            skipRules: [rule],
-            skipPinnedTabs: false
-          });
-        }
-        if (keys === 'skipPinnedTabs') {
-          return Promise.resolve({
-            premiumEnabled: true,
-            licenseKey: 'TEST-KEY',
-            skipPinnedTabs: false
-          });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      mockChrome.storage.local.get.mockImplementation(createStorageMock({
+        skipRules: [rule]
+      }));
 
       mockChrome.tabs.get.mockResolvedValue({
         ...mockTab,
@@ -620,27 +602,10 @@ describe('SkipRuleEngine', () => {
         priority: 0
       };
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'skipRules') {
-          return Promise.resolve({
-            premiumEnabled: true,
-            licenseKey: 'TEST-KEY',
-            skipRules: [rule],
-            skipPinnedTabs: false // Don't skip via setting, let rule match instead
-          });
-        }
-        if (keys === 'skipPinnedTabs') {
-          return Promise.resolve({
-            premiumEnabled: true,
-            licenseKey: 'TEST-KEY',
-            skipPinnedTabs: false
-          });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      mockChrome.storage.local.get.mockImplementation(createStorageMock({
+        skipRules: [rule],
+        skipPinnedTabs: false // Don't skip via setting, let rule match instead
+      }));
 
       mockChrome.tabs.get.mockResolvedValue(pinnedTab);
 
@@ -655,15 +620,9 @@ describe('SkipRuleEngine', () => {
         { id: '2', type: 'url', pattern: 'other.com', enabled: true, priority: 0 }
       ];
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'skipRules') {
-          return Promise.resolve({ skipRules: rules });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      mockChrome.storage.local.get.mockImplementation(createStorageMock({
+        skipRules: rules
+      }));
 
       mockChrome.tabs.get.mockResolvedValue({
         ...mockTab,
@@ -676,15 +635,9 @@ describe('SkipRuleEngine', () => {
     });
 
     test('should not skip when no rules match', async () => {
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'skipRules') {
-          return Promise.resolve({ skipRules: [] });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      mockChrome.storage.local.get.mockImplementation(createStorageMock({
+        skipRules: []
+      }));
 
       const result = await skipRuleEngine.shouldSkipTab(1);
 
@@ -702,15 +655,9 @@ describe('SkipRuleEngine', () => {
         priority: 0
       };
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'skipRules') {
-          return Promise.resolve({ skipRules: [rule] });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      mockChrome.storage.local.get.mockImplementation(createStorageMock({
+        skipRules: [rule]
+      }));
 
       const tabs: chrome.tabs.Tab[] = [
         { ...mockTab, id: 1, url: 'https://keep.com' },
@@ -730,15 +677,9 @@ describe('SkipRuleEngine', () => {
     });
 
     test('should return all tabs when no rules', async () => {
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'skipRules') {
-          return Promise.resolve({ skipRules: [] });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      mockChrome.storage.local.get.mockImplementation(createStorageMock({
+        skipRules: []
+      }));
 
       const tabs: chrome.tabs.Tab[] = [
         { ...mockTab, id: 1 },
@@ -756,6 +697,10 @@ describe('SkipRuleEngine', () => {
     });
 
     test('should handle tabs without IDs', async () => {
+      mockChrome.storage.local.get.mockImplementation(createStorageMock({
+        skipRules: []
+      }));
+
       const tabs: chrome.tabs.Tab[] = [
         { ...mockTab, id: undefined },
         { ...mockTab, id: 1 }
