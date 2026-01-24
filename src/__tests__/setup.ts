@@ -58,6 +58,7 @@ const tabsMock = {
   create: jest.fn(),
   remove: jest.fn(),
   get: jest.fn(),
+  reload: jest.fn(),
   onCreated: {
     addListener: jest.fn(),
     removeListener: jest.fn(),
@@ -130,6 +131,7 @@ const windowsMock = {
   getLastFocused: jest.fn(),
   getAll: jest.fn(),
   get: jest.fn(),
+  create: jest.fn(),
   WINDOW_ID_NONE: -1,
 };
 
@@ -142,6 +144,14 @@ const commandsMock = {
   },
 };
 
+// Mock chrome.downloads API
+const downloadsMock = {
+  download: jest.fn(),
+  search: jest.fn(),
+  cancel: jest.fn(),
+  erase: jest.fn(),
+};
+
 // Create global chrome mock
 (global as any).chrome = {
   storage: storageMock,
@@ -151,6 +161,7 @@ const commandsMock = {
   runtime: runtimeMock,
   windows: windowsMock,
   commands: commandsMock,
+  downloads: downloadsMock,
 };
 
 // Reset all mocks before each test

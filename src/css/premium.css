@@ -1,0 +1,651 @@
+/**
+ * Premium Features Styles
+ * Extends the base options.css with premium-specific styling
+ */
+
+/* Premium Status Indicator */
+.premium-status-indicator {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.premium-badge {
+  display: inline-block;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.premium-badge.active {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Premium Activation Card */
+.premium-activation-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.activation-form .license-input-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.activation-form .license-input-group input {
+  flex: 1;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.activation-status {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.activation-status .status-icon {
+  font-size: 48px;
+}
+
+.activation-status .status-info {
+  flex: 1;
+}
+
+.activation-status .status-info h3 {
+  margin: 0 0 8px 0;
+  color: #10b981;
+  font-size: 20px;
+}
+
+.activation-status .status-info p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.activation-status .tier-info {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Premium Feature Sections */
+.premium-feature {
+  position: relative;
+}
+
+.premium-feature.locked {
+  pointer-events: none;
+}
+
+.premium-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 12px;
+}
+
+.premium-overlay.hidden {
+  display: none;
+}
+
+.premium-lock {
+  text-align: center;
+  padding: 40px;
+}
+
+.premium-lock .lock-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.premium-lock .lock-text {
+  font-size: 20px;
+  font-weight: 600;
+  color: #667eea;
+}
+
+/* Session Management */
+.session-list-container {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.session-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.session-list-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.session-list {
+  min-height: 200px;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+}
+
+.session-item:hover {
+  background: #f3f4f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.session-item .session-icon {
+  font-size: 32px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 8px;
+}
+
+.session-item .session-info {
+  flex: 1;
+}
+
+.session-item .session-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.session-item .session-meta {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.session-item .session-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.session-item .session-actions button {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* Template Grid */
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.template-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.template-card:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.15);
+}
+
+.template-card .template-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.template-card .template-icon {
+  font-size: 24px;
+}
+
+.template-card .template-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.template-card .template-description {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.template-card .template-tabs {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Rule Lists */
+.rule-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.rule-list {
+  min-height: 150px;
+}
+
+.rule-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border-left: 4px solid transparent;
+}
+
+.rule-item.enabled {
+  border-left-color: #10b981;
+}
+
+.rule-item.disabled {
+  border-left-color: #d1d5db;
+  opacity: 0.6;
+}
+
+.rule-item .rule-type-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+.rule-item .rule-info {
+  flex: 1;
+}
+
+.rule-item .rule-pattern {
+  font-weight: 500;
+  font-size: 14px;
+  color: #1f2937;
+  font-family: 'Courier New', monospace;
+}
+
+.rule-item .rule-description {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.rule-item .rule-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.rule-item .rule-actions button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* Strategy Explanation */
+.strategy-explanation {
+  padding: 16px;
+  background: #eff6ff;
+  border-left: 4px solid #667eea;
+  border-radius: 6px;
+  margin-top: 16px;
+  font-size: 14px;
+  color: #1e40af;
+}
+
+/* Export/Import Sections */
+.export-section,
+.import-section,
+.backup-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+}
+
+.export-section h3,
+.import-section h3,
+.backup-section h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.export-options,
+.import-options {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.export-actions,
+.import-source,
+.backup-actions {
+  margin-top: 16px;
+}
+
+.backup-list {
+  min-height: 150px;
+}
+
+.backup-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.backup-item .backup-info {
+  flex: 1;
+}
+
+.backup-item .backup-date {
+  font-weight: 500;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.backup-item .backup-reason {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.backup-item .backup-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Empty States */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+}
+
+.empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.empty-state small {
+  font-size: 13px;
+}
+
+/* Modals */
+
+/* Modal base styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1050;
+  display: none;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  outline: 0;
+}
+
+.modal.show {
+  display: block;
+}
+
+.modal.fade-in .modal-dialog {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+.modal-dialog {
+  position: relative;
+  width: auto;
+  margin: 1.75rem auto;
+  max-width: 500px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(0, -50px);
+  transition: opacity 0.15s linear, transform 0.15s ease-out;
+}
+
+.modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  pointer-events: auto;
+  background-color: #fff;
+  background-clip: padding-box;
+  border-radius: 12px;
+  border: none;
+  outline: 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom: none;
+}
+
+.modal-title {
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.modal-header .close {
+  padding: 0;
+  background-color: transparent;
+  border: 0;
+  color: white;
+  opacity: 0.8;
+  text-shadow: none;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-header .close:hover {
+  opacity: 1;
+}
+
+.modal-body {
+  position: relative;
+  flex: 1 1 auto;
+  padding: 24px;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  border-bottom-right-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.modal-footer > * {
+  margin-left: 0.25rem;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1040;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+}
+
+.modal-backdrop.fade {
+  opacity: 0;
+  transition: opacity 0.15s linear;
+}
+
+.modal-backdrop.show {
+  opacity: 0.5;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .session-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .session-item .session-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .session-item .session-actions button {
+    flex: 1;
+  }
+
+  .template-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .activation-form .license-input-group {
+    flex-direction: column;
+  }
+
+  .activation-status {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.session-item,
+.template-card,
+.rule-item,
+.backup-item {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Success/Error states */
+.rule-item.success {
+  border-left-color: #10b981;
+  background: #f0fdf4;
+}
+
+.rule-item.error {
+  border-left-color: #ef4444;
+  background: #fef2f2;
+}
+
+/* Loading States */
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f4f6;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Tooltips */
+.tooltip-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background: #9ca3af;
+  color: white;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 16px;
+  font-size: 12px;
+  cursor: help;
+  margin-left: 4px;
+}
+
+.tooltip-icon:hover {
+  background: #667eea;
+}

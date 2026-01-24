@@ -1,0 +1,90 @@
+# Pre-commit hooks configuration
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # JavaScript/TypeScript Linting
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.56.0
+    hooks:
+      - id: eslint
+        files: \.[jt]sx?$
+        types: [file]
+        additional_dependencies:
+          - eslint@8.56.0
+          - '@typescript-eslint/parser@6.19.0'
+          - '@typescript-eslint/eslint-plugin@6.19.0'
+
+  # Security checks
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
+    rev: v1.1.2
+    hooks:
+      - id: npm-audit
+        name: npm security audit
+
+  # General code quality
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent committing large files
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+      # Prevent committing merge conflict markers
+      - id: check-merge-conflict
+
+      # Check JSON syntax
+      - id: check-json
+
+      # Check YAML syntax
+      - id: check-yaml
+        args: ['--unsafe']  # Allow custom YAML tags
+
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+
+      # Prevent committing private keys
+      - id: detect-private-key
+
+  # Custom security checks
+  - repo: local
+    hooks:
+      # Check for inline event handlers (XSS risk)
+      - id: check-inline-handlers
+        name: Check for inline event handlers
+        entry: bash -c 'if grep -rn "onclick\s*=" --include="*.js" --include="*.html" src/; then echo "ERROR: Inline event handlers found (XSS risk)"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      # Check for unescaped innerHTML usage
+      - id: check-innerHTML-usage
+        name: Check for potentially unsafe innerHTML usage
+        entry: bash -c 'if grep -rn "\.innerHTML\s*=" --include="*.js" src/ | grep -v "escapeHtml\|DOMPurify\|sanitize"; then echo "WARNING: Potentially unsafe innerHTML usage found"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      # Check for direct RegExp construction
+      - id: check-regex-construction
+        name: Check for unsafe regex construction
+        entry: bash -c 'if grep -rn "new RegExp(.*user\|.*pattern\|.*input" --include="*.js" --include="*.ts" src/ | grep -v "validateRegexPattern\|safeCompileRegex"; then echo "WARNING: Unsafe regex construction found (ReDoS risk)"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      # Run TypeScript compiler
+      - id: typescript-check
+        name: TypeScript type checking
+        entry: npm run typecheck
+        language: system
+        pass_filenames: false
+        files: \.[jt]sx?$
+
+      # Run tests
+      - id: run-tests
+        name: Run test suite
+        entry: npm test
+        language: system
+        pass_filenames: false
+        stages: [push]  # Only run on push, not on every commit

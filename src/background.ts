@@ -15,6 +15,27 @@ import { updateBadge } from './core/badge-manager.js';
 import { switchTab } from './core/tab-switcher.js';
 import { logger, logModeChange, logWindowToggle } from './core/logger.js';
 import { WindowTimerManager } from './core/window-timer-manager.js';
+import { canAccessPremium } from './core/premium-access.js';
+import { PREMIUM_FEATURES_AVAILABLE } from './core/build-config.js';
+
+// Premium feature managers (only imported if premium features are enabled at build time)
+let sessionManager: any = null;
+let refreshManager: any = null;
+
+// Dynamically import premium managers if available
+if (PREMIUM_FEATURES_AVAILABLE) {
+  import('./premium/SessionManager.js').then(module => {
+    sessionManager = module.sessionManager;
+  }).catch(() => {
+    logger.warn('Premium', 'SessionManager not available');
+  });
+
+  import('./premium/RefreshManager.js').then(module => {
+    refreshManager = module.refreshManager;
+  }).catch(() => {
+    logger.warn('Premium', 'RefreshManager not available');
+  });
+}
 
 // Default delay time: 5 seconds for all environments
 const DEFAULT_DELAY_TIME = 5000; // 5 seconds
@@ -324,6 +345,27 @@ chrome.runtime.onStartup.addListener(async () => {
   try {
     // Clear manual pause state on browser startup (fresh start)
     await clearManualPause();
+
+    // Premium: Initialize RefreshManager and launch auto-start sessions
+    if (PREMIUM_FEATURES_AVAILABLE && await canAccessPremium()) {
+      try {
+        // Initialize RefreshManager
+        if (refreshManager) {
+          await refreshManager.initialize();
+          await logger.info('Premium', 'RefreshManager initialized on startup');
+        }
+
+        // Launch auto-start sessions
+        if (sessionManager) {
+          const launched = await sessionManager.launchAutoStartSessions();
+          await logger.info('Premium', 'Auto-start sessions launched', { count: launched.length });
+        }
+      } catch (error) {
+        await logger.error('Premium', 'Error initializing premium features on startup', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
 
     // Check if auto-start on browser startup is enabled
     const data = await getSettings(['enableOnStartup', 'enabled', 'switchingMode', 'operatingMode', 'windowStates']);

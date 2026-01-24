@@ -7,6 +7,27 @@ import { DEFAULT_WINDOW_MODE } from './constants.js';
 import { getSwitchingMode } from './storage.js';
 import { updateBadge } from './badge-manager.js';
 import { logger, logTabSwitch } from './logger.js';
+import { canAccessPremium } from './premium-access.js';
+import { PREMIUM_FEATURES_AVAILABLE } from './build-config.js';
+
+// Premium feature managers (only imported if premium features are enabled at build time)
+let skipRuleEngine: any = null;
+let refreshManager: any = null;
+
+// Dynamically import premium managers if available
+if (PREMIUM_FEATURES_AVAILABLE) {
+  import('../premium/SkipRuleEngine.js').then(module => {
+    skipRuleEngine = module.skipRuleEngine;
+  }).catch(() => {
+    logger.warn('Premium', 'SkipRuleEngine not available');
+  });
+
+  import('../premium/RefreshManager.js').then(module => {
+    refreshManager = module.refreshManager;
+  }).catch(() => {
+    logger.warn('Premium', 'RefreshManager not available');
+  });
+}
 
 /**
  * Switch to the next tab based on window mode configuration
@@ -97,7 +118,25 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
     }
 
     // Query tabs in the target window
-    const tabs = await chrome.tabs.query({ windowId: targetWindowId });
+    let tabs = await chrome.tabs.query({ windowId: targetWindowId });
+
+    // Premium: Apply skip rules to filter tabs
+    if (PREMIUM_FEATURES_AVAILABLE && await canAccessPremium() && skipRuleEngine) {
+      try {
+        const filteredTabs = await skipRuleEngine.filterTabs(tabs);
+        if (filteredTabs.length > 0) {
+          tabs = filteredTabs;
+          await logger.info('Premium', 'Skip rules applied', {
+            originalCount: tabs.length,
+            filteredCount: filteredTabs.length
+          });
+        }
+      } catch (error) {
+        await logger.error('Premium', 'Error applying skip rules, using all tabs', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
 
     if (tabs.length <= 1) {
       return false; // Nothing to switch if only one tab
@@ -122,7 +161,42 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       const newTabTitle = nextTab.title || 'Unknown';
       const previousTabId = currentTab?.id;
 
+      // Premium: Preemptive refresh before switching
+      if (PREMIUM_FEATURES_AVAILABLE && await canAccessPremium() && refreshManager) {
+        try {
+          const shouldRefresh = await refreshManager.shouldRefresh(nextTab.id);
+          if (shouldRefresh) {
+            await refreshManager.preemptiveRefresh(nextTab.id);
+            await logger.info('Premium', 'Preemptive refresh completed', {
+              tabId: nextTab.id,
+              title: newTabTitle
+            });
+          }
+        } catch (error) {
+          await logger.error('Premium', 'Error in preemptive refresh', {
+            error: error instanceof Error ? error.message : String(error),
+            tabId: nextTab.id
+          });
+        }
+      }
+
       await chrome.tabs.update(nextTab.id, { active: true });
+
+      // Premium: Post-switch refresh after switching
+      if (PREMIUM_FEATURES_AVAILABLE && await canAccessPremium() && refreshManager) {
+        try {
+          await refreshManager.postSwitchRefresh(nextTab.id);
+          await logger.info('Premium', 'Post-switch refresh completed', {
+            tabId: nextTab.id,
+            title: newTabTitle
+          });
+        } catch (error) {
+          await logger.error('Premium', 'Error in post-switch refresh', {
+            error: error instanceof Error ? error.message : String(error),
+            tabId: nextTab.id
+          });
+        }
+      }
 
       // Store the timestamp of this switch per window
       const now = Date.now();

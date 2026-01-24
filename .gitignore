@@ -26,6 +26,9 @@ Thumbs.db
 *.swo
 *~
 
+# Claude Code CLI (user-specific)
+.claude/
+
 # Extension packages
 *.crx
 *.pem
@@ -34,3 +37,13 @@ Thumbs.db
 # Test coverage
 coverage/
 *.lcov
+
+# Environment variables
+# Keep default .env files in repo, ignore local overrides
+.env.local
+.env.*.local
+
+# Build-time generated files
+# build-config.ts is auto-generated during production builds
+# Keep the development version in repo
+# src/core/build-config.ts - Keep in repo (development default)

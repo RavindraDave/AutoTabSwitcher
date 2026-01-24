@@ -10,6 +10,8 @@ import { isPaused } from '../core/activity-tracker.js';
 import { isManuallyPaused } from '../core/manual-pause-tracker.js';
 import { getMinDelayMs, getSwitchingMode } from '../core/storage.js';
 import { logger } from '../core/logger.js';
+import { canAccessPremium } from '../core/premium-access.js';
+import { PREMIUM_FEATURES_AVAILABLE } from '../core/build-config.js';
 
 // DOM Elements
 let header: HTMLElement;
@@ -28,6 +30,8 @@ let modeWindowBtn: HTMLButtonElement;
 let modeValue: HTMLElement;
 let intervalValue: HTMLElement;
 let settingsButton: HTMLButtonElement;
+let premiumTeaser: HTMLElement | null;
+let learnMorePremiumBtn: HTMLButtonElement | null;
 
 // State
 let countdownInterval: number | undefined;
@@ -58,12 +62,21 @@ export async function initializePopup(): Promise<void> {
   modeValue = document.getElementById('modeValue')!;
   intervalValue = document.getElementById('intervalValue')!;
   settingsButton = document.getElementById('settingsButton') as HTMLButtonElement;
+  premiumTeaser = document.getElementById('premiumTeaser');
+  learnMorePremiumBtn = document.getElementById('learnMorePremiumBtn') as HTMLButtonElement | null;
 
   // Set up event listeners
   toggleButton.addEventListener('click', handleToggle);
   modeGlobalBtn.addEventListener('click', () => handleModeSwitch('global'));
   modeWindowBtn.addEventListener('click', () => handleModeSwitch('window'));
   settingsButton.addEventListener('click', openSettings);
+
+  // Premium teaser handler
+  if (learnMorePremiumBtn) {
+    learnMorePremiumBtn.addEventListener('click', () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('options/premium.html') });
+    });
+  }
 
   // Listen for storage changes
   chrome.storage.onChanged.addListener((_changes, namespace) => {
@@ -142,10 +155,36 @@ async function updateUI(): Promise<void> {
 
     // Apply visual theme
     applyTheme(switchingMode);
+
+    // Update premium teaser visibility
+    await updatePremiumTeaser();
+
+    // Update ARIA attributes
+    toggleButton.setAttribute('aria-pressed', isCurrentWindowEnabled.toString());
   } catch (error) {
     await logger.error('PopupIndex', 'Error updating UI', {
       error: error instanceof Error ? error.message : String(error)
     });
+  }
+}
+
+/**
+ * Update premium teaser visibility
+ */
+async function updatePremiumTeaser(): Promise<void> {
+  if (!premiumTeaser) return;
+
+  try {
+    // Show teaser if premium features are available but user doesn't have access
+    if (PREMIUM_FEATURES_AVAILABLE) {
+      const hasPremium = await canAccessPremium();
+      premiumTeaser.style.display = hasPremium ? 'none' : 'block';
+    } else {
+      // Free build - hide teaser
+      premiumTeaser.style.display = 'none';
+    }
+  } catch (error) {
+    premiumTeaser.style.display = 'none';
   }
 }
 

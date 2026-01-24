@@ -44,3 +44,43 @@ export const MAX_DELAY_SECONDS = 3600; // 1 hour
 export const MIN_PAUSE_DURATION_SECONDS = 5;
 export const MAX_PAUSE_DURATION_SECONDS = 300; // 5 minutes
 export const DEFAULT_PAUSE_DURATION_SECONDS = 30;
+
+// ===== PREMIUM FEATURES =====
+
+/**
+ * Build-time constant controlling premium feature availability
+ * - Set via BUILD_PREMIUM environment variable during build
+ * - Free builds: false (premium code removed via dead code elimination)
+ * - Premium builds: true (premium code included)
+ * - This prevents reverse engineering of premium features in free builds
+ *
+ * Re-exported from build-config.ts which is auto-generated during build
+ */
+export { PREMIUM_FEATURES_AVAILABLE } from './build-config.js';
+
+// Premium feature limits
+export const MAX_SESSIONS = 50; // Maximum saved sessions
+export const MAX_TABS_PER_SESSION = 200; // Maximum tabs in a session
+export const MAX_REFRESH_RULES = 100; // Maximum refresh rules
+export const MAX_SKIP_RULES = 100; // Maximum skip rules
+export const MAX_SESSION_NAME_LENGTH = 100; // Maximum session name length
+export const MAX_SESSION_DESCRIPTION_LENGTH = 500; // Maximum session description length
+export const MAX_RULE_PATTERN_LENGTH = 500; // Maximum URL pattern length
+
+// Session template IDs
+export const SESSION_TEMPLATE_IDS = {
+  DEVELOPMENT: 'dev-workspace',
+  RESEARCH: 'research-session',
+  SOCIAL_MEDIA: 'social-media',
+  SHOPPING: 'shopping',
+  CUSTOM: 'custom'
+} as const;
+
+// Refresh intervals (milliseconds)
+export const MIN_REFRESH_INTERVAL = 5000; // 5 seconds minimum
+export const MAX_REFRESH_INTERVAL = 3600000; // 1 hour maximum
+export const DEFAULT_REFRESH_INTERVAL = 60000; // 1 minute default
+
+// Backup settings
+export const MAX_AUTO_BACKUPS = 10; // Keep last 10 auto backups
+export const AUTO_BACKUP_INTERVAL = 86400000; // 24 hours
