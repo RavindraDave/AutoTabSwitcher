@@ -1,0 +1,31 @@
+.content {
+  flex: 1;
+  min-height: 100vh;
+  background: var(--color-bg);
+  overflow-y: auto;
+}
+
+.inner {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-xl);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .inner {
+    padding: var(--space-lg);
+    padding-top: 70px; /* Account for mobile hamburger */
+  }
+}

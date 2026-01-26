@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/settings/*"],
+      "@core/*": ["src/core/*"],
+      "@premium/*": ["src/premium/*"]
+    }
+  },
+  "include": [
+    "src/settings/**/*.ts",
+    "src/settings/**/*.tsx",
+    "src/core/**/*.ts",
+    "src/premium/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
