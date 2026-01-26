@@ -12,6 +12,7 @@ const SessionManagement = React.lazy(() => import('./sections/premium/SessionMan
 const RefreshSettings = React.lazy(() => import('./sections/premium/RefreshSettings'));
 const SkipRules = React.lazy(() => import('./sections/premium/SkipRules'));
 const BackupSettings = React.lazy(() => import('./sections/premium/BackupSettings'));
+const PremiumActivation = React.lazy(() => import('./sections/premium/PremiumActivation'));
 const Diagnostics = React.lazy(() => import('./sections/system/Diagnostics'));
 const About = React.lazy(() => import('./sections/system/About'));
 
@@ -30,6 +31,7 @@ function App() {
           <Route path="/shortcuts" element={<ShortcutSettings />} />
 
           {/* Premium Settings */}
+          <Route path="/premium/activate" element={<PremiumActivation />} />
           <Route path="/sessions" element={<SessionManagement />} />
           <Route path="/refresh" element={<RefreshSettings />} />
           <Route path="/skip" element={<SkipRules />} />

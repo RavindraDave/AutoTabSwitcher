@@ -34,6 +34,7 @@ const navigation: NavigationGroup[] = [
     group: 'Premium',
     badge: 'sparkles',
     items: [
+      { id: 'activate', label: 'Activate Premium', icon: 'sparkles', path: '/premium/activate' },
       { id: 'sessions', label: 'Session Management', icon: 'folder', path: '/sessions', premium: true },
       { id: 'refresh', label: 'Smart Refresh', icon: 'refresh', path: '/refresh', premium: true },
       { id: 'skip', label: 'Skip Rules', icon: 'skip', path: '/skip', premium: true },
