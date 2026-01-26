@@ -74,7 +74,7 @@ export async function initializePopup(): Promise<void> {
   // Premium teaser handler
   if (learnMorePremiumBtn) {
     learnMorePremiumBtn.addEventListener('click', () => {
-      chrome.tabs.create({ url: chrome.runtime.getURL('options/premium.html') });
+      chrome.tabs.create({ url: chrome.runtime.getURL('settings/index.html#/premium/activate') });
     });
   }
 

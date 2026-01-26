@@ -45,21 +45,6 @@ htmlFiles.forEach(file => {
   }
 });
 
-// Copy options directory
-console.log('Copying options HTML...');
-const optionsDistDir = path.join(distDir, 'options');
-if (!fs.existsSync(optionsDistDir)) {
-  fs.mkdirSync(optionsDistDir, { recursive: true });
-}
-
-const optionsHtmlFiles = ['options.html', 'diagnostics.html'];
-optionsHtmlFiles.forEach(file => {
-  const srcPath = path.join(srcDir, 'options', file);
-  if (fs.existsSync(srcPath)) {
-    fs.copyFileSync(srcPath, path.join(optionsDistDir, file));
-  }
-});
-
 // Copy onboarding directory
 console.log('Copying onboarding HTML...');
 const onboardingDistDir = path.join(distDir, 'onboarding');

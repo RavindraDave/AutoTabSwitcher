@@ -9,6 +9,7 @@
     "scripts",
     "src/**/*.test.ts",
     "src/**/__tests__/**",
-    "src/**/*-hybrid.ts"
+    "src/**/*-hybrid.ts",
+    "src/settings/**"
   ]
 }
