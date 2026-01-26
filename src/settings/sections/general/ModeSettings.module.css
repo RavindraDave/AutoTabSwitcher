@@ -140,3 +140,93 @@
   padding: var(--space-2xl);
   color: var(--color-text-muted);
 }
+
+/* Feature list in mode cards */
+.modeFeatures {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-md) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.modeFeatures li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) 0;
+}
+
+.modeFeatures li::before {
+  content: '•';
+  color: var(--color-primary);
+}
+
+/* Window mode specific styles */
+.windowModeCard.active {
+  border-color: var(--color-secondary);
+  background: linear-gradient(135deg, rgba(32, 178, 170, 0.05) 0%, rgba(60, 179, 113, 0.05) 100%);
+}
+
+.windowModeCard.active .modeIcon {
+  background: var(--color-secondary-gradient);
+}
+
+.windowModeCard.active .modeTitle {
+  color: var(--color-secondary);
+}
+
+.windowModeCard .modeFeatures li::before {
+  color: var(--color-secondary);
+}
+
+.windowModeIndicator {
+  background: var(--color-secondary);
+}
+
+/* Status section */
+.statusInfo {
+  display: flex;
+  gap: var(--space-xl);
+  flex-wrap: wrap;
+}
+
+.statusItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.statusLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.statusValue {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+
+.windowModeText {
+  color: var(--color-secondary);
+}
+
+.enabledText {
+  color: var(--color-success);
+}
+
+.disabledText {
+  color: var(--color-text-muted);
+}
+
+/* Theme color indicators in table */
+.globalColor {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.windowColor {
+  color: var(--color-secondary);
+  font-weight: var(--font-weight-medium);
+}

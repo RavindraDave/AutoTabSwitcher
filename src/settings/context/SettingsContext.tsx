@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 // Settings interface matching the extension's storage structure
+// Note: Storage uses milliseconds for time values
 interface Settings {
   // Basic settings
-  delayTime: number;
+  delayTime: number; // milliseconds in storage (UI shows seconds)
   enabled: boolean;
   enableOnStartup: boolean;
 
@@ -12,13 +13,15 @@ interface Settings {
 
   // Pause on activity
   pauseOnActivity: boolean;
-  pauseDuration: number;
+  pauseDuration: number; // milliseconds in storage (UI shows seconds)
 
   // Premium settings
   skipPinnedTabs: boolean;
+
+  // Refresh settings (stored as nested refreshSettings in storage)
   refreshEnabled: boolean;
   refreshStrategy: 'preemptive' | 'post-switch' | 'manual' | 'hybrid';
-  refreshInterval: number;
+  preemptiveOffset: number; // milliseconds
 }
 
 interface SettingsContextValue {
@@ -27,19 +30,25 @@ interface SettingsContextValue {
   updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => Promise<void>;
   updateSettings: (updates: Partial<Settings>) => Promise<void>;
   refreshSettings: () => Promise<void>;
+  // Helpers for time conversion (storage uses ms, UI shows seconds)
+  getDelayInSeconds: () => number;
+  getPauseDurationInSeconds: () => number;
+  setDelayInSeconds: (seconds: number) => Promise<void>;
+  setPauseDurationInSeconds: (seconds: number) => Promise<void>;
 }
 
+// Default delay: 60 seconds = 60000ms
 const defaultSettings: Settings = {
-  delayTime: 60,
+  delayTime: 60000, // 60 seconds in ms
   enabled: false,
   enableOnStartup: false,
   switchingMode: 'global',
   pauseOnActivity: false,
-  pauseDuration: 30,
+  pauseDuration: 30000, // 30 seconds in ms
   skipPinnedTabs: true,
   refreshEnabled: false,
   refreshStrategy: 'post-switch',
-  refreshInterval: 300,
+  preemptiveOffset: 2000, // 2 seconds in ms
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -48,23 +57,34 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshSettings = useCallback(async () => {
+  const loadSettings = useCallback(async () => {
     try {
-      const result = await chrome.storage.local.get(Object.keys(defaultSettings));
+      const result = await chrome.storage.local.get([
+        'delayTime',
+        'enabled',
+        'enableOnStartup',
+        'switchingMode',
+        'pauseOnActivity',
+        'pauseDuration',
+        'skipPinnedTabs',
+        'refreshSettings',
+      ]);
 
-      setSettings((prev) => ({
-        ...prev,
-        delayTime: result.delayTime ?? prev.delayTime,
-        enabled: result.enabled ?? prev.enabled,
-        enableOnStartup: result.enableOnStartup ?? prev.enableOnStartup,
-        switchingMode: result.switchingMode ?? prev.switchingMode,
-        pauseOnActivity: result.pauseOnActivity ?? prev.pauseOnActivity,
-        pauseDuration: result.pauseDuration ?? prev.pauseDuration,
-        skipPinnedTabs: result.skipPinnedTabs ?? prev.skipPinnedTabs,
-        refreshEnabled: result.refreshEnabled ?? prev.refreshEnabled,
-        refreshStrategy: result.refreshStrategy ?? prev.refreshStrategy,
-        refreshInterval: result.refreshInterval ?? prev.refreshInterval,
-      }));
+      // Handle nested refreshSettings
+      const refreshSettings = result.refreshSettings || {};
+
+      setSettings({
+        delayTime: result.delayTime ?? defaultSettings.delayTime,
+        enabled: result.enabled ?? defaultSettings.enabled,
+        enableOnStartup: result.enableOnStartup ?? defaultSettings.enableOnStartup,
+        switchingMode: result.switchingMode ?? defaultSettings.switchingMode,
+        pauseOnActivity: result.pauseOnActivity ?? defaultSettings.pauseOnActivity,
+        pauseDuration: result.pauseDuration ?? defaultSettings.pauseDuration,
+        skipPinnedTabs: result.skipPinnedTabs ?? defaultSettings.skipPinnedTabs,
+        refreshEnabled: refreshSettings.enabled ?? defaultSettings.refreshEnabled,
+        refreshStrategy: refreshSettings.strategy ?? defaultSettings.refreshStrategy,
+        preemptiveOffset: refreshSettings.preloadTime ?? defaultSettings.preemptiveOffset,
+      });
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -77,7 +97,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     value: Settings[K]
   ) => {
     try {
-      await chrome.storage.local.set({ [key]: value });
+      // Handle refresh settings specially (nested object in storage)
+      if (key === 'refreshEnabled' || key === 'refreshStrategy' || key === 'preemptiveOffset') {
+        const currentRefreshSettings = await chrome.storage.local.get('refreshSettings');
+        const updated = {
+          ...currentRefreshSettings.refreshSettings,
+          ...(key === 'refreshEnabled' && { enabled: value }),
+          ...(key === 'refreshStrategy' && { strategy: value }),
+          ...(key === 'preemptiveOffset' && { preloadTime: value }),
+        };
+        await chrome.storage.local.set({ refreshSettings: updated });
+      } else {
+        await chrome.storage.local.set({ [key]: value });
+      }
       setSettings((prev) => ({ ...prev, [key]: value }));
     } catch (error) {
       console.error(`Failed to update setting ${key}:`, error);
@@ -87,7 +119,37 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const updateSettings = useCallback(async (updates: Partial<Settings>) => {
     try {
-      await chrome.storage.local.set(updates);
+      // Separate refresh settings from other settings
+      const refreshKeys = ['refreshEnabled', 'refreshStrategy', 'preemptiveOffset'];
+      const refreshUpdates: Record<string, unknown> = {};
+      const otherUpdates: Record<string, unknown> = {};
+
+      for (const [key, value] of Object.entries(updates)) {
+        if (refreshKeys.includes(key)) {
+          if (key === 'refreshEnabled') refreshUpdates.enabled = value;
+          if (key === 'refreshStrategy') refreshUpdates.strategy = value;
+          if (key === 'preemptiveOffset') refreshUpdates.preloadTime = value;
+        } else {
+          otherUpdates[key] = value;
+        }
+      }
+
+      // Update refresh settings if any
+      if (Object.keys(refreshUpdates).length > 0) {
+        const currentRefreshSettings = await chrome.storage.local.get('refreshSettings');
+        await chrome.storage.local.set({
+          refreshSettings: {
+            ...currentRefreshSettings.refreshSettings,
+            ...refreshUpdates,
+          },
+        });
+      }
+
+      // Update other settings
+      if (Object.keys(otherUpdates).length > 0) {
+        await chrome.storage.local.set(otherUpdates);
+      }
+
       setSettings((prev) => ({ ...prev, ...updates }));
     } catch (error) {
       console.error('Failed to update settings:', error);
@@ -95,10 +157,27 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Helper functions for time conversion
+  const getDelayInSeconds = useCallback(() => {
+    return Math.round(settings.delayTime / 1000);
+  }, [settings.delayTime]);
+
+  const getPauseDurationInSeconds = useCallback(() => {
+    return Math.round(settings.pauseDuration / 1000);
+  }, [settings.pauseDuration]);
+
+  const setDelayInSeconds = useCallback(async (seconds: number) => {
+    await updateSetting('delayTime', seconds * 1000);
+  }, [updateSetting]);
+
+  const setPauseDurationInSeconds = useCallback(async (seconds: number) => {
+    await updateSetting('pauseDuration', seconds * 1000);
+  }, [updateSetting]);
+
   // Initial load
   useEffect(() => {
-    refreshSettings();
-  }, [refreshSettings]);
+    loadSettings();
+  }, [loadSettings]);
 
   // Listen for storage changes from other parts of the extension
   useEffect(() => {
@@ -109,16 +188,40 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if (areaName !== 'local') return;
 
       setSettings((prev) => {
-        const updates: Partial<Settings> = {};
+        let updated = { ...prev };
+        let hasChanges = false;
 
-        for (const key of Object.keys(changes)) {
-          if (key in defaultSettings) {
-            updates[key as keyof Settings] = changes[key]?.newValue;
+        // Handle direct settings
+        const directKeys: (keyof Settings)[] = [
+          'delayTime', 'enabled', 'enableOnStartup', 'switchingMode',
+          'pauseOnActivity', 'pauseDuration', 'skipPinnedTabs'
+        ];
+
+        for (const key of directKeys) {
+          if (changes[key]) {
+            updated[key] = changes[key].newValue as never;
+            hasChanges = true;
           }
         }
 
-        if (Object.keys(updates).length === 0) return prev;
-        return { ...prev, ...updates };
+        // Handle nested refreshSettings
+        if (changes.refreshSettings) {
+          const rs = changes.refreshSettings.newValue || {};
+          if (rs.enabled !== undefined) {
+            updated.refreshEnabled = rs.enabled;
+            hasChanges = true;
+          }
+          if (rs.strategy !== undefined) {
+            updated.refreshStrategy = rs.strategy;
+            hasChanges = true;
+          }
+          if (rs.preloadTime !== undefined) {
+            updated.preemptiveOffset = rs.preloadTime;
+            hasChanges = true;
+          }
+        }
+
+        return hasChanges ? updated : prev;
       });
     };
 
@@ -133,7 +236,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         updateSetting,
         updateSettings,
-        refreshSettings,
+        refreshSettings: loadSettings,
+        getDelayInSeconds,
+        getPauseDurationInSeconds,
+        setDelayInSeconds,
+        setPauseDurationInSeconds,
       }}
     >
       {children}

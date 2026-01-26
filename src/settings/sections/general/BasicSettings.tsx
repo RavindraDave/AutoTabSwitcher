@@ -9,20 +9,21 @@ import { useToast } from '../../context/ToastContext';
 import styles from './BasicSettings.module.css';
 
 function BasicSettings() {
-  const { settings, updateSetting, isLoading } = useSettings();
+  const { settings, updateSetting, isLoading, getDelayInSeconds, setDelayInSeconds } = useSettings();
   const { showToast } = useToast();
 
-  // Local state for delay (explicit save)
-  const [delayTime, setDelayTime] = useState(settings.delayTime);
+  // Local state for delay in seconds (UI displays seconds, storage uses ms)
+  const [delaySeconds, setDelaySeconds] = useState(getDelayInSeconds());
   const [delayError, setDelayError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Sync local state when settings load
   useEffect(() => {
-    setDelayTime(settings.delayTime);
-  }, [settings.delayTime]);
+    setDelaySeconds(getDelayInSeconds());
+  }, [getDelayInSeconds]);
 
-  const isDirty = delayTime !== settings.delayTime;
+  const savedDelaySeconds = getDelayInSeconds();
+  const isDirty = delaySeconds !== savedDelaySeconds;
 
   const validateDelay = (value: number): string | null => {
     if (isNaN(value)) return 'Please enter a valid number';
@@ -33,12 +34,12 @@ function BasicSettings() {
 
   const handleDelayChange = (value: string) => {
     const numValue = parseInt(value, 10);
-    setDelayTime(isNaN(numValue) ? 0 : numValue);
+    setDelaySeconds(isNaN(numValue) ? 0 : numValue);
     setDelayError(validateDelay(numValue));
   };
 
   const handleSaveDelay = async () => {
-    const error = validateDelay(delayTime);
+    const error = validateDelay(delaySeconds);
     if (error) {
       setDelayError(error);
       return;
@@ -46,7 +47,7 @@ function BasicSettings() {
 
     setIsSaving(true);
     try {
-      await updateSetting('delayTime', delayTime);
+      await setDelayInSeconds(delaySeconds);
       showToast('Delay time saved', 'success');
     } catch {
       showToast('Failed to save delay time', 'error');
@@ -56,7 +57,7 @@ function BasicSettings() {
   };
 
   const handleResetDelay = () => {
-    setDelayTime(settings.delayTime);
+    setDelaySeconds(savedDelaySeconds);
     setDelayError(null);
   };
 
@@ -91,7 +92,7 @@ function BasicSettings() {
           <div className={styles.inputGroup}>
             <Input
               type="number"
-              value={delayTime.toString()}
+              value={delaySeconds.toString()}
               onChange={handleDelayChange}
               suffix="seconds"
               error={delayError || undefined}
