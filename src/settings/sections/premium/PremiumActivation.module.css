@@ -1,0 +1,256 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.header {
+  margin-bottom: var(--space-md);
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-sm);
+}
+
+.description {
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Active premium banner */
+.activeBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+  background: linear-gradient(135deg, var(--color-success) 0%, #2d9c6f 100%);
+  border-radius: var(--radius-lg);
+  color: white;
+}
+
+.activeBannerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+}
+
+.activeBannerContent h2 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 var(--space-xs);
+}
+
+.activeBannerContent p {
+  font-size: var(--font-size-base);
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* License info */
+.licenseInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.infoRow:last-child {
+  border-bottom: none;
+}
+
+.infoLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.infoValue {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+/* Manage section */
+.manageSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.manageHint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: var(--line-height-relaxed);
+}
+
+/* Benefits banner */
+.benefitsBanner {
+  padding: var(--space-xl);
+  background: linear-gradient(
+    135deg,
+    rgba(246, 224, 94, 0.15) 0%,
+    rgba(214, 158, 46, 0.15) 50%,
+    rgba(102, 126, 234, 0.15) 100%
+  );
+  border: 2px solid rgba(214, 158, 46, 0.3);
+  border-radius: var(--radius-lg);
+}
+
+.benefitsTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-premium);
+  margin: 0 0 var(--space-lg);
+}
+
+.benefitsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-md);
+}
+
+.benefitItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.benefitItem svg {
+  color: var(--color-premium);
+}
+
+/* Purchase section */
+.purchaseSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  text-align: center;
+}
+
+.priceTag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.price {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-premium);
+}
+
+.priceLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.purchaseHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Activation form */
+.activationForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Help content */
+.helpContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.helpItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.helpItem strong {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.helpItem p {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: var(--line-height-relaxed);
+}
+
+/* Modal */
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.modalWarning {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: var(--line-height-relaxed);
+}
+
+.modalHint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  padding: var(--space-sm);
+  background: var(--color-info-bg);
+  border-radius: var(--radius-md);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border-light);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .activeBanner {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .benefitsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .infoRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+}

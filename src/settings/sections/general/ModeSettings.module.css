@@ -1,0 +1,232 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.header {
+  margin-bottom: var(--space-md);
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-sm);
+}
+
+.description {
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.modeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+.modeCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+  width: 100%;
+}
+
+.modeCard:hover {
+  border-color: var(--color-text-light);
+  box-shadow: var(--shadow-md);
+}
+
+.modeCard.active {
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+}
+
+.modeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+}
+
+.modeCard.active .modeIcon {
+  background: var(--color-primary-gradient);
+  color: white;
+}
+
+.modeContent {
+  flex: 1;
+}
+
+.modeTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-xs);
+}
+
+.modeCard.active .modeTitle {
+  color: var(--color-primary);
+}
+
+.modeDescription {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: var(--line-height-relaxed);
+}
+
+.activeIndicator {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 50%;
+}
+
+.comparisonTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.comparisonTable th,
+.comparisonTable td {
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.comparisonTable th {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.comparisonTable td {
+  color: var(--color-text-secondary);
+}
+
+.comparisonTable tr:last-child td {
+  border-bottom: none;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  color: var(--color-text-muted);
+}
+
+/* Feature list in mode cards */
+.modeFeatures {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-md) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.modeFeatures li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) 0;
+}
+
+.modeFeatures li::before {
+  content: '•';
+  color: var(--color-primary);
+}
+
+/* Window mode specific styles */
+.windowModeCard.active {
+  border-color: var(--color-secondary);
+  background: linear-gradient(135deg, rgba(32, 178, 170, 0.05) 0%, rgba(60, 179, 113, 0.05) 100%);
+}
+
+.windowModeCard.active .modeIcon {
+  background: var(--color-secondary-gradient);
+}
+
+.windowModeCard.active .modeTitle {
+  color: var(--color-secondary);
+}
+
+.windowModeCard .modeFeatures li::before {
+  color: var(--color-secondary);
+}
+
+.windowModeIndicator {
+  background: var(--color-secondary);
+}
+
+/* Status section */
+.statusInfo {
+  display: flex;
+  gap: var(--space-xl);
+  flex-wrap: wrap;
+}
+
+.statusItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.statusLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.statusValue {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+
+.windowModeText {
+  color: var(--color-secondary);
+}
+
+.enabledText {
+  color: var(--color-success);
+}
+
+.disabledText {
+  color: var(--color-text-muted);
+}
+
+/* Theme color indicators in table */
+.globalColor {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.windowColor {
+  color: var(--color-secondary);
+  font-weight: var(--font-weight-medium);
+}

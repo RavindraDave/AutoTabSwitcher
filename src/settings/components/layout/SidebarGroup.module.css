@@ -1,0 +1,29 @@
+.group {
+  margin-bottom: var(--space-sm);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+}
+
+.title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.badge {
+  font-size: var(--font-size-sm);
+  line-height: 1;
+}
+
+.items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
