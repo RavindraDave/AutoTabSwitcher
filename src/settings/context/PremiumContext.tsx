@@ -7,6 +7,7 @@ interface PremiumContextValue {
   activateLicense: (key: string) => Promise<boolean>;
   deactivateLicense: () => Promise<void>;
   checkPremiumStatus: () => Promise<void>;
+  openPremiumPage: () => void;
 }
 
 const PremiumContext = createContext<PremiumContextValue | null>(null);
@@ -85,6 +86,11 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const openPremiumPage = useCallback(() => {
+    // Navigate to the premium activation section within the settings
+    window.location.hash = '#/premium/activate';
+  }, []);
+
   // Initial load
   useEffect(() => {
     checkPremiumStatus();
@@ -119,6 +125,7 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
         activateLicense,
         deactivateLicense,
         checkPremiumStatus,
+        openPremiumPage,
       }}
     >
       {children}

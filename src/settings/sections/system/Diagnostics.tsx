@@ -15,14 +15,14 @@ interface SystemStatus {
 }
 
 function Diagnostics() {
-  const { settings } = useSettings();
+  const { settings, getDelayInSeconds } = useSettings();
   const { isPremium } = usePremium();
   const [logs, setLogs] = useState<string[]>([]);
 
   const status: SystemStatus = {
     extensionEnabled: settings.enabled,
     currentMode: settings.switchingMode,
-    delayTime: settings.delayTime,
+    delayTime: getDelayInSeconds(), // Convert from ms to seconds
     pauseOnActivity: settings.pauseOnActivity,
     isPremium,
   };
