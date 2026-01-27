@@ -40,6 +40,7 @@ describe('SkipRuleEngine', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    jest.resetModules(); // Reset module cache to get fresh singleton instance
 
     // Reset chrome mocks
     mockChrome.storage.local.get.mockReset();

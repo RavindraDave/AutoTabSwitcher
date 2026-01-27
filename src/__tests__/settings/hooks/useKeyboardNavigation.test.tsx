@@ -22,7 +22,27 @@ function createKeyboardEvent(
     cancelable: true,
   });
 
+  // Mock preventDefault so we can spy on it
+  const originalPreventDefault = event.preventDefault.bind(event);
+  event.preventDefault = jest.fn(originalPreventDefault);
+
   return event;
+}
+
+// Helper to ensure elements are visible in JSDOM
+function makeElementVisible(element: HTMLElement) {
+  // In JSDOM, offsetParent is null by default
+  // We need to mock it to make elements appear visible
+  // But respect display: none
+  Object.defineProperty(element, 'offsetParent', {
+    get: () => {
+      if (element.style.display === 'none') {
+        return null;
+      }
+      return element.parentElement;
+    },
+    configurable: true,
+  });
 }
 
 describe('useKeyboardNavigation', () => {
@@ -46,6 +66,11 @@ describe('useKeyboardNavigation', () => {
     container.appendChild(button3);
 
     document.body.appendChild(container);
+
+    // Make elements visible for JSDOM
+    makeElementVisible(button1);
+    makeElementVisible(button2);
+    makeElementVisible(button3);
   });
 
   afterEach(() => {
@@ -156,6 +181,7 @@ describe('useKeyboardNavigation', () => {
     it('should work with custom selector', () => {
       const input = document.createElement('input');
       container.appendChild(input);
+      makeElementVisible(input);
 
       const containerRef = { current: container };
 
@@ -173,6 +199,7 @@ describe('useKeyboardNavigation', () => {
       const div = document.createElement('div');
       div.tabIndex = 0;
       container.appendChild(div);
+      makeElementVisible(div);
 
       const containerRef = { current: container };
 
@@ -293,9 +320,7 @@ describe('useKeyboardNavigation', () => {
       );
 
       button1.focus();
-      const event = createKeyboardEvent('ArrowDown', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('ArrowDown');
       container.dispatchEvent(event);
 
       expect(document.activeElement).toBe(button1); // Stays on same element
@@ -309,9 +334,7 @@ describe('useKeyboardNavigation', () => {
       renderHook(() => useKeyboardNavigation(containerRef));
 
       button3.focus();
-      const event = createKeyboardEvent('Home', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('Home');
       container.dispatchEvent(event);
 
       expect(document.activeElement).toBe(button1);
@@ -323,9 +346,7 @@ describe('useKeyboardNavigation', () => {
       renderHook(() => useKeyboardNavigation(containerRef));
 
       button1.focus();
-      const event = createKeyboardEvent('End', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('End');
       container.dispatchEvent(event);
 
       expect(document.activeElement).toBe(button3);
@@ -339,9 +360,7 @@ describe('useKeyboardNavigation', () => {
       );
 
       button3.focus();
-      const event = createKeyboardEvent('Home', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('Home');
       container.dispatchEvent(event);
 
       expect(document.activeElement).toBe(button3);
@@ -356,9 +375,7 @@ describe('useKeyboardNavigation', () => {
 
       renderHook(() => useKeyboardNavigation(containerRef, { onEscape }));
 
-      const event = createKeyboardEvent('Escape', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('Escape');
       container.dispatchEvent(event);
 
       expect(onEscape).toHaveBeenCalledTimes(1);
@@ -369,9 +386,7 @@ describe('useKeyboardNavigation', () => {
       const containerRef = { current: container };
       renderHook(() => useKeyboardNavigation(containerRef));
 
-      const event = createKeyboardEvent('Escape', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('Escape');
       container.dispatchEvent(event);
 
       expect(event.preventDefault).not.toHaveBeenCalled();
@@ -384,14 +399,13 @@ describe('useKeyboardNavigation', () => {
       const div = document.createElement('div');
       div.tabIndex = 0;
       container.appendChild(div);
+      makeElementVisible(div);
 
       const containerRef = { current: container };
       renderHook(() => useKeyboardNavigation(containerRef, { onSelect }));
 
       div.focus();
-      const event = createKeyboardEvent('Enter', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('Enter');
       container.dispatchEvent(event);
 
       expect(onSelect).toHaveBeenCalledWith(div);
@@ -405,9 +419,7 @@ describe('useKeyboardNavigation', () => {
       renderHook(() => useKeyboardNavigation(containerRef, { onSelect }));
 
       button1.focus();
-      const event = createKeyboardEvent('Enter', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('Enter');
       container.dispatchEvent(event);
 
       expect(onSelect).not.toHaveBeenCalled();
@@ -419,14 +431,13 @@ describe('useKeyboardNavigation', () => {
       const link = document.createElement('a');
       link.href = '#';
       container.appendChild(link);
+      makeElementVisible(link);
 
       const containerRef = { current: container };
       renderHook(() => useKeyboardNavigation(containerRef, { onSelect }));
 
       link.focus();
-      const event = createKeyboardEvent('Enter', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('Enter');
       container.dispatchEvent(event);
 
       expect(onSelect).not.toHaveBeenCalled();
@@ -497,6 +508,11 @@ describe('useFocusTrap', () => {
     container.appendChild(button3);
 
     document.body.appendChild(container);
+
+    // Make elements visible for JSDOM
+    makeElementVisible(button1);
+    makeElementVisible(button2);
+    makeElementVisible(button3);
   });
 
   afterEach(() => {
@@ -527,9 +543,7 @@ describe('useFocusTrap', () => {
 
       button3.focus();
 
-      const event = createKeyboardEvent('Tab', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('Tab');
       container.dispatchEvent(event);
 
       expect(document.activeElement).toBe(button1);
@@ -544,7 +558,6 @@ describe('useFocusTrap', () => {
 
       const event = createKeyboardEvent('Tab', {
         shiftKey: true,
-        preventDefault: jest.fn(),
       });
       container.dispatchEvent(event);
 
@@ -558,9 +571,7 @@ describe('useFocusTrap', () => {
 
       button1.focus();
 
-      const event = createKeyboardEvent('Tab', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('Tab');
       container.dispatchEvent(event);
 
       // Should not prevent default when not at boundary
@@ -619,9 +630,7 @@ describe('useFocusTrap', () => {
       expect(document.activeElement).toBe(button1);
 
       button1.focus();
-      const event = createKeyboardEvent('Tab', {
-        preventDefault: jest.fn(),
-      });
+      const event = createKeyboardEvent('Tab');
       container.dispatchEvent(event);
 
       // Should not prevent default - can tab to button3

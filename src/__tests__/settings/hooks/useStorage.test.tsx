@@ -4,8 +4,21 @@
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useStorage, useStorageMultiple } from '../../../settings/hooks/useStorage';
+import { resetMockStorage } from '../setup';
+
+// Helper to flush pending promises and effects
+async function flushPromises() {
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+}
 
 describe('useStorage', () => {
+  beforeEach(() => {
+    // Ensure mock storage is empty before each test
+    resetMockStorage({});
+  });
+
   describe('initialization', () => {
     it('should initialize with default value', () => {
       const { result } = renderHook(() => useStorage('testKey', 'default'));
@@ -15,11 +28,13 @@ describe('useStorage', () => {
     });
 
     it('should load value from storage on mount', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      resetMockStorage({
         testKey: 'stored value',
       });
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toBe('stored value');
@@ -28,9 +43,11 @@ describe('useStorage', () => {
     });
 
     it('should use default value if storage is empty', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({});
+      resetMockStorage({});
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toBe('default');
@@ -39,11 +56,13 @@ describe('useStorage', () => {
     });
 
     it('should handle undefined values in storage', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      resetMockStorage({
         testKey: undefined,
       });
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toBe('default');
@@ -52,11 +71,13 @@ describe('useStorage', () => {
     });
 
     it('should handle null values in storage', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      resetMockStorage({
         testKey: null,
       });
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toBe(null);
@@ -72,6 +93,8 @@ describe('useStorage', () => {
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
 
+      await flushPromises();
+
       await waitFor(() => {
         expect(result.current[0]).toBe('default');
         expect(result.current[2]).toBe(false); // isLoading set to false even on error
@@ -83,13 +106,15 @@ describe('useStorage', () => {
 
     it('should handle different data types', async () => {
       const objectValue = { name: 'test', count: 42 };
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      resetMockStorage({
         testKey: objectValue,
       });
 
       const { result } = renderHook(() =>
         useStorage('testKey', { name: '', count: 0 })
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toEqual(objectValue);
@@ -98,11 +123,13 @@ describe('useStorage', () => {
 
     it('should handle arrays', async () => {
       const arrayValue = [1, 2, 3, 4, 5];
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      resetMockStorage({
         testKey: arrayValue,
       });
 
       const { result } = renderHook(() => useStorage('testKey', [] as number[]));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toEqual(arrayValue);
@@ -110,11 +137,13 @@ describe('useStorage', () => {
     });
 
     it('should handle boolean values', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      resetMockStorage({
         testKey: true,
       });
 
       const { result } = renderHook(() => useStorage('testKey', false));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toBe(true);
@@ -122,11 +151,13 @@ describe('useStorage', () => {
     });
 
     it('should handle number values', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      resetMockStorage({
         testKey: 42,
       });
 
       const { result } = renderHook(() => useStorage('testKey', 0));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toBe(42);
@@ -136,9 +167,11 @@ describe('useStorage', () => {
 
   describe('setStorageValue', () => {
     it('should update value and save to storage', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({});
+      resetMockStorage({});
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false); // isLoading
@@ -155,9 +188,11 @@ describe('useStorage', () => {
     });
 
     it('should update local state immediately', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({});
+      resetMockStorage({});
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -174,10 +209,12 @@ describe('useStorage', () => {
       const consoleError = jest.spyOn(console, 'error').mockImplementation();
       const error = new Error('Storage error');
 
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({});
+      resetMockStorage({});
       (chrome.storage.local.set as jest.Mock).mockRejectedValueOnce(error);
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -194,11 +231,13 @@ describe('useStorage', () => {
     });
 
     it('should handle object updates', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({});
+      resetMockStorage({});
 
       const { result } = renderHook(() =>
         useStorage('testKey', { name: '', count: 0 })
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -217,9 +256,11 @@ describe('useStorage', () => {
     });
 
     it('should handle array updates', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({});
+      resetMockStorage({});
 
       const { result } = renderHook(() => useStorage('testKey', [] as number[]));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -237,11 +278,13 @@ describe('useStorage', () => {
 
   describe('storage change listener', () => {
     it('should update value when storage changes from other sources', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      resetMockStorage({
         testKey: 'initial',
       });
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toBe('initial');
@@ -268,11 +311,13 @@ describe('useStorage', () => {
     });
 
     it('should ignore changes from other storage areas', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      resetMockStorage({
         testKey: 'initial',
       });
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toBe('initial');
@@ -298,11 +343,13 @@ describe('useStorage', () => {
     });
 
     it('should ignore changes to other keys', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({
+      resetMockStorage({
         testKey: 'initial',
       });
 
       const { result } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[0]).toBe('initial');
@@ -328,9 +375,11 @@ describe('useStorage', () => {
     });
 
     it('should remove listener on unmount', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValueOnce({});
+      resetMockStorage({});
 
       const { unmount } = renderHook(() => useStorage('testKey', 'default'));
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(chrome.storage.onChanged.addListener).toHaveBeenCalled();
@@ -344,7 +393,7 @@ describe('useStorage', () => {
 
   describe('multiple instances', () => {
     it('should handle multiple instances of the same key', async () => {
-      (chrome.storage.local.get as jest.Mock).mockResolvedValue({
+      resetMockStorage({
         testKey: 'initial',
       });
 
@@ -354,6 +403,8 @@ describe('useStorage', () => {
       const { result: result2 } = renderHook(() =>
         useStorage('testKey', 'default')
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result1.current[0]).toBe('initial');
@@ -391,13 +442,13 @@ describe('useStorageMultiple', () => {
       const defaults = { key1: 'value1', key2: 'value2' };
       const stored = { key1: 'stored1', key2: 'stored2' };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce(() =>
-        Promise.resolve(stored)
-      );
+      resetMockStorage(stored);
 
       const { result } = renderHook(() =>
         useStorageMultiple(['key1', 'key2'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false); // isLoading
@@ -409,16 +460,16 @@ describe('useStorageMultiple', () => {
     it('should use default values for missing keys', async () => {
       const defaults = { key1: 'value1', key2: 'value2', key3: 'value3' };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce(() =>
-        Promise.resolve({
-          key1: 'stored1',
-          // key2 and key3 missing
-        })
-      );
+      resetMockStorage({
+        key1: 'stored1',
+        // key2 and key3 missing
+      });
 
       const { result } = renderHook(() =>
         useStorageMultiple(['key1', 'key2', 'key3'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false); // Wait for loading
@@ -442,6 +493,8 @@ describe('useStorageMultiple', () => {
       const { result } = renderHook(() =>
         useStorageMultiple(['key1', 'key2'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -469,9 +522,7 @@ describe('useStorageMultiple', () => {
         arrayKey: [1, 2, 3],
       };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce(() =>
-        Promise.resolve(stored)
-      );
+      resetMockStorage(stored);
 
       const { result } = renderHook(() =>
         useStorageMultiple(
@@ -479,6 +530,8 @@ describe('useStorageMultiple', () => {
           defaults
         )
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false); // Wait for loading to complete
@@ -492,14 +545,13 @@ describe('useStorageMultiple', () => {
     it('should update specified values and save to storage', async () => {
       const defaults = { key1: 'value1', key2: 'value2', key3: 'value3' };
 
-      // Mock the storage get to return an empty object (keys not found)
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce((keys) =>
-        Promise.resolve({})
-      );
+      resetMockStorage({});
 
       const { result } = renderHook(() =>
         useStorageMultiple(['key1', 'key2', 'key3'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false); // isLoading
@@ -523,13 +575,13 @@ describe('useStorageMultiple', () => {
     it('should handle partial updates', async () => {
       const defaults = { key1: 'value1', key2: 'value2' };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce((keys) =>
-        Promise.resolve({})
-      );
+      resetMockStorage({});
 
       const { result } = renderHook(() =>
         useStorageMultiple(['key1', 'key2'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -550,14 +602,14 @@ describe('useStorageMultiple', () => {
       const defaults = { key1: 'value1', key2: 'value2' };
       const error = new Error('Storage error');
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce((keys) =>
-        Promise.resolve({})
-      );
+      resetMockStorage({});
       (chrome.storage.local.set as jest.Mock).mockRejectedValueOnce(error);
 
       const { result } = renderHook(() =>
         useStorageMultiple(['key1', 'key2'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -578,13 +630,13 @@ describe('useStorageMultiple', () => {
     it('should update values when storage changes', async () => {
       const defaults = { key1: 'value1', key2: 'value2' };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce(() =>
-        Promise.resolve({})
-      );
+      resetMockStorage({});
 
       const { result } = renderHook(() =>
         useStorageMultiple(['key1', 'key2'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -615,13 +667,13 @@ describe('useStorageMultiple', () => {
     it('should handle partial changes', async () => {
       const defaults = { key1: 'value1', key2: 'value2', key3: 'value3' };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce(() =>
-        Promise.resolve({})
-      );
+      resetMockStorage({});
 
       const { result } = renderHook(() =>
         useStorageMultiple(['key1', 'key2', 'key3'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -653,13 +705,13 @@ describe('useStorageMultiple', () => {
     it('should ignore changes to keys not in the list', async () => {
       const defaults = { key1: 'value1', key2: 'value2' };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce(() =>
-        Promise.resolve({})
-      );
+      resetMockStorage({});
 
       const { result } = renderHook(() =>
         useStorageMultiple(['key1', 'key2'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -686,13 +738,13 @@ describe('useStorageMultiple', () => {
     it('should ignore changes from other storage areas', async () => {
       const defaults = { key1: 'value1', key2: 'value2' };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce(() =>
-        Promise.resolve({})
-      );
+      resetMockStorage({});
 
       const { result } = renderHook(() =>
         useStorageMultiple(['key1', 'key2'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(result.current[2]).toBe(false);
@@ -719,13 +771,13 @@ describe('useStorageMultiple', () => {
     it('should remove listener on unmount', async () => {
       const defaults = { key1: 'value1', key2: 'value2' };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce(() =>
-        Promise.resolve({})
-      );
+      resetMockStorage({});
 
       const { unmount } = renderHook(() =>
         useStorageMultiple(['key1', 'key2'], defaults)
       );
+
+      await flushPromises();
 
       await waitFor(() => {
         expect(chrome.storage.onChanged.addListener).toHaveBeenCalled();

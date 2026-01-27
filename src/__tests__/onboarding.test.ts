@@ -53,6 +53,7 @@ describe('Onboarding', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.resetModules(); // Reset module cache for fresh initialization
 
     // Setup DOM
     document.body.innerHTML = '';
@@ -153,10 +154,10 @@ describe('Onboarding', () => {
 
     test('should handle completion successfully', async () => {
       await import('../onboarding/onboarding.js');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       mockFinishButton.click();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       expect(mockChrome.storage.local.set).toHaveBeenCalledWith({
         hasSeenOnboarding: true
@@ -166,10 +167,10 @@ describe('Onboarding', () => {
 
     test('should handle skip button', async () => {
       await import('../onboarding/onboarding.js');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       mockSkipButton.click();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       expect(mockChrome.storage.local.set).toHaveBeenCalledWith({
         hasSeenOnboarding: true
@@ -183,10 +184,10 @@ describe('Onboarding', () => {
       const windowCloseSpy = jest.spyOn(window, 'close').mockImplementation(() => {});
 
       await import('../onboarding/onboarding.js');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       mockFinishButton.click();
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 250));
 
       expect(logger.error).toHaveBeenCalled();
       expect(windowCloseSpy).toHaveBeenCalled();
@@ -198,10 +199,10 @@ describe('Onboarding', () => {
       mockChrome.tabs.getCurrent.mockResolvedValue({});
 
       await import('../onboarding/onboarding.js');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       mockFinishButton.click();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       // Should save but not remove tab
       expect(mockChrome.storage.local.set).toHaveBeenCalled();
@@ -210,15 +211,17 @@ describe('Onboarding', () => {
 
     test('should update progress bar', async () => {
       await import('../onboarding/onboarding.js');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       expect(mockProgressSteps[0].classList.contains('active')).toBe(true);
 
       mockNextButton.click();
+      await new Promise(resolve => setTimeout(resolve, 10));
       expect(mockProgressSteps[0].classList.contains('completed')).toBe(true);
       expect(mockProgressSteps[1].classList.contains('active')).toBe(true);
 
       mockNextButton.click();
+      await new Promise(resolve => setTimeout(resolve, 10));
       expect(mockProgressSteps[0].classList.contains('completed')).toBe(true);
       expect(mockProgressSteps[1].classList.contains('completed')).toBe(true);
       expect(mockProgressSteps[2].classList.contains('active')).toBe(true);

@@ -882,26 +882,32 @@ describe('SessionManager', () => {
   describe('edge cases', () => {
     test('should handle tabs without URLs', async () => {
       const tabsWithoutUrls = [
-        { ...mockTabs[0], url: undefined }
+        { ...mockTabs[0], url: undefined },
+        { ...mockTabs[1], url: 'https://example.com' } // Add valid tab
       ];
 
       mockChrome.tabs.query.mockResolvedValue(tabsWithoutUrls);
 
       const result = await sessionManager.saveCurrentWindow('Test');
 
-      expect(result.tabs[0].url).toBe('about:blank');
+      // Tabs without URLs are skipped, should only save the valid tab
+      expect(result.tabs).toHaveLength(1);
+      expect(result.tabs[0].url).toBe('https://example.com');
     });
 
     test('should handle chrome:// URLs', async () => {
       const chromeTabs = [
-        { ...mockTabs[0], url: 'chrome://extensions' }
+        { ...mockTabs[0], url: 'chrome://extensions' },
+        { ...mockTabs[1], url: 'https://example.com' } // Add valid tab
       ];
 
       mockChrome.tabs.query.mockResolvedValue(chromeTabs);
 
       const result = await sessionManager.saveCurrentWindow('Test');
 
-      expect(result.tabs[0].url).toBe('chrome://extensions');
+      // chrome:// URLs are skipped, should only save the valid tab
+      expect(result.tabs).toHaveLength(1);
+      expect(result.tabs[0].url).toBe('https://example.com');
     });
 
     test('should handle concurrent session saves', async () => {
@@ -983,7 +989,10 @@ describe('SessionManager', () => {
       const mockSession: SavedSession = {
         id: 'test-session',
         name: 'Test',
-        tabs: [{ url: 'https://example.com', index: 0 }],
+        tabs: [
+          { url: 'https://example.com', index: 0 },
+          { url: 'https://test.com', index: 1 } // Need at least 2 tabs for tabs.create to be called
+        ],
         createdAt: Date.now(),
         launchCount: 0
       };
@@ -1013,7 +1022,7 @@ describe('SessionManager', () => {
 
       await sessionManager.restoreSession('test-session', 'new-window');
 
-      // Should have retried
+      // Should have retried (called twice for the second tab)
       expect(mockChrome.tabs.create).toHaveBeenCalledTimes(2);
     });
 
@@ -1021,7 +1030,10 @@ describe('SessionManager', () => {
       const mockSession: SavedSession = {
         id: 'test-session',
         name: 'Test',
-        tabs: [{ url: 'https://example.com', index: 0 }],
+        tabs: [
+          { url: 'https://example.com', index: 0 },
+          { url: 'https://test.com', index: 1 } // Need at least 2 tabs for tabs.create to be called
+        ],
         createdAt: Date.now(),
         launchCount: 0
       };
@@ -1044,8 +1056,8 @@ describe('SessionManager', () => {
 
       await sessionManager.restoreSession('test-session', 'new-window');
 
-      // Should not log errors for individual tab failures (they are caught and logged)
-      expect(mockChrome.tabs.create).toHaveBeenCalled();
+      // Should be called once for the second tab (non-retryable errors don't retry)
+      expect(mockChrome.tabs.create).toHaveBeenCalledTimes(1);
     });
 
     test('should identify retryable errors', async () => {

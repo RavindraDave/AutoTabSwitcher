@@ -9,6 +9,14 @@ import {
   useExplicitSaveMultiple,
 } from '../../../settings/hooks/useExplicitSave';
 import { ToastProvider } from '../../../settings/context/ToastContext';
+import { resetMockStorage } from '../setup';
+
+// Helper to flush pending promises and effects
+async function flushPromises() {
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+}
 
 // Wrapper component that provides context
 function Wrapper({ children }: { children: React.ReactNode }) {
@@ -595,9 +603,7 @@ describe('useExplicitSaveMultiple', () => {
       const initialValues = { key1: 'value1', key2: 'value2' };
       const storedValues = { key1: 'stored1', key2: 'stored2' };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce(() =>
-        Promise.resolve(storedValues)
-      );
+      resetMockStorage(storedValues);
 
       const { result } = renderHook(
         () =>
@@ -607,6 +613,9 @@ describe('useExplicitSaveMultiple', () => {
         }
       );
 
+      await flushPromises();
+
+      // Wait for the storage to load
       await waitFor(() => {
         expect(result.current.value).toEqual(storedValues);
       }, { timeout: 3000 });
@@ -617,12 +626,10 @@ describe('useExplicitSaveMultiple', () => {
     it('should use initial values for missing keys', async () => {
       const initialValues = { key1: 'value1', key2: 'value2' };
 
-      (chrome.storage.local.get as jest.Mock).mockImplementationOnce(() =>
-        Promise.resolve({
-          key1: 'stored1',
-          // key2 is missing
-        })
-      );
+      resetMockStorage({
+        key1: 'stored1',
+        // key2 is missing
+      });
 
       const { result } = renderHook(
         () =>
@@ -632,6 +639,9 @@ describe('useExplicitSaveMultiple', () => {
         }
       );
 
+      await flushPromises();
+
+      // Wait for the storage to load
       await waitFor(() => {
         expect(result.current.value).toEqual({
           key1: 'stored1',
