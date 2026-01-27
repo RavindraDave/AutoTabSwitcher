@@ -17,6 +17,7 @@ const mockChrome = (global as any).chrome;
 describe('ConfigManager', () => {
   let configManager: any;
   let ConfigManager: any;
+  let mockStorage: any; // Shared storage object for state persistence
 
   // Mock data
   const mockSettings = {
@@ -70,36 +71,40 @@ describe('ConfigManager', () => {
     mockChrome.runtime.getManifest.mockReturnValue({ version: '1.0.0' });
     mockChrome.downloads.download.mockResolvedValue(1);
 
-    // Default mock implementations
-    mockChrome.storage.local.get.mockImplementation((keys: string | string[] | null) => {
-      const allData: any = {
-        premiumEnabled: true,
-        licenseKey: 'TEST-LICENSE-KEY',
-        configVersion: 1,
-        ...mockSettings,
-        savedSessions: [mockSession],
-        refreshSettings: mockRefreshSettings,
-        refreshRules: [mockRefreshRule],
-        skipRules: [mockSkipRule],
-        skipPinnedTabs: false
-      };
+    // Create mock storage that persists data between set and get
+    mockStorage = {
+      premiumEnabled: true,
+      licenseKey: 'TEST-LICENSE-KEY',
+      configVersion: 1,
+      ...mockSettings,
+      savedSessions: [mockSession],
+      refreshSettings: mockRefreshSettings,
+      refreshRules: [mockRefreshRule],
+      skipRules: [mockSkipRule],
+      skipPinnedTabs: false
+    };
 
+    // Default mock implementations with state persistence
+    mockChrome.storage.local.get.mockImplementation((keys: string | string[] | null) => {
       // Filter by requested keys if specified
       if (keys === null || keys === undefined) {
-        return Promise.resolve(allData);
+        return Promise.resolve({ ...mockStorage });
       }
 
       const requestedKeys = Array.isArray(keys) ? keys : [keys];
       const result: any = {};
       for (const key of requestedKeys) {
-        if (key in allData) {
-          result[key] = allData[key];
+        if (key in mockStorage) {
+          result[key] = mockStorage[key];
         }
       }
       return Promise.resolve(result);
     });
 
-    mockChrome.storage.local.set.mockResolvedValue(undefined);
+    mockChrome.storage.local.set.mockImplementation((data: any) => {
+      Object.assign(mockStorage, data);
+      return Promise.resolve(undefined);
+    });
 
     // Import fresh module
     const module = await import('../../premium/ConfigManager.js');
