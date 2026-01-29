@@ -55,30 +55,149 @@
   color: var(--color-premium);
 }
 
+/* Enhanced Log Display Styles */
 .logContainer {
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
-  font-family: monospace;
-  font-size: var(--font-size-sm);
   background: var(--color-bg);
   border-radius: var(--radius-md);
-  padding: var(--space-md);
+  padding: var(--space-sm);
 }
 
 .logEntry {
-  padding: var(--space-xs) 0;
-  border-bottom: 1px solid var(--color-border-light);
-  color: var(--color-text-secondary);
+  padding: var(--space-md);
+  margin-bottom: var(--space-sm);
+  background: white;
+  border-left: 3px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.logEntry:hover {
+  background: var(--color-surface-hover);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .logEntry:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
+}
+
+/* Log level color coding */
+.logError {
+  border-left-color: #ef4444;
+  background: #fef2f2;
+}
+
+.logError:hover {
+  background: #fee2e2;
+}
+
+.logWarn {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.logWarn:hover {
+  background: #fef3c7;
+}
+
+.logInfo {
+  border-left-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.logInfo:hover {
+  background: #dbeafe;
+}
+
+.logDebug {
+  border-left-color: #8b5cf6;
+  background: #faf5ff;
+}
+
+.logDebug:hover {
+  background: #f3e8ff;
+}
+
+/* Log header with timestamp, level, and category */
+.logHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.logTime {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-medium);
+}
+
+.logLevel {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.logError .logLevel {
+  background: #ef4444;
+  color: white;
+}
+
+.logWarn .logLevel {
+  background: #f59e0b;
+  color: white;
+}
+
+.logInfo .logLevel {
+  background: #3b82f6;
+  color: white;
+}
+
+.logDebug .logLevel {
+  background: #8b5cf6;
+  color: white;
+}
+
+.logCategory {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+  padding: 2px 8px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-sm);
+}
+
+.logMessage {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--space-xs);
+}
+
+.logData {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: rgba(0, 0, 0, 0.03);
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .noLogs {
   color: var(--color-text-muted);
   text-align: center;
-  padding: var(--space-lg);
+  padding: var(--space-xl);
+  font-size: var(--font-size-base);
 }
 
 /* About page styles */

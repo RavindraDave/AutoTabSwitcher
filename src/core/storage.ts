@@ -103,11 +103,21 @@ export async function windowExists(windowId: number): Promise<boolean> {
 /**
  * Initialize default storage values on extension install
  * ROBUST: Clamps defaultDelayTime to environment-specific minimum
+ * DEV: Auto-enables premium features in development builds
  *
  * @param defaultDelayTime - The default delay time in milliseconds
  */
 export async function initializeStorage(defaultDelayTime: number): Promise<void> {
   const clampedDelayTime = clampDelayTime(defaultDelayTime);
+
+  // Check if this is a development build
+  let isDevelopmentBuild = false;
+  try {
+    const { BUILD_TYPE } = await import('./build-config.js');
+    isDevelopmentBuild = BUILD_TYPE.includes('development');
+  } catch {
+    // build-config not available, assume production
+  }
 
   await chrome.storage.local.set({
     enabled: DEFAULT_ENABLED,
@@ -121,7 +131,14 @@ export async function initializeStorage(defaultDelayTime: number): Promise<void>
     pauseDuration: DEFAULT_PAUSE_DURATION,
     windowStates: {}, // Initialize empty window states
     lastSwitchTimes: {}, // BUGFIX: Initialize lastSwitchTimes on fresh install
+    // DEV: Auto-enable premium features in development builds
+    premiumEnabled: isDevelopmentBuild,
+    licenseKey: isDevelopmentBuild ? 'DEV-AUTO-ENABLED' : null,
   });
+
+  if (isDevelopmentBuild) {
+    logger.info('Storage', 'Development build detected - premium features auto-enabled');
+  }
 }
 
 /**

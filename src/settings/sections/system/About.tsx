@@ -16,7 +16,7 @@ function About() {
     }
   }, []);
 
-  const iconUrl = chrome.runtime.getURL('icon128.png');
+  const iconUrl = chrome.runtime.getURL('icon.png');
 
   return (
     <div className={styles.container}>
@@ -40,24 +40,6 @@ function About() {
         icon={<Icon name="externalLink" size={20} />}
       >
         <div className={styles.linkList}>
-          <a
-            href="https://github.com/RavindraDave/AutoTabSwitcher"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.linkItem}
-          >
-            <Icon name="externalLink" size={18} />
-            <span>GitHub Repository</span>
-          </a>
-          <a
-            href="https://github.com/RavindraDave/AutoTabSwitcher/issues"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.linkItem}
-          >
-            <Icon name="alertCircle" size={18} />
-            <span>Report an Issue</span>
-          </a>
           <a
             href="https://extensions.r2dsolutions.com"
             target="_blank"

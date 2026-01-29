@@ -87,7 +87,7 @@ export function Sidebar() {
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.logo}>
-            <img src="../icon48.png" alt="" width="32" height="32" />
+            <img src="../icon.png" alt="" width="32" height="32" />
             <div className={styles.logoText}>
               <span className={styles.title}>Auto Tab Switcher</span>
               <span className={styles.subtitle}>Settings</span>
@@ -117,6 +117,23 @@ export function Sidebar() {
             </SidebarGroup>
           ))}
         </nav>
+
+        {/* Brand section */}
+        <div className={styles.brand}>
+          <a
+            href="https://www.r2dsolutions.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.brandLink}
+          >
+            <img
+              src="../assets/r2d-logo.png"
+              alt="R2DSolutions"
+              className={styles.brandLogo}
+            />
+            <span className={styles.brandText}>by R2DSolutions</span>
+          </a>
+        </div>
 
         {/* Footer with version */}
         <div className={styles.footer}>

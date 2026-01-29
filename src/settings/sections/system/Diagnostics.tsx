@@ -4,6 +4,7 @@ import { Button } from '../../components/common/Button';
 import { Icon } from '../../components/common/Icon';
 import { useSettings } from '../../context/SettingsContext';
 import { usePremium } from '../../context/PremiumContext';
+import type { LogEntry } from '../../../core/logger';
 import styles from './SystemStyles.module.css';
 
 interface SystemStatus {
@@ -17,7 +18,8 @@ interface SystemStatus {
 function Diagnostics() {
   const { settings, getDelayInSeconds } = useSettings();
   const { isPremium } = usePremium();
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // Default: newest first
 
   const status: SystemStatus = {
     extensionEnabled: settings.enabled,
@@ -50,6 +52,37 @@ function Diagnostics() {
   const handleClearLogs = async () => {
     await chrome.storage.local.remove('diagnosticLogs');
     setLogs([]);
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+  };
+
+  // Sort logs based on current sort order
+  const sortedLogs = [...logs].sort((a, b) => {
+    return sortOrder === 'desc'
+      ? b.timestamp - a.timestamp  // Newest first
+      : a.timestamp - b.timestamp; // Oldest first
+  });
+
+  const formatTimestamp = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  };
+
+  const getLevelClass = (level: string) => {
+    switch (level) {
+      case 'ERROR': return styles.logError;
+      case 'WARN': return styles.logWarn;
+      case 'INFO': return styles.logInfo;
+      case 'DEBUG': return styles.logDebug;
+      default: return '';
+    }
   };
 
   return (
@@ -101,6 +134,15 @@ function Diagnostics() {
         icon={<Icon name="tool" size={20} />}
         headerAction={
           <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleSortOrder}
+              aria-label={`Sort ${sortOrder === 'desc' ? 'oldest first' : 'newest first'}`}
+            >
+              <Icon name={sortOrder === 'desc' ? 'chevronDown' : 'chevronDown'} size={16} />
+              {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
+            </Button>
             <Button variant="secondary" size="sm" onClick={handleExportLogs}>
               Export
             </Button>
@@ -114,9 +156,19 @@ function Diagnostics() {
           {logs.length === 0 ? (
             <p className={styles.noLogs}>No logs available</p>
           ) : (
-            logs.map((log, index) => (
-              <div key={index} className={styles.logEntry}>
-                {log}
+            sortedLogs.map((log, index) => (
+              <div key={index} className={`${styles.logEntry} ${getLevelClass(log.level)}`}>
+                <div className={styles.logHeader}>
+                  <span className={styles.logTime}>{formatTimestamp(log.timestamp)}</span>
+                  <span className={styles.logLevel}>{log.level}</span>
+                  <span className={styles.logCategory}>{log.category}</span>
+                </div>
+                <div className={styles.logMessage}>{log.message}</div>
+                {log.data && (
+                  <div className={styles.logData}>
+                    {JSON.stringify(log.data, null, 2)}
+                  </div>
+                )}
               </div>
             ))
           )}

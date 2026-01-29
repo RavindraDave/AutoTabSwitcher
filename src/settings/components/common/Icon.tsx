@@ -94,6 +94,9 @@ const icons: Record<string, React.ReactNode> = {
   chevronDown: (
     <polyline points="6 9 12 15 18 9" />
   ),
+  chevronUp: (
+    <polyline points="18 15 12 9 6 15" />
+  ),
   chevronRight: (
     <polyline points="9 18 15 12 9 6" />
   ),
@@ -149,6 +152,12 @@ const icons: Record<string, React.ReactNode> = {
     <>
       <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
       <line x1="3" y1="9" x2="21" y2="9" />
+    </>
+  ),
+  sparkles: (
+    <>
+      <path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.636 5.636l2.121 2.121m8.486 8.486l2.121 2.121M5.636 18.364l2.121-2.121m8.486-8.486l2.121-2.121" />
+      <circle cx="12" cy="12" r="2" />
     </>
   ),
 };

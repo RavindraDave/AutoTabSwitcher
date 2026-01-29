@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Welcome to Auto Tab Switcher</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/onboarding.css" />
@@ -12,12 +13,14 @@
 <body>
     <div class="onboarding-container">
         <!-- Progress Indicator -->
-        <div class="progress-bar">
-            <div class="progress-step active" data-step="1"></div>
-            <div class="progress-step" data-step="2"></div>
-            <div class="progress-step" data-step="3"></div>
-            <div class="progress-step" data-step="4"></div>
-            <div class="progress-step" data-step="5"></div>
+        <div class="progress-header">
+            <div class="progress-bar">
+                <div class="progress-step active" data-step="1"></div>
+                <div class="progress-step" data-step="2"></div>
+                <div class="progress-step" data-step="3"></div>
+                <div class="progress-step" data-step="4"></div>
+            </div>
+            <div class="progress-text" id="progressText">Step 1 of 4</div>
         </div>
 
         <!-- Step 1: Welcome -->
@@ -26,151 +29,121 @@
                 <div class="step-icon">👋</div>
                 <h1 class="step-title">Welcome to Auto Tab Switcher!</h1>
                 <p class="step-description">
-                    Automatically cycle through your browser tabs at custom intervals. Perfect for monitoring
-                    dashboards,
-                    presentations, or keeping an eye on multiple sources.
+                    Automatically cycle through your browser tabs at custom intervals.<br>
+                    Perfect for monitoring dashboards, presentations, or keeping an eye on multiple sources.
                 </p>
-                <div class="feature-grid">
-                    <div class="feature-item">
-                        <span class="feature-icon">⏱️</span>
-                        <span class="feature-text">Custom Intervals</span>
+                <div class="welcome-highlights">
+                    <div class="highlight-item">
+                        <span class="highlight-icon">⚡</span>
+                        <span class="highlight-text">Set custom intervals</span>
                     </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">🎯</span>
-                        <span class="feature-text">Smart Pause</span>
+                    <div class="highlight-item">
+                        <span class="highlight-icon">🎯</span>
+                        <span class="highlight-text">Global or per-window control</span>
                     </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">🪟</span>
-                        <span class="feature-text">Multi-Window</span>
+                    <div class="highlight-item">
+                        <span class="highlight-icon">⌨️</span>
+                        <span class="highlight-text">Keyboard shortcuts</span>
                     </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">🎨</span>
-                        <span class="feature-text">Visual Themes</span>
-                    </div>
+                </div>
+                <div class="welcome-cta">
+                    <p class="welcome-subtitle">Let's get you set up in under a minute</p>
                 </div>
             </div>
         </div>
 
-        <!-- Step 2: Global Mode -->
+        <!-- Step 2: Choose Your Mode -->
         <div class="tour-step" id="step2">
             <div class="step-content">
-                <div class="step-icon">🌐</div>
-                <h1 class="step-title">Global Mode</h1>
+                <div class="step-icon">🎯</div>
+                <h1 class="step-title">Choose Your Mode</h1>
                 <p class="step-description">
-                    The simplest way to use Auto Tab Switcher. One toggle controls all your browser windows together.
+                    Control how Auto Tab Switcher manages your browser windows
                 </p>
-                <div class="mode-demo global-mode">
-                    <div class="demo-popup">
-                        <div class="demo-header">Auto Tab Switcher</div>
-                        <div class="demo-content">
-                            <div class="demo-status">All Windows</div>
-                            <div class="demo-countdown">60</div>
+                <div class="mode-comparison">
+                    <div class="mode-card global-mode">
+                        <div class="mode-header">
+                            <span class="mode-icon">🌐</span>
+                            <h3>Global Mode</h3>
                         </div>
+                        <p class="mode-desc">One toggle controls all windows together</p>
+                        <ul class="mode-features">
+                            <li>✓ Simple single button</li>
+                            <li>✓ All windows sync</li>
+                            <li>✓ Best for monitoring</li>
+                        </ul>
+                    </div>
+                    <div class="mode-card window-mode">
+                        <div class="mode-header">
+                            <span class="mode-icon">🪟</span>
+                            <h3>Window Mode</h3>
+                        </div>
+                        <p class="mode-desc">Control each window independently</p>
+                        <ul class="mode-features">
+                            <li>✓ Per-window control</li>
+                            <li>✓ Independent timers</li>
+                            <li>✓ Work + monitor setup</li>
+                        </ul>
                     </div>
                 </div>
-                <ul class="feature-list">
-                    <li>✓ Single enable/disable button affects all windows</li>
-                    <li>✓ All windows switch tabs at the same interval</li>
-                    <li>✓ Perfect for monitoring multiple windows simultaneously</li>
-                </ul>
+                <p class="mode-note">💡 You can change this anytime in settings</p>
             </div>
         </div>
 
-        <!-- Step 3: Window Mode -->
+        <!-- Step 3: Essential Features -->
         <div class="tour-step" id="step3">
             <div class="step-content">
-                <div class="step-icon">🪟</div>
-                <h1 class="step-title">Window Mode</h1>
-                <p class="step-description">
-                    Advanced control - manage each browser window independently with its own timer and settings.
-                </p>
-                <div class="mode-demo window-mode">
-                    <div class="demo-popup">
-                        <div class="demo-header">Auto Tab Switcher</div>
-                        <div class="demo-content">
-                            <div class="demo-status">This Window</div>
-                            <div class="demo-countdown">30</div>
-                        </div>
-                    </div>
-                </div>
-                <ul class="feature-list">
-                    <li>✓ Control each browser window separately</li>
-                    <li>✓ Enable/disable specific windows using the popup</li>
-                    <li>✓ Each window maintains its own independent timer</li>
-                    <li>✓ Great for working in one window while monitoring others</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Step 4: Key Features -->
-        <div class="tour-step" id="step4">
-            <div class="step-content">
                 <div class="step-icon">✨</div>
-                <h1 class="step-title">Key Features</h1>
+                <h1 class="step-title">Essential Features</h1>
                 <p class="step-description">
-                    Auto Tab Switcher is packed with features to make your browsing experience seamless.
+                    Everything you need for seamless tab switching
                 </p>
-                <div class="features-showcase">
-                    <div class="showcase-item">
-                        <div class="showcase-icon">⌨️</div>
-                        <div class="showcase-content">
+                <div class="features-compact">
+                    <div class="feature-compact">
+                        <div class="feature-compact-icon">⌨️</div>
+                        <div class="feature-compact-content">
                             <h3>Keyboard Shortcut</h3>
-                            <p>Press <strong>Ctrl+Shift+P</strong> (or Cmd+Shift+P on Mac) to instantly pause/resume without opening the popup</p>
+                            <p><kbd>Ctrl+Shift+P</kbd> to pause/resume instantly</p>
                         </div>
                     </div>
-                    <div class="showcase-item">
-                        <div class="showcase-icon">⏸️</div>
-                        <div class="showcase-content">
-                            <h3>Pause on Activity</h3>
-                            <p>Automatically pauses when you interact with tabs to avoid interrupting your work</p>
+                    <div class="feature-compact">
+                        <div class="feature-compact-icon">⏸️</div>
+                        <div class="feature-compact-content">
+                            <h3>Smart Pause</h3>
+                            <p>Auto-pauses when you interact with tabs</p>
                         </div>
                     </div>
-                    <div class="showcase-item">
-                        <div class="showcase-icon">🎨</div>
-                        <div class="showcase-content">
-                            <h3>Visual Themes</h3>
-                            <p>Distinct color themes for Global and Window modes help you stay oriented</p>
-                        </div>
-                    </div>
-                    <div class="showcase-item">
-                        <div class="showcase-icon">⚙️</div>
-                        <div class="showcase-content">
-                            <h3>Flexible Settings</h3>
-                            <p>Customize intervals, pause duration, and startup behavior to match your workflow</p>
-                        </div>
-                    </div>
+                </div>
+                <div class="demo-section">
+                    <button class="btn-demo" id="demoButton">
+                        <span>▶️</span> Try a Quick Demo
+                    </button>
+                    <p class="demo-note">Watch automatic tab switching in action</p>
                 </div>
             </div>
         </div>
 
-        <!-- Step 5: Get Started -->
-        <div class="tour-step" id="step5">
+        <!-- Step 4: You're Ready! -->
+        <div class="tour-step" id="step4">
             <div class="step-content">
                 <div class="step-icon">🚀</div>
                 <h1 class="step-title">You're All Set!</h1>
                 <p class="step-description">
-                    Ready to start automatically switching tabs? Click the extension icon in your toolbar to begin.
+                    Ready to start automatically switching tabs?
                 </p>
-                <div class="quick-start">
-                    <div class="quick-start-item">
-                        <span class="quick-start-number">1</span>
-                        <span class="quick-start-text">Click the extension icon in your toolbar</span>
+                <div class="quick-start-compact">
+                    <div class="quick-start-item-compact">
+                        <span class="quick-icon">📌</span>
+                        <span>Click the extension icon in your toolbar</span>
                     </div>
-                    <div class="quick-start-item">
-                        <span class="quick-start-number">2</span>
-                        <span class="quick-start-text">Choose Global or Window mode</span>
+                    <div class="quick-start-item-compact">
+                        <span class="quick-icon">▶️</span>
+                        <span>Click "Enable" to start auto-switching</span>
                     </div>
-                    <div class="quick-start-item">
-                        <span class="quick-start-number">3</span>
-                        <span class="quick-start-text">Click "Enable" to start auto-switching</span>
+                    <div class="quick-start-item-compact">
+                        <span class="quick-icon">⌨️</span>
+                        <span>Use <kbd>Ctrl+Shift+P</kbd> to pause anytime</span>
                     </div>
-                    <div class="quick-start-item">
-                        <span class="quick-start-number">⌨️</span>
-                        <span class="quick-start-text">Use <strong>Ctrl+Shift+P</strong> to pause/resume anytime</span>
-                    </div>
-                </div>
-                <div class="final-note">
-                    <p>💡 <strong>Pro Tip:</strong> Visit Settings to customize the keyboard shortcut and other features!</p>
                 </div>
             </div>
         </div>
@@ -179,10 +152,15 @@
         <div class="tour-navigation">
             <button class="btn-skip" id="skipButton">Skip Tour</button>
             <div class="nav-buttons">
-                <button class="btn-nav btn-prev" id="prevButton" disabled>Previous</button>
-                <button class="btn-nav btn-next" id="nextButton">Next</button>
-                <button class="btn-nav btn-finish" id="finishButton" style="display: none;">Get Started</button>
+                <button class="btn-nav btn-prev" id="prevButton" disabled>← Previous</button>
+                <button class="btn-nav btn-next" id="nextButton">Next →</button>
+                <button class="btn-nav btn-finish" id="finishButton" style="display: none;">✨ Enable Now</button>
             </div>
+        </div>
+
+        <!-- Advanced users link -->
+        <div class="advanced-link">
+            <a href="../settings/index.html" class="link-settings">Advanced users: Go directly to settings →</a>
         </div>
     </div>
 </body>

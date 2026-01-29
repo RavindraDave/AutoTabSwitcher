@@ -24,4 +24,4 @@ export const BUILD_TYPE = 'production-premium' as const;
 /**
  * Build timestamp
  */
-export const BUILD_TIMESTAMP = 1768645465999;
+export const BUILD_TIMESTAMP = 1769691955932;
