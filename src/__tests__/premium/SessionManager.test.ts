@@ -15,6 +15,7 @@ const mockChrome = (global as any).chrome;
 describe('SessionManager', () => {
   let sessionManager: any;
   let SessionManager: any;
+  let mockStorage: any; // Shared storage object for state persistence
 
   // Mock data
   const mockTabs: chrome.tabs.Tab[] = [
@@ -93,17 +94,35 @@ describe('SessionManager', () => {
     mockChrome.windows.create.mockReset();
     mockChrome.windows.getAll.mockReset();
 
-    // Default mock implementations
+    // Create mock storage that persists data between set and get
+    mockStorage = {
+      premiumEnabled: true,
+      licenseKey: 'TEST-LICENSE-KEY',
+      savedSessions: [], // Note: storage key is 'savedSessions' not 'sessions'
+      autoLaunchSessionIds: []
+    };
+
+    // Default mock implementations with state persistence
     mockChrome.storage.local.get.mockImplementation((keys: string | string[] | null) => {
-      return Promise.resolve({
-        premiumEnabled: true,
-        licenseKey: 'TEST-LICENSE-KEY',
-        sessions: [],
-        autoLaunchSessionIds: []
-      });
+      if (keys === null || keys === undefined) {
+        return Promise.resolve({ ...mockStorage });
+      }
+
+      const requestedKeys = Array.isArray(keys) ? keys : [keys];
+      const result: any = {};
+      for (const key of requestedKeys) {
+        if (key in mockStorage) {
+          result[key] = mockStorage[key];
+        }
+      }
+      return Promise.resolve(result);
     });
 
-    mockChrome.storage.local.set.mockResolvedValue(undefined);
+    mockChrome.storage.local.set.mockImplementation((data: any) => {
+      Object.assign(mockStorage, data);
+      return Promise.resolve(undefined);
+    });
+
     mockChrome.windows.getCurrent.mockResolvedValue(mockWindow);
     mockChrome.tabs.query.mockResolvedValue(mockTabs);
 
@@ -204,15 +223,8 @@ describe('SessionManager', () => {
         launchCount: 0
       }));
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions' || (Array.isArray(keys) && keys.includes('sessions'))) {
-          return Promise.resolve({ sessions: existingSessions });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      // Modify shared mockStorage to have 50 sessions
+      mockStorage.savedSessions = existingSessions;
 
       await expect(
         sessionManager.saveCurrentWindow('Overflow')
@@ -304,15 +316,8 @@ describe('SessionManager', () => {
         launchCount: 0
       };
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions' || (Array.isArray(keys) && keys.includes('sessions'))) {
-          return Promise.resolve({ sessions: [mockSession] });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      // Add mockSession to shared mockStorage
+      mockStorage.savedSessions = [mockSession];
 
       mockChrome.windows.create.mockResolvedValue({
         id: 200,
@@ -363,7 +368,7 @@ describe('SessionManager', () => {
     test('should throw error if session has no tabs', async () => {
       mockSession.tabs = [];
       mockChrome.storage.local.get.mockResolvedValue({
-        sessions: [mockSession],
+        savedSessions: [mockSession],
         premiumEnabled: true,
         licenseKey: 'TEST-KEY'
       });
@@ -379,8 +384,8 @@ describe('SessionManager', () => {
       const afterLaunch = Date.now();
 
       const savedSession = mockChrome.storage.local.set.mock.calls.find((call: any) =>
-        call[0]?.sessions?.[0]?.id === 'test-session-123'
-      )?.[0]?.sessions?.[0];
+        call[0]?.savedSessions?.[0]?.id === 'test-session-123'
+      )?.[0]?.savedSessions?.[0];
 
       expect(savedSession.launchCount).toBe(1);
       expect(savedSession.lastLaunched).toBeGreaterThanOrEqual(beforeLaunch);
@@ -438,7 +443,7 @@ describe('SessionManager', () => {
       };
 
       mockChrome.storage.local.get.mockResolvedValue({
-        sessions: [mockSession],
+        savedSessions: [mockSession],
         autoLaunchSessionIds: [],
         premiumEnabled: true,
         licenseKey: 'TEST-KEY'
@@ -450,16 +455,8 @@ describe('SessionManager', () => {
     });
 
     test('should remove from auto-launch list', async () => {
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'autoLaunchSessionIds') {
-          return Promise.resolve({ autoLaunchSessionIds: ['session-1', 'session-2'] });
-        }
-        return Promise.resolve({
-          sessions: [{ id: 'session-1', name: 'S1', tabs: [], createdAt: 0, launchCount: 0 }],
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      mockStorage.autoLaunchSessionIds = ['session-1', 'session-2'];
+      mockStorage.savedSessions = [{ id: 'session-1', name: 'S1', tabs: [], createdAt: 0, launchCount: 0 }];
 
       await sessionManager.deleteSession('session-1');
 
@@ -489,15 +486,8 @@ describe('SessionManager', () => {
         { id: '2', name: 'S2', tabs: [], createdAt: 2, launchCount: 0 }
       ];
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions') {
-          return Promise.resolve({ sessions: mockSessions });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      // Set sessions in shared mockStorage
+      mockStorage.savedSessions = mockSessions;
 
       const result = await sessionManager.getAllSessions();
 
@@ -508,7 +498,7 @@ describe('SessionManager', () => {
 
     test('should return empty array when no sessions', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        sessions: [],
+        savedSessions: [],
         premiumEnabled: true,
         licenseKey: 'TEST-KEY'
       });
@@ -526,15 +516,8 @@ describe('SessionManager', () => {
         { id: 'session-2', name: 'S2', tabs: [], createdAt: 2, launchCount: 0 }
       ];
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions') {
-          return Promise.resolve({ sessions: mockSessions });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      // Set sessions in shared mockStorage
+      mockStorage.savedSessions = mockSessions;
 
       const result = await sessionManager.getSession('session-2');
 
@@ -545,7 +528,7 @@ describe('SessionManager', () => {
 
     test('should return null if session not found', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        sessions: [],
+        savedSessions: [],
         premiumEnabled: true,
         licenseKey: 'TEST-KEY'
       });
@@ -566,20 +549,12 @@ describe('SessionManager', () => {
         launchCount: 0
       };
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions') {
-          return Promise.resolve({ sessions: [mockSession] });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      mockStorage.savedSessions = [mockSession];
 
       await sessionManager.updateSession('session-1', { name: 'New Name' });
 
       const setCall = mockChrome.storage.local.set.mock.calls[0][0];
-      expect(setCall.sessions[0].name).toBe('New Name');
+      expect(setCall.savedSessions[0].name).toBe('New Name');
     });
 
     test('should update multiple fields', async () => {
@@ -591,15 +566,7 @@ describe('SessionManager', () => {
         launchCount: 0
       };
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions') {
-          return Promise.resolve({ sessions: [mockSession] });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      mockStorage.savedSessions = [mockSession];
 
       await sessionManager.updateSession('session-1', {
         name: 'Updated',
@@ -608,9 +575,9 @@ describe('SessionManager', () => {
       });
 
       const setCall = mockChrome.storage.local.set.mock.calls[0][0];
-      expect(setCall.sessions[0].name).toBe('Updated');
-      expect(setCall.sessions[0].description).toBe('New desc');
-      expect(setCall.sessions[0].icon).toBe('🔥');
+      expect(setCall.savedSessions[0].name).toBe('Updated');
+      expect(setCall.savedSessions[0].description).toBe('New desc');
+      expect(setCall.savedSessions[0].icon).toBe('🔥');
     });
 
     test('should set updatedAt timestamp', async () => {
@@ -622,28 +589,20 @@ describe('SessionManager', () => {
         launchCount: 0
       };
 
-      mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions') {
-          return Promise.resolve({ sessions: [mockSession] });
-        }
-        return Promise.resolve({
-          premiumEnabled: true,
-          licenseKey: 'TEST-KEY'
-        });
-      });
+      mockStorage.savedSessions = [mockSession];
 
       const beforeUpdate = Date.now();
       await sessionManager.updateSession('session-1', { name: 'Updated' });
       const afterUpdate = Date.now();
 
       const setCall = mockChrome.storage.local.set.mock.calls[0][0];
-      expect(setCall.sessions[0].updatedAt).toBeGreaterThanOrEqual(beforeUpdate);
-      expect(setCall.sessions[0].updatedAt).toBeLessThanOrEqual(afterUpdate);
+      expect(setCall.savedSessions[0].updatedAt).toBeGreaterThanOrEqual(beforeUpdate);
+      expect(setCall.savedSessions[0].updatedAt).toBeLessThanOrEqual(afterUpdate);
     });
 
     test('should throw error if session not found', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        sessions: [],
+        savedSessions: [],
         premiumEnabled: true,
         licenseKey: 'TEST-KEY'
       });
@@ -662,8 +621,8 @@ describe('SessionManager', () => {
       ];
 
       mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions') {
-          return Promise.resolve({ sessions: mockSessions });
+        if (keys === 'savedSessions') {
+          return Promise.resolve({ savedSessions: mockSessions });
         }
         return Promise.resolve({
           premiumEnabled: true,
@@ -680,8 +639,8 @@ describe('SessionManager', () => {
 
     test('should throw error for invalid session IDs', async () => {
       mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions') {
-          return Promise.resolve({ sessions: [
+        if (keys === 'savedSessions') {
+          return Promise.resolve({ savedSessions: [
             { id: 'session-1', name: 'S1', tabs: [], createdAt: 1, launchCount: 0 }
           ]});
         }
@@ -707,8 +666,8 @@ describe('SessionManager', () => {
         if (keys === 'autoLaunchSessionIds') {
           return Promise.resolve({ autoLaunchSessionIds: ['session-1', 'session-3'] });
         }
-        if (keys === 'sessions') {
-          return Promise.resolve({ sessions: mockSessions });
+        if (keys === 'savedSessions') {
+          return Promise.resolve({ savedSessions: mockSessions });
         }
         return Promise.resolve({
           premiumEnabled: true,
@@ -738,8 +697,8 @@ describe('SessionManager', () => {
         if (keys === 'autoLaunchSessionIds') {
           return Promise.resolve({ autoLaunchSessionIds: ['session-1'] });
         }
-        if (keys === 'sessions' || (Array.isArray(keys) && keys.includes('sessions'))) {
-          return Promise.resolve({ sessions: mockSessions });
+        if (keys === 'savedSessions' || (Array.isArray(keys) && keys.includes('savedSessions'))) {
+          return Promise.resolve({ savedSessions: mockSessions });
         }
         return Promise.resolve({
           premiumEnabled: true,
@@ -770,8 +729,8 @@ describe('SessionManager', () => {
         if (keys === 'autoLaunchSessionIds') {
           return Promise.resolve({ autoLaunchSessionIds: ['session-1'] });
         }
-        if (keys === 'sessions' || (Array.isArray(keys) && keys.includes('sessions'))) {
-          return Promise.resolve({ sessions: mockSessions });
+        if (keys === 'savedSessions' || (Array.isArray(keys) && keys.includes('savedSessions'))) {
+          return Promise.resolve({ savedSessions: mockSessions });
         }
         return Promise.resolve({
           premiumEnabled: true,
@@ -794,7 +753,7 @@ describe('SessionManager', () => {
         return Promise.resolve({
           premiumEnabled: true,
           licenseKey: 'TEST-KEY',
-          sessions: []
+          savedSessions: []
         });
       });
 
@@ -862,8 +821,8 @@ describe('SessionManager', () => {
       };
 
       mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions') {
-          return Promise.resolve({ sessions: [mockSession] });
+        if (keys === 'savedSessions') {
+          return Promise.resolve({ savedSessions: [mockSession] });
         }
         return Promise.resolve({
           premiumEnabled: true,
@@ -893,8 +852,8 @@ describe('SessionManager', () => {
       };
 
       mockChrome.storage.local.get.mockImplementation((keys) => {
-        if (keys === 'sessions') {
-          return Promise.resolve({ sessions: [mockSession] });
+        if (keys === 'savedSessions') {
+          return Promise.resolve({ savedSessions: [mockSession] });
         }
         return Promise.resolve({
           premiumEnabled: true,
@@ -909,7 +868,7 @@ describe('SessionManager', () => {
 
     test('should throw error if original not found', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        sessions: [],
+        savedSessions: [],
         premiumEnabled: true,
         licenseKey: 'TEST-KEY'
       });
@@ -923,26 +882,32 @@ describe('SessionManager', () => {
   describe('edge cases', () => {
     test('should handle tabs without URLs', async () => {
       const tabsWithoutUrls = [
-        { ...mockTabs[0], url: undefined }
+        { ...mockTabs[0], url: undefined },
+        { ...mockTabs[1], url: 'https://example.com' } // Add valid tab
       ];
 
       mockChrome.tabs.query.mockResolvedValue(tabsWithoutUrls);
 
       const result = await sessionManager.saveCurrentWindow('Test');
 
-      expect(result.tabs[0].url).toBe('about:blank');
+      // Tabs without URLs are skipped, should only save the valid tab
+      expect(result.tabs).toHaveLength(1);
+      expect(result.tabs[0].url).toBe('https://example.com');
     });
 
     test('should handle chrome:// URLs', async () => {
       const chromeTabs = [
-        { ...mockTabs[0], url: 'chrome://extensions' }
+        { ...mockTabs[0], url: 'chrome://extensions' },
+        { ...mockTabs[1], url: 'https://example.com' } // Add valid tab
       ];
 
       mockChrome.tabs.query.mockResolvedValue(chromeTabs);
 
       const result = await sessionManager.saveCurrentWindow('Test');
 
-      expect(result.tabs[0].url).toBe('chrome://extensions');
+      // chrome:// URLs are skipped, should only save the valid tab
+      expect(result.tabs).toHaveLength(1);
+      expect(result.tabs[0].url).toBe('https://example.com');
     });
 
     test('should handle concurrent session saves', async () => {
@@ -964,6 +929,384 @@ describe('SessionManager', () => {
       await expect(
         sessionManager.saveCurrentWindow('Test')
       ).rejects.toThrow('Storage full');
+    });
+
+    test('should skip chrome:// URLs when saving', async () => {
+      const chromeTabs = [
+        { ...mockTabs[0], url: 'https://example.com' },
+        { ...mockTabs[1], url: 'chrome://extensions' },
+        { ...mockTabs[2], url: 'https://github.com' }
+      ];
+
+      mockChrome.tabs.query.mockResolvedValue(chromeTabs);
+
+      const result = await sessionManager.saveCurrentWindow('Test');
+
+      expect(result.tabs).toHaveLength(2); // Should skip chrome:// URL
+      expect(result.tabs[0].url).toBe('https://example.com');
+      expect(result.tabs[1].url).toBe('https://github.com');
+    });
+
+    test('should skip chrome-extension:// URLs when saving', async () => {
+      const extensionTabs = [
+        { ...mockTabs[0], url: 'https://example.com' },
+        { ...mockTabs[1], url: 'chrome-extension://abcdef/popup.html' },
+        { ...mockTabs[2], url: 'https://github.com' }
+      ];
+
+      mockChrome.tabs.query.mockResolvedValue(extensionTabs);
+
+      const result = await sessionManager.saveCurrentWindow('Test');
+
+      expect(result.tabs).toHaveLength(2);
+      expect(result.tabs.every(tab => !tab.url.startsWith('chrome-extension://'))).toBe(true);
+    });
+
+    test('should throw error when all tabs are non-restorable', async () => {
+      const chromeTabs = [
+        { ...mockTabs[0], url: 'chrome://extensions' },
+        { ...mockTabs[1], url: 'chrome://settings' }
+      ];
+
+      mockChrome.tabs.query.mockResolvedValue(chromeTabs);
+
+      await expect(
+        sessionManager.saveCurrentWindow('Test')
+      ).rejects.toThrow('No restorable tabs found in window');
+    });
+
+    test('should throw error when window ID is undefined', async () => {
+      mockChrome.windows.getCurrent.mockResolvedValue({ id: undefined });
+
+      await expect(
+        sessionManager.saveCurrentWindow('Test')
+      ).rejects.toThrow('No window ID available');
+    });
+  });
+
+  describe('retry logic', () => {
+    test('should retry failed operations', async () => {
+      const mockSession: SavedSession = {
+        id: 'test-session',
+        name: 'Test',
+        tabs: [
+          { url: 'https://example.com', index: 0 },
+          { url: 'https://test.com', index: 1 } // Need at least 2 tabs for tabs.create to be called
+        ],
+        createdAt: Date.now(),
+        launchCount: 0
+      };
+
+      mockChrome.storage.local.get.mockImplementation((keys) => {
+        if (keys === 'savedSessions' || (Array.isArray(keys) && keys.includes('savedSessions'))) {
+          return Promise.resolve({ savedSessions: [mockSession] });
+        }
+        return Promise.resolve({
+          premiumEnabled: true,
+          licenseKey: 'TEST-KEY'
+        });
+      });
+
+      mockChrome.windows.create.mockResolvedValue({ id: 200, tabs: [{ id: 10 }] });
+      mockChrome.windows.get.mockResolvedValue({ id: 200 });
+
+      // First call fails with retryable error, second succeeds
+      let callCount = 0;
+      mockChrome.tabs.create.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.reject(new Error('Network error - temporarily unavailable'));
+        }
+        return Promise.resolve({ id: Math.floor(Math.random() * 1000) });
+      });
+
+      await sessionManager.restoreSession('test-session', 'new-window');
+
+      // Should have retried (called twice for the second tab)
+      expect(mockChrome.tabs.create).toHaveBeenCalledTimes(2);
+    });
+
+    test('should not retry non-retryable errors', async () => {
+      const mockSession: SavedSession = {
+        id: 'test-session',
+        name: 'Test',
+        tabs: [
+          { url: 'https://example.com', index: 0 },
+          { url: 'https://test.com', index: 1 } // Need at least 2 tabs for tabs.create to be called
+        ],
+        createdAt: Date.now(),
+        launchCount: 0
+      };
+
+      mockChrome.storage.local.get.mockImplementation((keys) => {
+        if (keys === 'savedSessions' || (Array.isArray(keys) && keys.includes('savedSessions'))) {
+          return Promise.resolve({ savedSessions: [mockSession] });
+        }
+        return Promise.resolve({
+          premiumEnabled: true,
+          licenseKey: 'TEST-KEY'
+        });
+      });
+
+      mockChrome.windows.create.mockResolvedValue({ id: 200, tabs: [{ id: 10 }] });
+      mockChrome.windows.get.mockResolvedValue({ id: 200 });
+
+      // Fail with non-retryable error
+      mockChrome.tabs.create.mockRejectedValue(new Error('Invalid argument'));
+
+      await sessionManager.restoreSession('test-session', 'new-window');
+
+      // Should be called once for the second tab (non-retryable errors don't retry)
+      expect(mockChrome.tabs.create).toHaveBeenCalledTimes(1);
+    });
+
+    test('should identify retryable errors', async () => {
+      const sessionMgr = new SessionManager();
+      const retryableErrors = [
+        new Error('Network error occurred'),
+        new Error('Operation timeout'),
+        new Error('Temporarily unavailable'),
+        new Error('Quota exceeded'),
+        new Error('Rate limit reached')
+      ];
+
+      for (const error of retryableErrors) {
+        const isRetryable = (sessionMgr as any).isRetryableError(error);
+        expect(isRetryable).toBe(true);
+      }
+    });
+
+    test('should identify non-retryable errors', async () => {
+      const sessionMgr = new SessionManager();
+      const nonRetryableErrors = [
+        new Error('Invalid argument'),
+        new Error('Permission denied'),
+        new Error('Not found')
+      ];
+
+      for (const error of nonRetryableErrors) {
+        const isRetryable = (sessionMgr as any).isRetryableError(error);
+        expect(isRetryable).toBe(false);
+      }
+    });
+
+    test('should use exponential backoff for retries', async () => {
+      const sessionMgr = new SessionManager();
+      const delays: number[] = [];
+      const originalSetTimeout = global.setTimeout;
+
+      // Mock setTimeout to capture delay values
+      (global as any).setTimeout = jest.fn((callback: any, delay: number) => {
+        delays.push(delay);
+        return originalSetTimeout(callback, 0); // Execute immediately for test
+      });
+
+      let attempt = 0;
+      const operation = async () => {
+        attempt++;
+        if (attempt < 3) {
+          throw new Error('Network error');
+        }
+        return 'success';
+      };
+
+      await (sessionMgr as any).retryOperation(operation, 3, 100);
+
+      // Should have delays: 100ms, 200ms
+      expect(delays.length).toBeGreaterThanOrEqual(2);
+      expect(delays[0]).toBe(100);
+      expect(delays[1]).toBe(200);
+
+      // Restore original setTimeout
+      (global as any).setTimeout = originalSetTimeout;
+    });
+  });
+
+  describe('restore error handling', () => {
+    let mockSession: SavedSession;
+
+    beforeEach(() => {
+      mockSession = {
+        id: 'test-session',
+        name: 'Test',
+        tabs: [
+          { url: 'https://example.com', index: 0 },
+          { url: 'https://google.com', index: 1 }
+        ],
+        createdAt: Date.now(),
+        launchCount: 0
+      };
+
+      mockChrome.storage.local.get.mockImplementation((keys) => {
+        if (keys === 'savedSessions' || (Array.isArray(keys) && keys.includes('savedSessions'))) {
+          return Promise.resolve({ savedSessions: [mockSession] });
+        }
+        return Promise.resolve({
+          premiumEnabled: true,
+          licenseKey: 'TEST-KEY'
+        });
+      });
+    });
+
+    test('should handle window.get failure during restore', async () => {
+      mockChrome.windows.create.mockResolvedValue({ id: 200, tabs: [{ id: 10 }] });
+
+      // Simulate window being closed
+      mockChrome.windows.get.mockRejectedValue(new Error('Window not found'));
+
+      await sessionManager.restoreSession('test-session', 'new-window');
+
+      // Should still update session stats despite error
+      expect(mockChrome.storage.local.set).toHaveBeenCalled();
+    });
+
+    test('should handle window.get failure in current window mode', async () => {
+      mockChrome.windows.getCurrent.mockResolvedValue({ id: 100 });
+
+      // First call succeeds, subsequent calls fail
+      let callCount = 0;
+      mockChrome.windows.get.mockImplementation(() => {
+        callCount++;
+        if (callCount > 1) {
+          return Promise.reject(new Error('Window closed'));
+        }
+        return Promise.resolve({ id: 100 });
+      });
+
+      await sessionManager.restoreSession('test-session', 'current');
+
+      // Should have attempted to verify window
+      expect(mockChrome.windows.get).toHaveBeenCalled();
+    });
+
+    test('should handle tab.get failure during replace', async () => {
+      mockChrome.windows.getCurrent.mockResolvedValue({ id: 100 });
+      mockChrome.tabs.query.mockResolvedValue([
+        { id: 1, windowId: 100 },
+        { id: 2, windowId: 100 }
+      ]);
+      mockChrome.windows.get.mockResolvedValue({ id: 100 });
+      mockChrome.tabs.create.mockResolvedValue({ id: 3 });
+
+      // First tab.get succeeds, second fails (tab already closed)
+      let getCallCount = 0;
+      mockChrome.tabs.get.mockImplementation(() => {
+        getCallCount++;
+        if (getCallCount > 1) {
+          return Promise.reject(new Error('Tab not found'));
+        }
+        return Promise.resolve({ id: 1 });
+      });
+
+      await sessionManager.restoreSession('test-session', 'replace');
+
+      // Should have attempted to verify tabs before removing
+      expect(mockChrome.tabs.get).toHaveBeenCalled();
+      expect(mockChrome.tabs.remove).toHaveBeenCalled();
+    });
+
+    test('should handle missing first tab during new window restore', async () => {
+      mockSession.tabs = [];
+
+      mockChrome.windows.create.mockResolvedValue({ id: 200, tabs: [{ id: 10 }] });
+
+      await expect(
+        sessionManager.restoreSession('test-session', 'new-window')
+      ).rejects.toThrow('Session has no tabs to restore');
+    });
+
+    test('should handle window.create failure', async () => {
+      mockChrome.windows.create.mockRejectedValue(new Error('Failed to create window'));
+
+      await expect(
+        sessionManager.restoreSession('test-session', 'new-window')
+      ).rejects.toThrow();
+    });
+
+    test('should handle no current window in current mode', async () => {
+      mockChrome.windows.getCurrent.mockResolvedValue({ id: undefined });
+
+      await expect(
+        sessionManager.restoreSession('test-session', 'current')
+      ).rejects.toThrow('No current window');
+    });
+
+    test('should handle no current window in replace mode', async () => {
+      mockChrome.windows.getCurrent.mockResolvedValue({ id: undefined });
+
+      await expect(
+        sessionManager.restoreSession('test-session', 'replace')
+      ).rejects.toThrow('No current window');
+    });
+
+    test('should handle pin tab failure gracefully', async () => {
+      mockSession.tabs[0].pinned = true;
+
+      mockChrome.windows.create.mockResolvedValue({
+        id: 200,
+        tabs: [{ id: 10 }]
+      });
+      mockChrome.windows.get.mockResolvedValue({ id: 200 });
+      mockChrome.tabs.create.mockResolvedValue({ id: 11 });
+      mockChrome.tabs.update.mockRejectedValue(new Error('Cannot pin tab'));
+
+      // Should not throw error
+      await expect(
+        sessionManager.restoreSession('test-session', 'new-window')
+      ).resolves.not.toThrow();
+    });
+  });
+
+  describe('saveAllWindows error handling', () => {
+    test('should continue with other windows when one fails', async () => {
+      const windows = [
+        { ...mockWindow, id: 100, tabs: mockTabs.slice(0, 2) },
+        { ...mockWindow, id: 101, tabs: mockTabs.slice(2, 3) },
+        { ...mockWindow, id: 102, tabs: [mockTabs[0]] }
+      ];
+
+      mockChrome.windows.getAll.mockResolvedValue(windows);
+
+      // Make second window fail
+      mockChrome.tabs.query
+        .mockResolvedValueOnce(windows[0].tabs)
+        .mockRejectedValueOnce(new Error('Failed to query tabs'))
+        .mockResolvedValueOnce(windows[2].tabs);
+
+      const results = await sessionManager.saveAllWindows('Window');
+
+      // Should have saved 2 out of 3 windows
+      expect(results).toHaveLength(2);
+      expect(results[0].name).toBe('Window 1');
+      expect(results[1].name).toBe('Window 3');
+    });
+
+    test('should skip windows without ID', async () => {
+      const windows = [
+        { ...mockWindow, id: 100, tabs: mockTabs },
+        { ...mockWindow, id: undefined, tabs: mockTabs }
+      ];
+
+      mockChrome.windows.getAll.mockResolvedValue(windows);
+      mockChrome.tabs.query.mockResolvedValue(mockTabs);
+
+      const results = await sessionManager.saveAllWindows();
+
+      expect(results).toHaveLength(1);
+    });
+
+    test('should skip windows without tabs property', async () => {
+      const windows = [
+        { ...mockWindow, id: 100, tabs: mockTabs },
+        { ...mockWindow, id: 101, tabs: undefined }
+      ];
+
+      mockChrome.windows.getAll.mockResolvedValue(windows);
+      mockChrome.tabs.query.mockResolvedValue(mockTabs);
+
+      const results = await sessionManager.saveAllWindows();
+
+      expect(results).toHaveLength(1);
     });
   });
 });
