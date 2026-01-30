@@ -39,6 +39,7 @@ const navigation: NavigationGroup[] = [
       { id: 'refresh', label: 'Smart Refresh', icon: 'refresh', path: '/refresh', premium: true },
       { id: 'skip', label: 'Skip Rules', icon: 'skip', path: '/skip', premium: true },
       { id: 'intervals', label: 'Window Intervals', icon: 'clock', path: '/intervals', premium: true },
+      { id: 'patterns', label: 'Rotation Patterns', icon: 'shuffle', path: '/patterns', premium: true },
       { id: 'backup', label: 'Backup & Sync', icon: 'download', path: '/backup', premium: true },
     ],
   },
