@@ -13,6 +13,7 @@ import { PREMIUM_FEATURES_AVAILABLE } from './build-config.js';
 // Premium feature managers (only imported if premium features are enabled at build time)
 let skipRuleEngine: any = null;
 let refreshManager: any = null;
+let rotationEngine: any = null;
 
 // Dynamically import premium managers if available
 if (PREMIUM_FEATURES_AVAILABLE) {
@@ -26,6 +27,12 @@ if (PREMIUM_FEATURES_AVAILABLE) {
     refreshManager = module.refreshManager;
   }).catch(() => {
     logger.warn('Premium', 'RefreshManager not available');
+  });
+
+  import('../premium/RotationEngine.js').then(module => {
+    rotationEngine = module.rotationEngine;
+  }).catch(() => {
+    logger.warn('Premium', 'RotationEngine not available');
   });
 }
 
@@ -151,8 +158,43 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       return false;
     }
 
-    const currentTabIndex = currentTab.index;
-    const nextTabIndex = (currentTabIndex + 1) % tabs.length;
+    // Determine next tab using rotation pattern (if premium) or sequential
+    let nextTabIndex: number;
+
+    if (PREMIUM_FEATURES_AVAILABLE && await canAccessPremium() && rotationEngine && currentTab.id) {
+      try {
+        // Get active rotation pattern
+        const result = await chrome.storage.local.get('activePattern');
+        const activePattern = result['activePattern'] || 'sequential';
+
+        // Use RotationEngine to get next tab index
+        nextTabIndex = await rotationEngine.getNextTabIndex(tabs, currentTab.id, activePattern);
+
+        if (nextTabIndex === -1) {
+          // Fall back to sequential if pattern resolution fails
+          await logger.warn('TabSwitcher', 'Pattern resolution failed, using sequential', {
+            pattern: activePattern
+          });
+          nextTabIndex = (currentTab.index + 1) % tabs.length;
+        }
+
+        await logger.debug('TabSwitcher', 'Using rotation pattern', {
+          pattern: activePattern,
+          currentIndex: currentTab.index,
+          nextIndex: nextTabIndex
+        });
+      } catch (error) {
+        // Fall back to sequential on error
+        await logger.error('TabSwitcher', 'Error applying rotation pattern', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+        nextTabIndex = (currentTab.index + 1) % tabs.length;
+      }
+    } else {
+      // Default sequential rotation
+      nextTabIndex = (currentTab.index + 1) % tabs.length;
+    }
+
     const nextTab = tabs[nextTabIndex];
 
     if (nextTab && nextTab.id && targetWindowId !== undefined) {
