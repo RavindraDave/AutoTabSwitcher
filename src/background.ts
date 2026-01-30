@@ -19,6 +19,7 @@ import { canAccessPremium } from './core/premium-access.js';
 import { PREMIUM_FEATURES_AVAILABLE } from './core/build-config.js';
 
 // Premium feature managers (only imported if premium features are enabled at build time)
+// Note: SkipRuleEngine and ConfigManager are imported in tab-switcher.ts where they're used
 let sessionManager: any = null;
 let refreshManager: any = null;
 
@@ -329,6 +330,20 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     // Migrate existing users to new switching mode system
     // NON-BREAKING: Defaults to 'global' mode to preserve existing behavior
     await migrateToSwitchingMode();
+  }
+
+  // Premium: Initialize RefreshManager on install/update
+  if (PREMIUM_FEATURES_AVAILABLE && await canAccessPremium()) {
+    try {
+      if (refreshManager) {
+        await refreshManager.initialize();
+        await logger.info('Premium', 'RefreshManager initialized on install/update');
+      }
+    } catch (error) {
+      await logger.error('Premium', 'Error initializing RefreshManager on install/update', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
   }
 
   // Always update badge and restart switcher on install/update

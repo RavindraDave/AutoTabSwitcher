@@ -1,0 +1,357 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+.header {
+  margin-bottom: 0.5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem 0;
+}
+
+.description {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Loading state */
+.loading {
+  padding: 3rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Global interval info */
+.globalInterval {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.infoText {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.infoText strong {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.helperText {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+/* Window list */
+.windowList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.windowCard {
+  border: 1px solid var(--border-primary);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  background: var(--bg-secondary);
+  transition: all 0.2s ease;
+}
+
+.windowCard:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.windowHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.windowTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.windowInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tabCount {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.badge {
+  padding: 0.25rem 0.5rem;
+  background: var(--accent-primary);
+  color: white;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Interval section */
+.intervalSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.currentInterval {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-tertiary);
+  border-radius: 0.375rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.customBadge,
+.globalBadge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.customBadge {
+  background: var(--accent-secondary);
+  color: white;
+}
+
+.globalBadge {
+  background: var(--bg-quaternary);
+  color: var(--text-secondary);
+}
+
+/* Presets */
+.presets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.presetsLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.presetButtons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 0.5rem;
+}
+
+.presetButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.presetButton:hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-hover);
+}
+
+.presetButton.active {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+  color: white;
+}
+
+.presetTime {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.25rem;
+}
+
+.presetButton.active .presetTime {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Custom input */
+.customInput {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.customLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.customInputGroup {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.customInputField {
+  flex: 1;
+  padding: 0.625rem 0.875rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 0.375rem;
+  font-size: 0.938rem;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.customInputField:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.1);
+}
+
+.customInputField::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Reset section */
+.resetSection {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-primary);
+}
+
+/* Mode warning */
+.modeWarning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.warningTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.warningText {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 500px;
+  margin: 0;
+}
+
+/* Empty state */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 2rem;
+  color: var(--text-secondary);
+}
+
+.emptyState p {
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Tips list */
+.tipsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tipsList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.938rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.tipsList li strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .presetButtons {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .customInputGroup {
+    flex-direction: column;
+  }
+
+  .windowHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

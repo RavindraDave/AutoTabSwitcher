@@ -54,6 +54,24 @@ export interface StorageData {
   // Premium license
   premiumEnabled?: boolean; // Whether premium features are enabled
   licenseKey?: string; // Premium license key (for future use)
+
+  // ===== PREMIUM FEATURES (Phase 2 & 3) =====
+
+  // Rotation Patterns (Feature 1)
+  rotationPatterns?: { [patternId: string]: RotationPattern }; // Available rotation patterns
+  activePattern?: string; // Currently active pattern ID (global)
+  windowPatterns?: { [windowId: number]: string }; // Per-window pattern overrides
+
+  // Tab Grouping (Feature 3)
+  tabGroups?: TabGroup[]; // Defined tab groups
+  activeGroupId?: string; // Currently active group (for within-group rotation)
+  groupRotationMode?: GroupRotationMode; // How groups interact with rotation
+  windowActiveGroups?: { [windowId: number]: string }; // Per-window active group
+
+  // Advanced Scheduling (Feature 5)
+  schedules?: Schedule[]; // Defined schedules
+  schedulesEnabled?: boolean; // Master toggle for all schedules
+  lastScheduleCheck?: number; // Last time schedules were evaluated
 }
 
 /**
@@ -277,6 +295,11 @@ export interface ConfigExport {
   refreshRules?: RefreshRule[];
   skipRules?: SkipRule[];
 
+  // Phase 2 & 3 features
+  rotationPatterns?: { [patternId: string]: RotationPattern };
+  tabGroups?: TabGroup[];
+  schedules?: Schedule[];
+
   // Metadata
   metadata?: {
     extensionVersion?: string;
@@ -300,11 +323,17 @@ export interface ImportResult {
     refreshSettings?: boolean;
     refreshRules?: number;
     skipRules?: number;
+    rotationPatterns?: number;
+    tabGroups?: number;
+    schedules?: number;
   };
   skipped?: {
     sessions?: number;
     refreshRules?: number;
     skipRules?: number;
+    rotationPatterns?: number;
+    tabGroups?: number;
+    schedules?: number;
   };
 }
 
@@ -317,7 +346,10 @@ export interface ExportOptions {
   includeRefreshSettings?: boolean;
   includeRefreshRules?: boolean;
   includeSkipRules?: boolean;
-  format?: 'json'; // Only JSON for Phase 1
+  includeRotationPatterns?: boolean;
+  includeTabGroups?: boolean;
+  includeSchedules?: boolean;
+  format?: 'json'; // Only JSON for Phase 1, YAML in Phase 2
   sanitize?: boolean; // Remove potentially sensitive data (URLs, titles)
 }
 
@@ -367,6 +399,151 @@ export interface ValidationError {
 export interface ValidationWarning {
   path: string;
   message: string;
+}
+
+// ============================================================================
+// PREMIUM FEATURES - PHASE 2 & 3 TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * Rotation Patterns (Feature 1)
+ */
+
+/**
+ * Custom rotation pattern - defines how tabs should be rotated
+ */
+export interface RotationPattern {
+  id: string;
+  name: string;
+  type: 'sequential' | 'reverse' | 'random' | 'pinned-first' | 'custom';
+  description?: string;
+
+  // Custom order for 'custom' pattern type
+  customOrder?: Array<number | string>; // Array of indices or URL patterns
+
+  // Pattern options
+  options?: {
+    shuffleDaily?: boolean; // For random: re-shuffle once per day
+    respectPinned?: boolean; // Keep pinned tabs in their position
+    loopMode?: 'circular' | 'bounce'; // Circular (wrap) or bounce (reverse at end)
+  };
+
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+/**
+ * Tab Grouping & Categorization (Feature 3)
+ */
+
+/**
+ * Tab group - collection of tabs with shared settings
+ */
+export interface TabGroup {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string; // Hex color or named color
+  icon?: string; // Emoji or icon identifier
+
+  // Tab matchers - define which tabs belong to this group
+  tabs: TabMatcher[];
+
+  // Group-specific settings
+  settings: {
+    customDelayTime?: number; // Override global interval for this group
+    rotationPatternId?: string; // Custom pattern for this group
+    skipRules?: string[]; // Skip rule IDs that apply to this group
+    enabled?: boolean; // Whether this group is active
+  };
+
+  // Rotation behavior within group
+  rotationMode?: 'within' | 'independent'; // Rotate within group only, or independently
+
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+/**
+ * Tab matcher - defines criteria for matching tabs to groups
+ */
+export interface TabMatcher {
+  type: 'url' | 'domain' | 'regex' | 'title' | 'manual';
+  pattern?: string; // Pattern for url/domain/regex/title types
+  tabIds?: number[]; // Explicit tab IDs for manual type
+  matchOptions?: {
+    caseSensitive?: boolean;
+    exactMatch?: boolean;
+  };
+}
+
+/**
+ * Group rotation mode - how groups interact with tab rotation
+ */
+export type GroupRotationMode =
+  | 'within-group'       // Rotate only within active group
+  | 'between-groups'     // Rotate between groups (one tab from each group)
+  | 'sequential-groups'  // Complete one group before moving to next
+  | 'independent';       // Groups don't affect rotation (normal rotation)
+
+/**
+ * Advanced Scheduling (Feature 5)
+ */
+
+/**
+ * Schedule - time-based automation rule
+ */
+export interface Schedule {
+  id: string;
+  name: string;
+  description?: string;
+  enabled: boolean;
+
+  // Time constraints
+  timeRange?: { start: string; end: string }; // HH:MM format
+  daysOfWeek?: number[]; // 0 = Sunday, 6 = Saturday
+  dateRange?: { start: string; end: string }; // ISO date strings
+
+  // Schedule type
+  type: 'recurring' | 'one-time';
+
+  // Actions to execute when schedule is active
+  actions: ScheduledAction[];
+
+  // Priority for conflict resolution (higher = more important)
+  priority?: number;
+
+  createdAt?: number;
+  updatedAt?: number;
+  lastTriggered?: number; // Last time this schedule was triggered
+}
+
+/**
+ * Scheduled action - what to do when schedule is active
+ */
+export interface ScheduledAction {
+  type:
+    | 'enable'           // Enable tab switching
+    | 'disable'          // Disable tab switching
+    | 'set-interval'     // Change rotation interval
+    | 'set-pattern'      // Change rotation pattern
+    | 'set-group'        // Activate a tab group
+    | 'set-mode'         // Change switching mode (global/window)
+    | 'launch-session'   // Launch a saved session
+    | 'enable-refresh'   // Enable auto-refresh
+    | 'disable-refresh'; // Disable auto-refresh
+
+  // Action parameters (depends on action type)
+  params?: {
+    enabled?: boolean;            // For enable/disable
+    delayTime?: number;           // For set-interval
+    patternId?: string;           // For set-pattern
+    groupId?: string;             // For set-group
+    switchingMode?: SwitchingMode; // For set-mode
+    windowId?: number;            // Target specific window (optional)
+    sessionId?: string;           // For launch-session
+    launchMode?: 'new-window' | 'current' | 'replace'; // For launch-session
+  };
 }
 
 /**
