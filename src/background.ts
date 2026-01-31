@@ -23,6 +23,7 @@ import { getEffectiveDelay } from './core/delay-calculator.js';
 // Note: SkipRuleEngine and ConfigManager are imported in tab-switcher.ts where they're used
 let sessionManager: any = null;
 let refreshManager: any = null;
+let scheduleManager: any = null;
 
 // Dynamically import premium managers if available
 if (PREMIUM_FEATURES_AVAILABLE) {
@@ -36,6 +37,13 @@ if (PREMIUM_FEATURES_AVAILABLE) {
     refreshManager = module.refreshManager;
   }).catch(() => {
     logger.warn('Premium', 'RefreshManager not available');
+  });
+
+  import('./premium/ScheduleManager.js').then(async module => {
+    scheduleManager = module.scheduleManager;
+    await scheduleManager.initialize();
+  }).catch(() => {
+    logger.warn('Premium', 'ScheduleManager not available');
   });
 }
 
