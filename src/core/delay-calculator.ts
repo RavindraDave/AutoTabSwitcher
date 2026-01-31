@@ -46,7 +46,7 @@ export async function getEffectiveDelay(
       const activeGroupId = await groupManager.getActiveGroupId();
       if (activeGroupId) {
         const activeGroup = await groupManager.getGroup(activeGroupId);
-        if (activeGroup && activeGroup.settings?.customDelayTime) {
+        if (activeGroup && activeGroup.settings?.customDelayTime !== undefined) {
           const groupDelay = activeGroup.settings.customDelayTime;
           await logger.debug('DelayCalculator', 'Using group custom delay', {
             groupId: activeGroupId,
@@ -65,7 +65,7 @@ export async function getEffectiveDelay(
   }
 
   // Check for window custom delay (medium priority)
-  if (windowId !== undefined && windowStates && windowStates[windowId]?.customDelayTime) {
+  if (windowId !== undefined && windowStates && windowStates[windowId]?.customDelayTime !== undefined) {
     const windowDelay = windowStates[windowId].customDelayTime!;
     await logger.debug('DelayCalculator', 'Using window custom delay', {
       windowId,

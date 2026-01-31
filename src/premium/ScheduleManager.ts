@@ -176,9 +176,11 @@ class ScheduleManager {
     try {
       // Check date range (if specified)
       if (schedule.dateRange) {
+        // Strip time component for date-only comparison
+        const currentDateOnly = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
         const startDate = new Date(schedule.dateRange.start);
         const endDate = new Date(schedule.dateRange.end);
-        if (currentDate < startDate || currentDate > endDate) {
+        if (currentDateOnly < startDate || currentDateOnly > endDate) {
           return false;
         }
       }
@@ -199,15 +201,17 @@ class ScheduleManager {
         }
       }
 
-      // One-time schedules should only execute once
+      // One-time schedules should only execute once per day
       if (schedule.type === 'one-time') {
-        const data = await chrome.storage.local.get('lastScheduleCheck');
-        const lastCheck = data['lastScheduleCheck'] || 0;
+        const data = await chrome.storage.local.get('executedOneTimeSchedules');
+        const executed = data['executedOneTimeSchedules'] || {};
 
-        // If we've already checked this schedule today, don't execute again
-        const lastCheckDate = new Date(lastCheck);
-        if (lastCheckDate.toDateString() === currentDate.toDateString()) {
-          return false;
+        // Check if THIS specific schedule was executed today
+        if (executed[schedule.id]) {
+          const lastExecution = new Date(executed[schedule.id]);
+          if (lastExecution.toDateString() === currentDate.toDateString()) {
+            return false;
+          }
         }
       }
 
@@ -242,6 +246,14 @@ class ScheduleManager {
 
       for (const action of schedule.actions) {
         await this.executeAction(action, schedule);
+      }
+
+      // Track one-time schedule execution
+      if (schedule.type === 'one-time') {
+        const data = await chrome.storage.local.get('executedOneTimeSchedules');
+        const executed = data['executedOneTimeSchedules'] || {};
+        executed[schedule.id] = Date.now();
+        await chrome.storage.local.set({ executedOneTimeSchedules: executed });
       }
 
       await logger.info('ScheduleManager', 'Schedule executed successfully', {
@@ -636,6 +648,11 @@ class ScheduleManager {
    * Sanitize time string (HH:MM format)
    */
   private sanitizeTimeString(time: string): string {
+    // Limit length before regex to prevent ReDoS
+    if (typeof time !== 'string' || time.length > 10) {
+      return '00:00'; // Default to midnight if invalid
+    }
+
     const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(time)) {
       return '00:00'; // Default to midnight if invalid
@@ -647,6 +664,11 @@ class ScheduleManager {
    * Sanitize date string (YYYY-MM-DD format)
    */
   private sanitizeDateString(date: string): string {
+    // Limit length before regex to prevent ReDoS
+    if (typeof date !== 'string' || date.length > 15) {
+      return new Date().toISOString().split('T')[0] ?? '2024-01-01'; // Default to today if invalid
+    }
+
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date)) {
       return new Date().toISOString().split('T')[0] ?? '2024-01-01'; // Default to today if invalid

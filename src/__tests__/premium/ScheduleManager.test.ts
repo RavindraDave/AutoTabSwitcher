@@ -27,6 +27,29 @@ global.chrome = {
         return Promise.resolve();
       }),
     },
+    sync: {
+      get: jest.fn((keys) => {
+        const result: { [key: string]: any } = {};
+        if (typeof keys === 'string') {
+          result[keys] = mockStorage[keys];
+        } else if (Array.isArray(keys)) {
+          keys.forEach(key => {
+            result[key] = mockStorage[key];
+          });
+        }
+        return Promise.resolve(result);
+      }),
+      set: jest.fn((items) => {
+        Object.assign(mockStorage, items);
+        return Promise.resolve();
+      }),
+    },
+  },
+  runtime: {
+    getManifest: jest.fn(() => ({
+      version: '1.0.0',
+      name: 'Test Extension'
+    }))
   },
 } as any;
 
@@ -36,6 +59,13 @@ describe('ScheduleManager', () => {
     Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
     jest.clearAllMocks();
     jest.restoreAllMocks();
+    // Use fake timers for consistent Date.now() behavior
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    // Restore real timers after each test
+    jest.useRealTimers();
   });
 
   describe('Schedule CRUD Operations', () => {
@@ -140,8 +170,7 @@ describe('ScheduleManager', () => {
   describe('Schedule Activation Logic', () => {
     test('should activate schedule within time range', async () => {
       // Mock current time to 10:00 AM
-      const mockTimestamp = new Date('2024-01-15T10:00:00').getTime();
-      jest.spyOn(Date, 'now').mockReturnValue(mockTimestamp);
+      jest.setSystemTime(new Date('2024-01-15T10:00:00'));
 
       const schedule: Schedule = {
         id: 'time-range-test',
@@ -164,8 +193,7 @@ describe('ScheduleManager', () => {
 
     test('should not activate schedule outside time range', async () => {
       // Mock current time to 2:00 PM
-      const mockTimestamp = new Date('2024-01-15T14:00:00').getTime();
-      jest.spyOn(Date, 'now').mockReturnValue(mockTimestamp);
+      jest.setSystemTime(new Date('2024-01-15T14:00:00'));
 
       const schedule: Schedule = {
         id: 'time-range-test-2',
@@ -188,8 +216,7 @@ describe('ScheduleManager', () => {
 
     test('should activate schedule on correct day of week', async () => {
       // Mock to Monday (day 1)
-      const mockTimestamp = new Date('2024-01-15T10:00:00').getTime(); // This is a Monday
-      jest.spyOn(Date, 'now').mockReturnValue(mockTimestamp);
+      jest.setSystemTime(new Date('2024-01-15T10:00:00')); // This is a Monday
 
       const schedule: Schedule = {
         id: 'day-of-week-test',
@@ -210,8 +237,7 @@ describe('ScheduleManager', () => {
 
     test('should not activate schedule on wrong day of week', async () => {
       // Mock to Saturday (day 6)
-      const mockTimestamp = new Date('2024-01-20T10:00:00').getTime(); // This is a Saturday
-      jest.spyOn(Date, 'now').mockReturnValue(mockTimestamp);
+      jest.setSystemTime(new Date('2024-01-20T10:00:00')); // This is a Saturday
 
       const schedule: Schedule = {
         id: 'day-of-week-test-2',
@@ -232,8 +258,7 @@ describe('ScheduleManager', () => {
     });
 
     test('should activate schedule within date range', async () => {
-      const mockTimestamp = new Date('2024-06-15T10:00:00').getTime();
-      jest.spyOn(Date, 'now').mockReturnValue(mockTimestamp);
+      jest.setSystemTime(new Date('2024-06-15T10:00:00'));
 
       const schedule: Schedule = {
         id: 'date-range-test',
@@ -253,8 +278,7 @@ describe('ScheduleManager', () => {
     });
 
     test('should not activate schedule outside date range', async () => {
-      const mockTimestamp = new Date('2024-01-15T10:00:00').getTime();
-      jest.spyOn(Date, 'now').mockReturnValue(mockTimestamp);
+      jest.setSystemTime(new Date('2024-01-15T10:00:00'));
 
       const schedule: Schedule = {
         id: 'date-range-test-2',
@@ -277,8 +301,7 @@ describe('ScheduleManager', () => {
 
   describe('Scheduled Actions', () => {
     beforeEach(() => {
-      const mockTimestamp = new Date('2024-01-15T10:00:00').getTime();
-      jest.spyOn(Date, 'now').mockReturnValue(mockTimestamp);
+      jest.setSystemTime(new Date('2024-01-15T10:00:00'));
       mockStorage.schedulesEnabled = true;
     });
 
@@ -459,8 +482,7 @@ describe('ScheduleManager', () => {
 
   describe('Priority Handling', () => {
     beforeEach(() => {
-      const mockTimestamp = new Date('2024-01-15T10:00:00').getTime();
-      jest.spyOn(Date, 'now').mockReturnValue(mockTimestamp);
+      jest.setSystemTime(new Date('2024-01-15T10:00:00'));
       mockStorage.schedulesEnabled = true;
     });
 

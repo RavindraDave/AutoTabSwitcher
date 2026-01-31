@@ -177,6 +177,14 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
                 originalCount: tabs.length,
                 filteredCount: groupTabs.length
               });
+            } else {
+              // Group is active but no tabs matched - skip rotation
+              await logger.warn('Premium', 'Active group has no matching tabs, skipping rotation', {
+                groupId: activeGroupId,
+                groupName: activeGroup.name,
+                totalTabs: tabs.length
+              });
+              return false;
             }
           }
         }
