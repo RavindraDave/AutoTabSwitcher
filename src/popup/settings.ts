@@ -8,6 +8,7 @@ import { StorageData } from '../core/types.js';
 import { MIN_DELAY_SECONDS, MAX_DELAY_SECONDS, DEFAULT_PAUSE_DURATION_SECONDS } from '../core/constants.js';
 import { setDelayTime } from '../core/storage.js';
 import { logger } from '../core/logger.js';
+import { createWindowInfo, setContent } from '../utils/dom-safe.js';
 
 // DOM Elements
 let delayTimeInput: HTMLInputElement;
@@ -172,10 +173,8 @@ async function updateWindowInfo(windowId: number): Promise<void> {
     const tabCount = win.tabs ? win.tabs.length : 0;
 
     if (windowInfoText) {
-      windowInfoText.innerHTML = `
-        <strong>Current window:</strong> Window ${windowId} (${tabCount} tabs)<br>
-        Auto-switching will only affect tabs in this window.
-      `;
+      // XSS-safe: Use DOM methods instead of innerHTML
+      setContent(windowInfoText, createWindowInfo(windowId, tabCount));
     }
     if (windowInfo) windowInfo.style.display = 'block';
   } catch (error) {
