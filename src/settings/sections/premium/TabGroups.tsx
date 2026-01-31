@@ -23,6 +23,8 @@ const TabGroups: React.FC<TabGroupsProps> = ({ onSuccess }) => {
   const [previewGroup, setPreviewGroup] = useState<TabGroup | null>(null);
   const [matchedTabs, setMatchedTabs] = useState<chrome.tabs.Tab[]>([]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [conflicts, setConflicts] = useState<any[]>([]);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<Partial<TabGroup>>({
@@ -50,6 +52,8 @@ const TabGroups: React.FC<TabGroupsProps> = ({ onSuccess }) => {
   useEffect(() => {
     loadGroups();
     loadRotationPatterns();
+    loadActiveGroup();
+    loadConflicts();
   }, []);
 
   const loadGroups = async () => {
@@ -72,6 +76,26 @@ const TabGroups: React.FC<TabGroupsProps> = ({ onSuccess }) => {
       setRotationPatterns(patterns);
     } catch (error) {
       console.error('Failed to load rotation patterns:', error);
+    }
+  };
+
+  const loadActiveGroup = async () => {
+    try {
+      const { groupManager } = await import('../../../premium/GroupManager.js');
+      const activeId = await groupManager.getActiveGroupId();
+      setActiveGroupId(activeId);
+    } catch (error) {
+      console.error('Failed to load active group:', error);
+    }
+  };
+
+  const loadConflicts = async () => {
+    try {
+      const { detectActiveGroupConflicts } = await import('../../../premium/conflict-detector.js');
+      const detected = await detectActiveGroupConflicts();
+      setConflicts(detected);
+    } catch (error) {
+      console.error('Failed to load conflicts:', error);
     }
   };
 
@@ -284,6 +308,44 @@ const TabGroups: React.FC<TabGroupsProps> = ({ onSuccess }) => {
             ➕ Create Group
           </button>
         </div>
+
+        {/* Conflict Warning Banner */}
+        {conflicts.length > 0 && (
+          <div className={styles.conflictBanner}>
+            <div className={styles.conflictIcon}>⚠️</div>
+            <div className={styles.conflictContent}>
+              <h4>Skip Rule Conflicts Detected</h4>
+              <p>
+                {conflicts.length} conflict{conflicts.length > 1 ? 's' : ''} found between skip rules and the active group.
+                Some tabs may be removed by skip rules before group filtering can include them.
+              </p>
+              <ul className={styles.conflictList}>
+                {conflicts.slice(0, 3).map((conflict: any, index: number) => (
+                  <li key={index}>
+                    Skip rule "{conflict.skipRulePattern}" conflicts with matcher "{conflict.matcherPattern}"
+                  </li>
+                ))}
+                {conflicts.length > 3 && (
+                  <li>...and {conflicts.length - 3} more conflict{conflicts.length - 3 > 1 ? 's' : ''}</li>
+                )}
+              </ul>
+              <div className={styles.conflictActions}>
+                <button
+                  className={styles.secondaryButton}
+                  onClick={() => window.location.hash = '#premium/skip-rules'}
+                >
+                  Review Skip Rules
+                </button>
+                <button
+                  className={styles.secondaryButton}
+                  onClick={() => setConflicts([])}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {groups.length === 0 ? (
           <div className={styles.emptyState}>

@@ -17,6 +17,7 @@ import { logger, logModeChange, logWindowToggle } from './core/logger.js';
 import { WindowTimerManager } from './core/window-timer-manager.js';
 import { canAccessPremium } from './core/premium-access.js';
 import { PREMIUM_FEATURES_AVAILABLE } from './core/build-config.js';
+import { getEffectiveDelay } from './core/delay-calculator.js';
 
 // Premium feature managers (only imported if premium features are enabled at build time)
 // Note: SkipRuleEngine and ConfigManager are imported in tab-switcher.ts where they're used
@@ -76,9 +77,14 @@ async function toggleTabSwitcher(): Promise<void> {
 
     // Route based on switching mode
     if (switchingMode === 'global') {
-      // GLOBAL MODE: Use existing code path - NO CHANGES to behavior
-      // This is the current behavior and remains 100% unchanged
-      await toggleHybridTimer(enabled, delayTime, MIN_DELAY_MS_PRODUCTION);
+      // GLOBAL MODE: Check for group custom delay override
+      const delayResult = await getEffectiveDelay(delayTime);
+      await toggleHybridTimer(enabled, delayResult.delay, MIN_DELAY_MS_PRODUCTION);
+      if (delayResult.source === 'group') {
+        await logger.info('TabSwitcher', 'Using group custom delay in global mode', {
+          delay: delayResult.delay
+        });
+      }
     } else {
       // WINDOW MODE: New feature - per-window control
       // This is a NEW code path, isolated from existing logic
@@ -214,7 +220,7 @@ async function handleSettingsChange(changes: any): Promise<void> {
  * This is isolated from existing global mode logic
  */
 async function handleWindowModeToggle(
-  windowStates: { [windowId: number]: { enabled: boolean; enabledTimestamp?: number; lastSwitchTime?: number } },
+  windowStates: { [windowId: number]: { enabled: boolean; enabledTimestamp?: number; lastSwitchTime?: number; customDelayTime?: number } },
   delayTime: number
 ): Promise<void> {
   try {
@@ -236,8 +242,14 @@ async function handleWindowModeToggle(
       if (state.enabled) {
         const exists = await windowExists(windowId);
         if (exists) {
-          await windowTimerManager.startTimer(windowId, delayTime);
-          await logger.info('WindowMode', 'Started timer for window', { windowId, delayTime });
+          // Calculate effective delay with precedence: Group > Window > Global
+          const delayResult = await getEffectiveDelay(delayTime, windowId, windowStates);
+          await windowTimerManager.startTimer(windowId, delayResult.delay);
+          await logger.info('WindowMode', 'Started timer for window', {
+            windowId,
+            delayTime: delayResult.delay,
+            delaySource: delayResult.source
+          });
         } else {
           await logger.warn('WindowMode', 'Window no longer exists, skipping timer start', {
             windowId
@@ -264,7 +276,8 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
 
   const relevantChanges = 'enabled' in changes || 'delayTime' in changes ||
     'windowMode' in changes || 'selectedWindowId' in changes ||
-    'switchingMode' in changes || 'operatingMode' in changes || 'windowStates' in changes;
+    'switchingMode' in changes || 'operatingMode' in changes || 'windowStates' in changes ||
+    'activeGroupId' in changes || 'tabGroups' in changes;
 
   if (relevantChanges) {
     // BUGFIX: Detect if this is a disable operation
