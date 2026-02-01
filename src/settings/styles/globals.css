@@ -40,6 +40,34 @@
   --color-premium: #d69e2e;
   --color-premium-gradient: linear-gradient(135deg, #f6e05e 0%, #d69e2e 100%);
 
+  /* ============================================
+   * Variable Aliases for Component Compatibility
+   * ============================================ */
+
+  /* Text aliases */
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --text-tertiary: var(--color-text-muted);
+  --text-quaternary: var(--color-text-light);
+
+  /* Background aliases */
+  --bg-primary: var(--color-surface);
+  --bg-secondary: var(--color-surface-hover);
+  --bg-tertiary: var(--color-bg);
+  --bg-quaternary: var(--color-border-light);
+  --bg-hover: var(--color-surface-hover);
+
+  /* Border aliases */
+  --border-primary: var(--color-border);
+  --border-hover: var(--color-primary-light);
+
+  /* Accent aliases */
+  --accent-primary: var(--color-primary);
+  --accent-primary-rgb: 102, 126, 234;
+  --accent-primary-alpha: rgba(102, 126, 234, 0.1);
+  --accent-secondary: var(--color-primary-dark);
+  --accent-secondary-alpha: rgba(118, 75, 162, 0.1);
+
   /* Spacing */
   --space-xs: 4px;
   --space-sm: 8px;
@@ -97,6 +125,14 @@ body.window-mode {
   --color-primary-dark: var(--color-secondary-dark);
   --color-primary-light: var(--color-secondary-light);
   --color-primary-gradient: var(--color-secondary-gradient);
+
+  /* Update accent aliases for window mode */
+  --accent-primary: var(--color-secondary);
+  --accent-primary-rgb: 32, 178, 170;
+  --accent-primary-alpha: rgba(32, 178, 170, 0.1);
+  --accent-secondary: var(--color-secondary-dark);
+  --accent-secondary-alpha: rgba(60, 179, 113, 0.1);
+  --border-hover: var(--color-secondary-light);
 }
 
 /* Reset & Base Styles */

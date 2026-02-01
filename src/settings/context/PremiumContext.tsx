@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { PREMIUM_FEATURES_AVAILABLE, BUILD_TYPE } from '../../core/build-config';
 
 interface PremiumContextValue {
   isPremium: boolean;
@@ -12,22 +13,23 @@ interface PremiumContextValue {
 
 const PremiumContext = createContext<PremiumContextValue | null>(null);
 
-// Check if premium features are available in this build
-const PREMIUM_FEATURES_AVAILABLE = (() => {
-  try {
-    // This will be set by the build system
-    return (window as unknown as { PREMIUM_FEATURES_AVAILABLE?: boolean }).PREMIUM_FEATURES_AVAILABLE ?? true;
-  } catch {
-    return true; // Default to true for development
-  }
-})();
+// In development builds, auto-enable premium for testing
+const IS_DEV_BUILD = BUILD_TYPE === 'development';
 
 export function PremiumProvider({ children }: { children: React.ReactNode }) {
-  const [isPremium, setIsPremium] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [licenseKey, setLicenseKey] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(IS_DEV_BUILD);
+  const [isLoading, setIsLoading] = useState(!IS_DEV_BUILD);
+  const [licenseKey, setLicenseKey] = useState<string | null>(IS_DEV_BUILD ? 'DEV-LICENSE' : null);
 
   const checkPremiumStatus = useCallback(async () => {
+    // In dev builds, premium is always enabled
+    if (IS_DEV_BUILD) {
+      setIsPremium(true);
+      setLicenseKey('DEV-LICENSE');
+      setIsLoading(false);
+      return;
+    }
+
     if (!PREMIUM_FEATURES_AVAILABLE) {
       setIsPremium(false);
       setIsLoading(false);

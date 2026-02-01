@@ -398,8 +398,8 @@ chrome.runtime.onStartup.addListener(async () => {
 
         // Launch auto-start sessions
         if (sessionManager) {
-          const launched = await sessionManager.launchAutoStartSessions();
-          await logger.info('Premium', 'Auto-start sessions launched', { count: launched.length });
+          const launchedCount = await sessionManager.launchAutoStartSessions();
+          await logger.info('Premium', 'Auto-start sessions launched', { count: launchedCount });
         }
       } catch (error) {
         await logger.error('Premium', 'Error initializing premium features on startup', {
