@@ -11,6 +11,8 @@ const ShortcutSettings = React.lazy(() => import('./sections/general/ShortcutSet
 const SessionManagement = React.lazy(() => import('./sections/premium/SessionManagement'));
 const RefreshSettings = React.lazy(() => import('./sections/premium/RefreshSettings'));
 const SkipRules = React.lazy(() => import('./sections/premium/SkipRules'));
+const WindowIntervals = React.lazy(() => import('./sections/premium/WindowIntervals'));
+const RotationPatterns = React.lazy(() => import('./sections/premium/RotationPatterns'));
 const BackupSettings = React.lazy(() => import('./sections/premium/BackupSettings'));
 const PremiumActivation = React.lazy(() => import('./sections/premium/PremiumActivation'));
 const Diagnostics = React.lazy(() => import('./sections/system/Diagnostics'));
@@ -35,6 +37,8 @@ function App() {
           <Route path="/sessions" element={<SessionManagement />} />
           <Route path="/refresh" element={<RefreshSettings />} />
           <Route path="/skip" element={<SkipRules />} />
+          <Route path="/intervals" element={<WindowIntervals />} />
+          <Route path="/patterns" element={<RotationPatterns />} />
           <Route path="/backup" element={<BackupSettings />} />
 
           {/* System */}

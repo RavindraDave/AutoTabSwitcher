@@ -27,6 +27,34 @@ import { logger } from '../core/logger.js';
 import { MAX_SESSIONS, MAX_TABS_PER_SESSION, SESSION_TEMPLATE_IDS } from '../core/constants.js';
 
 /**
+ * Whitelist of allowed URL protocols for security
+ */
+const ALLOWED_PROTOCOLS = ['http:', 'https:', 'file:', 'ftp:'];
+
+/**
+ * Validate URL for security - only allow safe protocols
+ * Prevents javascript:, data:, vbscript: and other malicious URLs
+ *
+ * @param url - URL to validate
+ * @returns true if URL is safe to restore, false otherwise
+ */
+function isValidUrl(url: string): boolean {
+  if (!url) return false;
+
+  // Block chrome:// and extension URLs (can't be restored)
+  if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_PROTOCOLS.includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Session Manager class
  */
 export class SessionManager {
@@ -138,9 +166,9 @@ export class SessionManager {
       const tab = tabs[i];
       if (!tab) continue; // Skip if undefined
 
-      // Skip tabs without URLs or with chrome:// URLs (can't be restored)
-      if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
-        logger.debug('SessionManager', 'Skipping non-restorable tab', {
+      // Skip tabs with invalid URLs (security: only allow http/https/file/ftp)
+      if (!isValidUrl(tab.url)) {
+        logger.debug('SessionManager', 'Skipping invalid/unsafe tab URL', {
           url: tab.url,
           title: tab.title
         });

@@ -13,6 +13,8 @@ import { PREMIUM_FEATURES_AVAILABLE } from './build-config.js';
 // Premium feature managers (only imported if premium features are enabled at build time)
 let skipRuleEngine: any = null;
 let refreshManager: any = null;
+let rotationEngine: any = null;
+let groupManager: any = null;
 
 // Dynamically import premium managers if available
 if (PREMIUM_FEATURES_AVAILABLE) {
@@ -26,6 +28,18 @@ if (PREMIUM_FEATURES_AVAILABLE) {
     refreshManager = module.refreshManager;
   }).catch(() => {
     logger.warn('Premium', 'RefreshManager not available');
+  });
+
+  import('../premium/RotationEngine.js').then(module => {
+    rotationEngine = module.rotationEngine;
+  }).catch(() => {
+    logger.warn('Premium', 'RotationEngine not available');
+  });
+
+  import('../premium/GroupManager.js').then(module => {
+    groupManager = module.groupManager;
+  }).catch(() => {
+    logger.warn('Premium', 'GroupManager not available');
   });
 }
 
@@ -138,6 +152,49 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       }
     }
 
+    // Premium: Apply group filtering if active group exists
+    let activeGroupId: string | null = null;
+    let activeGroup: any = null;
+    if (PREMIUM_FEATURES_AVAILABLE && await canAccessPremium() && groupManager) {
+      try {
+        activeGroupId = await groupManager.getActiveGroupId();
+        if (activeGroupId) {
+          activeGroup = await groupManager.getGroup(activeGroupId);
+          if (activeGroup && activeGroup.settings.enabled) {
+            // Filter tabs based on group rotation mode
+            const groupTabs = await groupManager.filterTabsByGroupMode(
+              tabs,
+              activeGroupId,
+              activeGroup.rotationMode || 'within'
+            );
+
+            if (groupTabs.length > 0) {
+              tabs = groupTabs;
+              await logger.info('Premium', 'Group filtering applied', {
+                groupId: activeGroupId,
+                groupName: activeGroup.name,
+                rotationMode: activeGroup.rotationMode,
+                originalCount: tabs.length,
+                filteredCount: groupTabs.length
+              });
+            } else {
+              // Group is active but no tabs matched - skip rotation
+              await logger.warn('Premium', 'Active group has no matching tabs, skipping rotation', {
+                groupId: activeGroupId,
+                groupName: activeGroup.name,
+                totalTabs: tabs.length
+              });
+              return false;
+            }
+          }
+        }
+      } catch (error) {
+        await logger.error('Premium', 'Error applying group filtering, using all tabs', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+
     if (tabs.length <= 1) {
       return false; // Nothing to switch if only one tab
     }
@@ -151,8 +208,55 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       return false;
     }
 
-    const currentTabIndex = currentTab.index;
-    const nextTabIndex = (currentTabIndex + 1) % tabs.length;
+    // Determine next tab using rotation pattern (if premium) or sequential
+    let nextTabIndex: number;
+
+    if (PREMIUM_FEATURES_AVAILABLE && await canAccessPremium() && rotationEngine && currentTab.id) {
+      try {
+        // Get active rotation pattern (group-specific or global)
+        let activePattern: string;
+
+        if (activeGroup && activeGroup.settings.rotationPatternId) {
+          // Use group's custom rotation pattern
+          activePattern = activeGroup.settings.rotationPatternId;
+          await logger.debug('TabSwitcher', 'Using group rotation pattern', {
+            groupId: activeGroupId,
+            pattern: activePattern
+          });
+        } else {
+          // Use global rotation pattern
+          const result = await chrome.storage.local.get('activePattern');
+          activePattern = result['activePattern'] || 'sequential';
+        }
+
+        // Use RotationEngine to get next tab index
+        nextTabIndex = await rotationEngine.getNextTabIndex(tabs, currentTab.id, activePattern);
+
+        if (nextTabIndex === -1) {
+          // Fall back to sequential if pattern resolution fails
+          await logger.warn('TabSwitcher', 'Pattern resolution failed, using sequential', {
+            pattern: activePattern
+          });
+          nextTabIndex = (currentTab.index + 1) % tabs.length;
+        }
+
+        await logger.debug('TabSwitcher', 'Using rotation pattern', {
+          pattern: activePattern,
+          currentIndex: currentTab.index,
+          nextIndex: nextTabIndex
+        });
+      } catch (error) {
+        // Fall back to sequential on error
+        await logger.error('TabSwitcher', 'Error applying rotation pattern', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+        nextTabIndex = (currentTab.index + 1) % tabs.length;
+      }
+    } else {
+      // Default sequential rotation
+      nextTabIndex = (currentTab.index + 1) % tabs.length;
+    }
+
     const nextTab = tabs[nextTabIndex];
 
     if (nextTab && nextTab.id && targetWindowId !== undefined) {
