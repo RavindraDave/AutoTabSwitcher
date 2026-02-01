@@ -3,6 +3,7 @@
  */
 
 import { logger } from '../../core/logger.js';
+import { createElement, setContent, createAlert } from '../../utils/dom-safe.js';
 
 /**
  * Show error message to user
@@ -49,11 +50,13 @@ export async function updateWindowInfo(windowId: number): Promise<void> {
     const window = await chrome.windows.get(windowId, { populate: true });
     const tabCount = window.tabs ? window.tabs.length : 0;
 
-    windowInfoEl.innerHTML = `
-      <small class="text-muted">
-        <strong>Selected Window:</strong> Window ${windowId} (${tabCount} tabs)
-      </small>
-    `;
+    // XSS-safe: Use DOM methods instead of innerHTML
+    const small = createElement('small', { className: 'text-muted' });
+    const strong = createElement('strong', { text: 'Selected Window:' });
+    small.appendChild(strong);
+    small.appendChild(document.createTextNode(` Window ${windowId} (${tabCount} tabs)`));
+
+    setContent(windowInfoEl, small);
     windowInfoEl.style.display = 'block';
   } catch (error) {
     await logger.error('PopupUI', 'Error getting window info', {
@@ -109,15 +112,21 @@ export function showWindowModeWarning(selectedWindowId: number, currentWindowId?
   const windowInfoEl = document.getElementById('windowInfo');
   if (!windowInfoEl) return;
 
-  const warningHtml = `
-    <div class="alert alert-warning mt-2 mb-0" role="alert" style="padding: 0.5rem; font-size: 0.875rem;">
-      <strong>⚠️ Note:</strong> Auto-switching is active in Window ${selectedWindowId}, not this window${currentWindowId ? ` (Window ${currentWindowId})` : ''}.
-    </div>
-  `;
-
-  // Append warning after window info
-  const existingContent = windowInfoEl.innerHTML;
-  if (!existingContent.includes('alert-warning')) {
-    windowInfoEl.innerHTML = existingContent + warningHtml;
+  // Check if warning already exists
+  if (windowInfoEl.querySelector('.alert-warning')) {
+    return;
   }
+
+  // XSS-safe: Use DOM methods instead of innerHTML
+  const message = `Auto-switching is active in Window ${selectedWindowId}, not this window${currentWindowId ? ` (Window ${currentWindowId})` : ''}.`;
+  const warning = createAlert(message, {
+    type: 'warning',
+    title: '⚠️ Note:',
+    className: 'mt-2 mb-0'
+  });
+  warning.style.padding = '0.5rem';
+  warning.style.fontSize = '0.875rem';
+
+  // Append warning after existing content
+  windowInfoEl.appendChild(warning);
 }

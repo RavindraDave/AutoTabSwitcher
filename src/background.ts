@@ -19,11 +19,16 @@ import { canAccessPremium } from './core/premium-access.js';
 import { PREMIUM_FEATURES_AVAILABLE } from './core/build-config.js';
 import { getEffectiveDelay } from './core/delay-calculator.js';
 
+// Type imports for premium managers
+import type { SessionManager } from './premium/SessionManager.js';
+import type { RefreshManager } from './premium/RefreshManager.js';
+
 // Premium feature managers (only imported if premium features are enabled at build time)
 // Note: SkipRuleEngine and ConfigManager are imported in tab-switcher.ts where they're used
-let sessionManager: any = null;
-let refreshManager: any = null;
-let scheduleManager: any = null;
+let sessionManager: SessionManager | null = null;
+let refreshManager: RefreshManager | null = null;
+// ScheduleManager is exported as singleton instance, not class
+let scheduleManager: { initialize(): Promise<void>; checkSchedules(now?: number): Promise<void> } | null = null;
 
 // Dynamically import premium managers if available
 if (PREMIUM_FEATURES_AVAILABLE) {

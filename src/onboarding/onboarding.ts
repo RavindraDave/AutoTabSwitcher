@@ -192,7 +192,7 @@ async function runDemo(): Promise<void> {
 
     try {
         demoButton.disabled = true;
-        demoButton.innerHTML = '<span>⏳</span> Creating demo...';
+        demoButton.textContent = '⏳ Creating demo...';
 
         await logger.info('Onboarding', 'Demo button clicked');
 
@@ -211,7 +211,7 @@ async function runDemo(): Promise<void> {
             throw new Error('Failed to create demo window');
         }
 
-        demoButton.innerHTML = '<span>▶️</span> Demo running...';
+        demoButton.textContent = '▶️ Demo running...';
 
         // Wait a moment for tabs to load
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -235,7 +235,7 @@ async function runDemo(): Promise<void> {
         }
 
         // Show completion message
-        demoButton.innerHTML = '<span>✅</span> Demo complete!';
+        demoButton.textContent = '✅ Demo complete!';
 
         // Close demo window after 1 second
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -243,16 +243,16 @@ async function runDemo(): Promise<void> {
 
         // Reset button
         await new Promise(resolve => setTimeout(resolve, 500));
-        demoButton.innerHTML = '<span>▶️</span> Try a Quick Demo';
+        demoButton.textContent = '▶️ Try a Quick Demo';
         demoButton.disabled = false;
 
     } catch (error) {
         await logger.error('Onboarding', 'Error running demo', {
             error: error instanceof Error ? error.message : String(error)
         });
-        demoButton.innerHTML = '<span>❌</span> Demo failed';
+        demoButton.textContent = '❌ Demo failed';
         await new Promise(resolve => setTimeout(resolve, 2000));
-        demoButton.innerHTML = '<span>▶️</span> Try a Quick Demo';
+        demoButton.textContent = '▶️ Try a Quick Demo';
         demoButton.disabled = false;
     }
 }
