@@ -78,7 +78,7 @@ export const SESSION_TEMPLATE_IDS = {
 
 // Refresh intervals (milliseconds)
 export const MIN_REFRESH_INTERVAL = 5000; // 5 seconds minimum
-export const MAX_REFRESH_INTERVAL = 3600000; // 1 hour maximum
+export const MAX_REFRESH_INTERVAL = 86400000; // 24 hours maximum
 export const DEFAULT_REFRESH_INTERVAL = 60000; // 1 minute default
 
 // Backup settings

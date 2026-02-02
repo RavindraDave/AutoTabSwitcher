@@ -272,6 +272,46 @@ function RefreshSettingsContent() {
             </div>
           </Card>
 
+          {(settings.refreshStrategy === 'preemptive' || settings.refreshStrategy === 'post-switch') && (
+            <Card
+              title="Global Refresh Timing"
+              description="Set the interval between automatic refreshes"
+              icon={<Icon name="clock" size={20} />}
+            >
+              <div className={styles.formGroup}>
+                <label className={styles.label}>
+                  Refresh Interval: {' '}
+                  <strong>
+                    {(settings.globalRefreshInterval || 60) < 60
+                      ? `${settings.globalRefreshInterval || 60} seconds`
+                      : (settings.globalRefreshInterval || 60) < 3600
+                        ? `${Math.floor((settings.globalRefreshInterval || 60) / 60)} minutes`
+                        : `${Math.floor((settings.globalRefreshInterval || 60) / 3600)} hours`}
+                  </strong>
+                </label>
+                <input
+                  type="range"
+                  min="10"
+                  max="86400"
+                  step="10"
+                  value={settings.globalRefreshInterval || 60}
+                  onChange={async (e) => {
+                    try {
+                      await updateSetting('globalRefreshInterval', parseInt(e.target.value, 10));
+                    } catch {
+                      showToast('Failed to update interval', 'error');
+                    }
+                  }}
+                  className={styles.slider}
+                />
+                <div className={styles.intervalHint}>
+                  <span>10s</span>
+                  <span>24h</span>
+                </div>
+              </div>
+            </Card>
+          )}
+
           <Card
             title="Refresh Rules"
             description={`${rules.length} rule${rules.length !== 1 ? 's' : ''} configured`}
@@ -380,7 +420,8 @@ function RefreshSettingsContent() {
               <input
                 type="range"
                 min="10"
-                max="3600"
+                max="86400"
+                step="10"
                 value={ruleInterval}
                 onChange={(e) => setRuleInterval(parseInt(e.target.value, 10))}
                 className={styles.slider}
@@ -390,8 +431,12 @@ function RefreshSettingsContent() {
                   ? `${ruleInterval} seconds`
                   : ruleInterval < 3600
                     ? `${Math.floor(ruleInterval / 60)} minutes`
-                    : `${Math.floor(ruleInterval / 3600)} hour`}
+                    : `${Math.floor(ruleInterval / 3600)} hours`}
               </span>
+            </div>
+            <div className={styles.intervalHint}>
+              <span>10 seconds</span>
+              <span>24 hours</span>
             </div>
           </div>
 
