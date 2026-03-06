@@ -14,7 +14,9 @@
     "storage",
     "alarms",
     "windows",
-    "downloads"
+    "downloads",
+    "idle",
+    "contextMenus"
   ],
   "action": {
     "default_popup": "popup/index.html",

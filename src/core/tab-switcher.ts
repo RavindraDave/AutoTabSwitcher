@@ -9,6 +9,8 @@ import { updateBadge } from './badge-manager.js';
 import { logger, logTabSwitch } from './logger.js';
 import { canAccessPremium } from './premium-access.js';
 import { PREMIUM_FEATURES_AVAILABLE } from './build-config.js';
+import { recordTabSwitch } from './statistics-tracker.js';
+import { notifyTabSwitch } from './switch-notifier.js';
 
 // Premium feature managers (only imported if premium features are enabled at build time)
 let skipRuleEngine: any = null;
@@ -337,6 +339,13 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
         previousTabTitle,
         newTabTitle,
       });
+
+      // Record statistics for this switch
+      await recordTabSwitch(nextTab.id, newTabTitle, tabs.length, previousTabId);
+
+      // Show switch notification (if enabled)
+      await notifyTabSwitch(previousTabTitle, newTabTitle, targetWindowId);
+
       return true;
     }
     return false;

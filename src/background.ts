@@ -18,6 +18,8 @@ import { WindowTimerManager } from './core/window-timer-manager.js';
 import { canAccessPremium } from './core/premium-access.js';
 import { PREMIUM_FEATURES_AVAILABLE } from './core/build-config.js';
 import { getEffectiveDelay } from './core/delay-calculator.js';
+import { initializeIdleAutoStart, reconfigureIdleDetection } from './core/idle-auto-start.js';
+import { initializeContextMenus, handleContextMenuClick, reconfigureContextMenus } from './core/context-menu-manager.js';
 
 // Type imports for premium managers
 import type { SessionManager } from './premium/SessionManager.js';
@@ -287,6 +289,14 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
     return;
   }
 
+  // Reconfigure new features when their settings change
+  if ('idleAutoStart' in changes || 'idleThresholdSeconds' in changes || 'idleStopOnActive' in changes) {
+    reconfigureIdleDetection();
+  }
+  if ('contextMenuEnabled' in changes) {
+    reconfigureContextMenus();
+  }
+
   const relevantChanges = 'enabled' in changes || 'delayTime' in changes ||
     'windowMode' in changes || 'selectedWindowId' in changes ||
     'switchingMode' in changes || 'operatingMode' in changes || 'windowStates' in changes ||
@@ -372,6 +382,10 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     }
   }
 
+  // Initialize new features
+  await initializeContextMenus();
+  await initializeIdleAutoStart();
+
   // Always update badge and restart switcher on install/update
   await toggleTabSwitcher();
 });
@@ -407,6 +421,9 @@ chrome.runtime.onStartup.addListener(async () => {
         });
       }
     }
+
+    // Initialize new features on startup
+    await initializeIdleAutoStart();
 
     // Check if auto-start on browser startup is enabled
     const data = await getSettings(['enableOnStartup', 'enabled', 'switchingMode', 'operatingMode', 'windowStates']);
@@ -727,6 +744,9 @@ chrome.commands.onCommand.addListener(async (command) => {
     }
   }
 });
+
+// Set up context menu click listener
+chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
 
 // Initialize on script load (when service worker starts)
 // Run migration first to ensure switchingMode is set

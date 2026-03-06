@@ -72,6 +72,23 @@ export interface StorageData {
   schedules?: Schedule[]; // Defined schedules
   schedulesEnabled?: boolean; // Master toggle for all schedules
   lastScheduleCheck?: number; // Last time schedules were evaluated
+
+  // ===== NEW FEATURES =====
+
+  // Idle Auto-Start: Automatically start cycling when system goes idle
+  idleAutoStart?: boolean; // Enable idle-based auto-start
+  idleThresholdSeconds?: number; // Seconds of inactivity before considered idle (15-3600)
+  idleStopOnActive?: boolean; // Stop cycling when user becomes active again
+
+  // Tab Statistics Tracker: Track rotation metrics
+  tabStatistics?: TabStatistics; // Rotation statistics
+
+  // Switch Notification: Visual notification before tab switch
+  switchNotification?: boolean; // Enable switch notifications
+  switchNotificationSound?: boolean; // Play a sound on switch (future)
+
+  // Context Menu: Quick action settings
+  contextMenuEnabled?: boolean; // Enable right-click context menu
 }
 
 /**
@@ -558,3 +575,38 @@ export interface Result<T> {
   data?: T;
   error?: string;
 }
+
+// ============================================================================
+// NEW FEATURES TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * Tab Statistics - tracks rotation metrics
+ */
+export interface TabStatistics {
+  totalSwitches: number; // Total tab switches since tracking began
+  totalCycles: number; // Complete cycles through all tabs
+  sessionStartTime: number; // When the current tracking session started
+  lastResetTime: number; // When stats were last reset
+  perTabVisits: { [tabId: number]: TabVisitInfo }; // Per-tab visit tracking
+}
+
+/**
+ * Per-tab visit information
+ */
+export interface TabVisitInfo {
+  visitCount: number; // Times this tab was switched to
+  totalViewTime: number; // Total milliseconds spent viewing this tab
+  lastVisitTime: number; // Timestamp of last visit
+  tabTitle?: string; // Last known tab title (for display)
+}
+
+/**
+ * Idle state type for chrome.idle API
+ */
+export type IdleState = 'active' | 'idle' | 'locked';
+
+/**
+ * Context menu action type
+ */
+export type ContextMenuAction = 'exclude-tab' | 'toggle-cycling' | 'toggle-window';

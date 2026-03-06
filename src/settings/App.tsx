@@ -8,6 +8,9 @@ const BasicSettings = React.lazy(() => import('./sections/general/BasicSettings'
 const ModeSettings = React.lazy(() => import('./sections/general/ModeSettings'));
 const ActivitySettings = React.lazy(() => import('./sections/general/ActivitySettings'));
 const ShortcutSettings = React.lazy(() => import('./sections/general/ShortcutSettings'));
+const IdleAutoStart = React.lazy(() => import('./sections/general/IdleAutoStart'));
+const NotificationSettings = React.lazy(() => import('./sections/general/NotificationSettings'));
+const StatisticsSettings = React.lazy(() => import('./sections/general/StatisticsSettings'));
 const SessionManagement = React.lazy(() => import('./sections/premium/SessionManagement'));
 const RefreshSettings = React.lazy(() => import('./sections/premium/RefreshSettings'));
 const SkipRules = React.lazy(() => import('./sections/premium/SkipRules'));
@@ -31,6 +34,9 @@ function App() {
           <Route path="/mode" element={<ModeSettings />} />
           <Route path="/activity" element={<ActivitySettings />} />
           <Route path="/shortcuts" element={<ShortcutSettings />} />
+          <Route path="/idle" element={<IdleAutoStart />} />
+          <Route path="/notifications" element={<NotificationSettings />} />
+          <Route path="/statistics" element={<StatisticsSettings />} />
 
           {/* Premium Settings */}
           <Route path="/premium/activate" element={<PremiumActivation />} />

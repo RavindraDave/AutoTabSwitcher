@@ -28,6 +28,9 @@ const navigation: NavigationGroup[] = [
       { id: 'mode', label: 'Operating Mode', icon: 'globe', path: '/mode' },
       { id: 'activity', label: 'Pause on Activity', icon: 'pause', path: '/activity' },
       { id: 'shortcuts', label: 'Keyboard Shortcuts', icon: 'keyboard', path: '/shortcuts' },
+      { id: 'idle', label: 'Idle Auto-Start', icon: 'clock', path: '/idle' },
+      { id: 'notifications', label: 'Notifications', icon: 'info', path: '/notifications' },
+      { id: 'statistics', label: 'Statistics', icon: 'tool', path: '/statistics' },
     ],
   },
   {

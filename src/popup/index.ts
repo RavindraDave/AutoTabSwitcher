@@ -12,6 +12,7 @@ import { getMinDelayMs, getSwitchingMode } from '../core/storage.js';
 import { logger } from '../core/logger.js';
 import { canAccessPremium } from '../core/premium-access.js';
 import { PREMIUM_FEATURES_AVAILABLE } from '../core/build-config.js';
+import { getStatsSummary } from '../core/statistics-tracker.js';
 
 // DOM Elements
 let header: HTMLElement;
@@ -32,6 +33,9 @@ let intervalValue: HTMLElement;
 let settingsButton: HTMLButtonElement;
 let premiumTeaser: HTMLElement | null;
 let learnMorePremiumBtn: HTMLButtonElement | null;
+let statSwitches: HTMLElement;
+let statCycles: HTMLElement;
+let statDuration: HTMLElement;
 
 // State
 let countdownInterval: number | undefined;
@@ -64,6 +68,9 @@ export async function initializePopup(): Promise<void> {
   settingsButton = document.getElementById('settingsButton') as HTMLButtonElement;
   premiumTeaser = document.getElementById('premiumTeaser');
   learnMorePremiumBtn = document.getElementById('learnMorePremiumBtn') as HTMLButtonElement | null;
+  statSwitches = document.getElementById('statSwitches')!;
+  statCycles = document.getElementById('statCycles')!;
+  statDuration = document.getElementById('statDuration')!;
 
   // Set up event listeners
   toggleButton.addEventListener('click', handleToggle);
@@ -158,6 +165,9 @@ async function updateUI(): Promise<void> {
 
     // Update premium teaser visibility
     await updatePremiumTeaser();
+
+    // Update statistics display
+    await updateStatistics();
 
     // Update ARIA attributes
     toggleButton.setAttribute('aria-pressed', isCurrentWindowEnabled.toString());
@@ -737,6 +747,23 @@ async function updateCountdown(): Promise<void> {
     await logger.error('PopupIndex', 'Error updating countdown', {
       error: error instanceof Error ? error.message : String(error)
     });
+  }
+}
+
+/**
+ * Update statistics display in the popup
+ */
+async function updateStatistics(): Promise<void> {
+  try {
+    const summary = await getStatsSummary();
+    statSwitches.textContent = String(summary.totalSwitches);
+    statCycles.textContent = String(summary.totalCycles);
+    statDuration.textContent = summary.sessionDuration;
+  } catch (error) {
+    // Silently handle - stats are non-critical
+    statSwitches.textContent = '—';
+    statCycles.textContent = '—';
+    statDuration.textContent = '—';
   }
 }
 
