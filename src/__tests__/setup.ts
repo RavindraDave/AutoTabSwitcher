@@ -152,6 +152,28 @@ const downloadsMock = {
   erase: jest.fn(),
 };
 
+// Mock chrome.idle API
+const idleMock = {
+  setDetectionInterval: jest.fn(),
+  queryState: jest.fn(),
+  onStateChanged: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
+};
+
+// Mock chrome.contextMenus API
+const contextMenusMock = {
+  create: jest.fn(),
+  remove: jest.fn(),
+  removeAll: jest.fn(),
+  update: jest.fn(),
+  onClicked: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
+};
+
 // Create global chrome mock
 (global as any).chrome = {
   storage: storageMock,
@@ -162,6 +184,8 @@ const downloadsMock = {
   windows: windowsMock,
   commands: commandsMock,
   downloads: downloadsMock,
+  idle: idleMock,
+  contextMenus: contextMenusMock,
 };
 
 // Reset all mocks before each test

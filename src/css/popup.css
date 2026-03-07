@@ -356,6 +356,60 @@ body.window-mode .settings-button:hover {
   transform: scale(0.98);
 }
 
+/* Statistics Section */
+.stats-section {
+  background: #f7fafc;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+
+.stats-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 8px 4px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.stat-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #667eea;
+  line-height: 1.2;
+}
+
+body.window-mode .stat-value {
+  color: #20B2AA;
+}
+
+.stat-label {
+  display: block;
+  font-size: 10px;
+  color: #a0aec0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
 .hidden {
   display: none !important;
 }

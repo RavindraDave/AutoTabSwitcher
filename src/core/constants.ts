@@ -84,3 +84,25 @@ export const DEFAULT_REFRESH_INTERVAL = 60000; // 1 minute default
 // Backup settings
 export const MAX_AUTO_BACKUPS = 10; // Keep last 10 auto backups
 export const AUTO_BACKUP_INTERVAL = 86400000; // 24 hours
+
+// ===== NEW FEATURES CONSTANTS =====
+
+// Idle Auto-Start
+export const DEFAULT_IDLE_AUTO_START = false;
+export const DEFAULT_IDLE_THRESHOLD_SECONDS = 60; // 1 minute idle threshold
+export const MIN_IDLE_THRESHOLD_SECONDS = 15; // Chrome minimum for idle detection
+export const MAX_IDLE_THRESHOLD_SECONDS = 3600; // 1 hour maximum
+export const DEFAULT_IDLE_STOP_ON_ACTIVE = true;
+
+// Tab Statistics
+export const MAX_TAB_VISIT_ENTRIES = 200; // Maximum per-tab entries to store
+
+// Switch Notification
+export const DEFAULT_SWITCH_NOTIFICATION = false;
+export const NOTIFICATION_DISPLAY_MS = 2000; // How long to show notification
+
+// Context Menu
+export const DEFAULT_CONTEXT_MENU_ENABLED = true;
+export const CONTEXT_MENU_ID_EXCLUDE = 'ats-exclude-tab';
+export const CONTEXT_MENU_ID_TOGGLE = 'ats-toggle-cycling';
+export const CONTEXT_MENU_ID_PARENT = 'ats-parent';

@@ -2,7 +2,7 @@
  * Storage management helpers
  */
 
-import { StorageData, SwitchingMode, OperatingMode } from './types.js';
+import { StorageData, SwitchingMode, OperatingMode, TabStatistics } from './types.js';
 import {
   DEFAULT_ENABLED,
   DEFAULT_ENABLE_ON_STARTUP,
@@ -12,6 +12,11 @@ import {
   DEFAULT_PAUSE_ON_ACTIVITY,
   DEFAULT_PAUSE_DURATION,
   MIN_DELAY_MS_PRODUCTION,
+  DEFAULT_IDLE_AUTO_START,
+  DEFAULT_IDLE_THRESHOLD_SECONDS,
+  DEFAULT_IDLE_STOP_ON_ACTIVE,
+  DEFAULT_SWITCH_NOTIFICATION,
+  DEFAULT_CONTEXT_MENU_ENABLED,
 } from './constants.js';
 import { logger } from './logger.js';
 
@@ -134,6 +139,19 @@ export async function initializeStorage(defaultDelayTime: number): Promise<void>
     // DEV: Auto-enable premium features in development builds
     premiumEnabled: isDevelopmentBuild,
     licenseKey: isDevelopmentBuild ? 'DEV-AUTO-ENABLED' : null,
+    // New features defaults
+    idleAutoStart: DEFAULT_IDLE_AUTO_START,
+    idleThresholdSeconds: DEFAULT_IDLE_THRESHOLD_SECONDS,
+    idleStopOnActive: DEFAULT_IDLE_STOP_ON_ACTIVE,
+    switchNotification: DEFAULT_SWITCH_NOTIFICATION,
+    contextMenuEnabled: DEFAULT_CONTEXT_MENU_ENABLED,
+    tabStatistics: {
+      totalSwitches: 0,
+      totalCycles: 0,
+      sessionStartTime: Date.now(),
+      lastResetTime: Date.now(),
+      perTabVisits: {},
+    },
   });
 
   if (isDevelopmentBuild) {
@@ -507,4 +525,124 @@ export async function getLicenseKey(): Promise<string | null> {
 export async function setLicenseKey(key: string): Promise<void> {
   await chrome.storage.local.set({ licenseKey: key });
   logger.info('Premium', 'License key updated');
+}
+
+// ============================================================================
+// NEW FEATURES - STORAGE HELPERS
+// ============================================================================
+
+/**
+ * Get tab statistics
+ */
+export async function getTabStatistics(): Promise<TabStatistics> {
+  const data = await chrome.storage.local.get('tabStatistics') as StorageData;
+  return data.tabStatistics || {
+    totalSwitches: 0,
+    totalCycles: 0,
+    sessionStartTime: Date.now(),
+    lastResetTime: Date.now(),
+    perTabVisits: {},
+  };
+}
+
+/**
+ * Update tab statistics after a switch
+ */
+export async function updateTabStatistics(
+  tabId: number,
+  tabTitle: string,
+  totalTabsInWindow: number,
+  previousTabId?: number
+): Promise<void> {
+  const stats = await getTabStatistics();
+
+  stats.totalSwitches++;
+
+  // Update per-tab visits for the new tab
+  const now = Date.now();
+  if (!stats.perTabVisits[tabId]) {
+    stats.perTabVisits[tabId] = {
+      visitCount: 0,
+      totalViewTime: 0,
+      lastVisitTime: now,
+      tabTitle,
+    };
+  }
+  stats.perTabVisits[tabId].visitCount++;
+  stats.perTabVisits[tabId].lastVisitTime = now;
+  stats.perTabVisits[tabId].tabTitle = tabTitle;
+
+  // Update view time for the previous tab
+  if (previousTabId && stats.perTabVisits[previousTabId]) {
+    const lastVisit = stats.perTabVisits[previousTabId].lastVisitTime;
+    if (lastVisit > 0) {
+      stats.perTabVisits[previousTabId].totalViewTime += (now - lastVisit);
+    }
+  }
+
+  // Check if a full cycle completed (every N switches where N = tab count)
+  if (totalTabsInWindow > 0 && stats.totalSwitches % totalTabsInWindow === 0) {
+    stats.totalCycles++;
+  }
+
+  // Prune old entries if too many
+  const entries = Object.entries(stats.perTabVisits);
+  if (entries.length > 200) {
+    // Keep only the most recently visited tabs
+    const sorted = entries.sort(([, a], [, b]) => b.lastVisitTime - a.lastVisitTime);
+    stats.perTabVisits = Object.fromEntries(sorted.slice(0, 150));
+  }
+
+  await chrome.storage.local.set({ tabStatistics: stats });
+}
+
+/**
+ * Reset tab statistics
+ */
+export async function resetTabStatistics(): Promise<void> {
+  const now = Date.now();
+  await chrome.storage.local.set({
+    tabStatistics: {
+      totalSwitches: 0,
+      totalCycles: 0,
+      sessionStartTime: now,
+      lastResetTime: now,
+      perTabVisits: {},
+    },
+  });
+  logger.info('Statistics', 'Tab statistics reset');
+}
+
+/**
+ * Get idle auto-start settings
+ */
+export async function getIdleSettings(): Promise<{
+  idleAutoStart: boolean;
+  idleThresholdSeconds: number;
+  idleStopOnActive: boolean;
+}> {
+  const data = await chrome.storage.local.get([
+    'idleAutoStart', 'idleThresholdSeconds', 'idleStopOnActive'
+  ]) as StorageData;
+  return {
+    idleAutoStart: data.idleAutoStart ?? DEFAULT_IDLE_AUTO_START,
+    idleThresholdSeconds: data.idleThresholdSeconds ?? DEFAULT_IDLE_THRESHOLD_SECONDS,
+    idleStopOnActive: data.idleStopOnActive ?? DEFAULT_IDLE_STOP_ON_ACTIVE,
+  };
+}
+
+/**
+ * Get switch notification setting
+ */
+export async function getSwitchNotification(): Promise<boolean> {
+  const data = await chrome.storage.local.get('switchNotification') as StorageData;
+  return data.switchNotification ?? DEFAULT_SWITCH_NOTIFICATION;
+}
+
+/**
+ * Get context menu enabled setting
+ */
+export async function getContextMenuEnabled(): Promise<boolean> {
+  const data = await chrome.storage.local.get('contextMenuEnabled') as StorageData;
+  return data.contextMenuEnabled ?? DEFAULT_CONTEXT_MENU_ENABLED;
 }
