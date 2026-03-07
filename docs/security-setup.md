@@ -6,7 +6,7 @@ This guide explains how to set up and use the security tools in this project.
 
 We use multiple layers of security enforcement:
 
-1. **Claude.md** - Guidelines for AI-assisted development
+1. **CLAUDE.md** - Guidelines for AI-assisted development
 2. **SECURITY.md** - Public security policy and best practices
 3. **Pre-commit hooks** - Automated checks before commits
 4. **ESLint** - Static code analysis
@@ -282,7 +282,7 @@ If a vulnerability cannot be fixed:
 ### For Code Reviewers
 
 1. **Check security in PRs**
-   - Review Claude.md guidelines were followed
+   - Review CLAUDE.md guidelines were followed
    - Look for patterns mentioned in SECURITY.md
    - Verify pre-commit checks passed
 
@@ -356,7 +356,7 @@ Before submitting new code, verify:
 
 ## Learning Resources
 
-- [Claude.md](Claude.md) - Project-specific security guidelines
+- [CLAUDE.md](CLAUDE.md) - Project-specific security guidelines
 - [SECURITY.md](SECURITY.md) - Public security policy
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [Chrome Extension Security](https://developer.chrome.com/docs/extensions/mv3/security/)
@@ -365,7 +365,7 @@ Before submitting new code, verify:
 ## Questions?
 
 If you have questions about security:
-- Check [Claude.md](Claude.md) for AI development guidelines
+- Check [CLAUDE.md](CLAUDE.md) for AI development guidelines
 - Check [SECURITY.md](SECURITY.md) for general policy
 - Ask in pull request reviews
 - Contact the security team
@@ -373,7 +373,7 @@ If you have questions about security:
 ## Summary
 
 Security is enforced through:
-1. ✅ Documentation (Claude.md, SECURITY.md)
+1. ✅ Documentation (CLAUDE.md, SECURITY.md)
 2. ✅ Automated checks (pre-commit hooks)
 3. ✅ Static analysis (ESLint, TypeScript)
 4. ✅ Testing (Jest)
