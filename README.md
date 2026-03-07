@@ -441,7 +441,7 @@ Key security features:
 - ✅ CSP-compliant (no inline scripts)
 - ✅ XSS protection via proper DOM manipulation
 
-See `docs/SECURITY_REVIEW.md` for complete analysis.
+See `SECURITY.md` for security policy and `docs/security-setup.md` for enforcement details.
 
 ### Permissions Explained
 
@@ -615,12 +615,10 @@ This error occurs when trying to load the unpacked extension before building it.
 
 Comprehensive documentation available:
 
-- **`claude.md`**: Complete development timeline
-- **`REFACTORING.md`**: Architecture and refactoring guide
-- **`SECURITY_REVIEW.md`**: Security analysis and recommendations
-- **`TYPESCRIPT_CONFIG.md`**: TypeScript configuration explained
+- **`CLAUDE.md`**: Claude Code development guidance
 - **`CONTRIBUTING.md`**: Contribution guidelines
-- **`TEST_SUMMARY.md`**: Testing documentation
+- **`SECURITY.md`**: Security policy
+- **`docs/`**: Implementation details, bug fixes, testing, and technical debt docs
 
 ## 🧪 Testing
 
@@ -773,11 +771,7 @@ MIT License - see LICENSE file for details
 - 💡 Better visibility into extension behavior
 
 #### Documentation
-- 📚 Complete development timeline (claude.md)
-- 📚 Refactoring guide (REFACTORING.md)
-- 📚 Security review (SECURITY_REVIEW.md)
-- 📚 TypeScript configuration guide
-- 📚 Comprehensive README update
+- 📚 Comprehensive project documentation in `docs/`
 - 📚 **Diagnostic logging documentation**
 - 📚 **Troubleshooting guide with diagnostics**
 
