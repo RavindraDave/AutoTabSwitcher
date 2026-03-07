@@ -38,11 +38,27 @@ const ALLOWED_PROTOCOLS = ['http:', 'https:', 'file:', 'ftp:'];
  * @param url - URL to validate
  * @returns true if URL is safe to restore, false otherwise
  */
-function isValidUrl(url: string): boolean {
-  if (!url) return false;
+function isValidUrl(url: string | undefined): boolean {
+  if (!url || typeof url !== 'string' || url.trim().length === 0) {
+    return false;
+  }
 
   // Block chrome:// and extension URLs (can't be restored)
-  if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) {
+  // Also block edge://, about:, moz-extension:// for other browsers
+  const blockedPrefixes = [
+    'chrome://',
+    'chrome-extension://',
+    'edge://',
+    'about:',
+    'moz-extension://',
+    'browser-extension://',
+    'javascript:',
+    'data:',
+    'vbscript:'
+  ];
+
+  const urlLower = url.toLowerCase();
+  if (blockedPrefixes.some(prefix => urlLower.startsWith(prefix))) {
     return false;
   }
 
@@ -167,8 +183,9 @@ export class SessionManager {
       if (!tab) continue; // Skip if undefined
 
       // Skip tabs with invalid URLs (security: only allow http/https/file/ftp)
-      if (!tab.url || !isValidUrl(tab.url)) {
-        logger.debug('SessionManager', 'Skipping invalid/unsafe tab URL', {
+      // This filters out extension pages, chrome:// URLs, and other non-restorable tabs
+      if (!isValidUrl(tab.url) || !tab.url) {
+        logger.debug('SessionManager', 'Skipping non-restorable tab (extension page, chrome:// URL, or invalid URL)', {
           url: tab.url,
           title: tab.title
         });
