@@ -4,8 +4,10 @@ import { Input } from '../../components/common/Input';
 import { Toggle } from '../../components/common/Toggle';
 import { Button } from '../../components/common/Button';
 import { Icon } from '../../components/common/Icon';
+import { Modal } from '../../components/common/Modal';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
+import { MIN_DELAY_SECONDS, MAX_DELAY_SECONDS } from '../../../core/constants';
 import styles from './BasicSettings.module.css';
 
 function BasicSettings() {
@@ -16,6 +18,8 @@ function BasicSettings() {
   const [delaySeconds, setDelaySeconds] = useState(getDelayInSeconds());
   const [delayError, setDelayError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [pendingDelayValue, setPendingDelayValue] = useState<number | null>(null);
 
   // Sync local state when settings load
   useEffect(() => {
@@ -27,8 +31,8 @@ function BasicSettings() {
 
   const validateDelay = (value: number): string | null => {
     if (isNaN(value)) return 'Please enter a valid number';
-    if (value < 5) return 'Minimum delay is 5 seconds';
-    if (value > 3600) return 'Maximum delay is 3600 seconds (1 hour)';
+    if (value < MIN_DELAY_SECONDS) return `Minimum delay is ${MIN_DELAY_SECONDS} seconds`;
+    if (value > MAX_DELAY_SECONDS) return `Maximum delay is ${MAX_DELAY_SECONDS} seconds (1 hour)`;
     return null;
   };
 
@@ -45,15 +49,39 @@ function BasicSettings() {
       return;
     }
 
+    // Show warning for very low delay times (under 5 seconds)
+    if (delaySeconds < 5) {
+      setPendingDelayValue(delaySeconds);
+      setShowWarningModal(true);
+      return;
+    }
+
+    await performSaveDelay(delaySeconds);
+  };
+
+  const performSaveDelay = async (value: number) => {
     setIsSaving(true);
     try {
-      await setDelayInSeconds(delaySeconds);
+      await setDelayInSeconds(value);
       showToast('Delay time saved', 'success');
     } catch {
       showToast('Failed to save delay time', 'error');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleWarningConfirm = async () => {
+    setShowWarningModal(false);
+    if (pendingDelayValue !== null) {
+      await performSaveDelay(pendingDelayValue);
+      setPendingDelayValue(null);
+    }
+  };
+
+  const handleWarningCancel = () => {
+    setShowWarningModal(false);
+    setPendingDelayValue(null);
   };
 
   const handleResetDelay = () => {
@@ -96,8 +124,8 @@ function BasicSettings() {
               onChange={handleDelayChange}
               suffix="seconds"
               error={delayError || undefined}
-              min={5}
-              max={3600}
+              min={MIN_DELAY_SECONDS}
+              max={MAX_DELAY_SECONDS}
               aria-label="Delay time in seconds"
             />
           </div>
@@ -124,9 +152,40 @@ function BasicSettings() {
           )}
         </div>
         <p className={styles.hint}>
-          Valid range: 5 to 3600 seconds (1 hour)
+          Valid range: {MIN_DELAY_SECONDS} to {MAX_DELAY_SECONDS} seconds (1 hour). Values under 5 seconds will show a warning.
         </p>
       </Card>
+
+      {/* Warning modal for very low delay times */}
+      <Modal
+        isOpen={showWarningModal}
+        onClose={handleWarningCancel}
+        title={`Very Low Delay Time (${pendingDelayValue} seconds)`}
+        size="sm"
+      >
+        <div className={styles.warningContent}>
+          <p className={styles.warningMessage}>
+            <strong>This setting may cause issues:</strong>
+          </p>
+          <ul className={styles.warningList}>
+            <li>May be difficult to stop once started (tabs switch before you can click stop)</li>
+            <li>Can cause browser performance issues with rapid switching</li>
+            <li>May interfere with normal browsing activities</li>
+            <li>Not recommended for general use - primarily for specific use cases like slideshows</li>
+          </ul>
+          <p className={styles.warningQuestion}>
+            Are you absolutely sure you want to continue?
+          </p>
+          <div className={styles.warningActions}>
+            <Button variant="ghost" onClick={handleWarningCancel}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleWarningConfirm}>
+              Yes, I understand the risks
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Card
         title="Startup Behavior"

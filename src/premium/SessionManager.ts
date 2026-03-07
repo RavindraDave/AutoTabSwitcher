@@ -192,8 +192,10 @@ export class SessionManager {
         continue;
       }
 
+      // tab.url is guaranteed to be a string after the check above
+      const tabUrl = tab.url;
       savedTabs.push({
-        url: tab.url,
+        url: tabUrl,
         title: saveOptions.includeTitles !== false ? tab.title : undefined,
         favIconUrl: saveOptions.includeFavicons !== false ? tab.favIconUrl : undefined,
         pinned: saveOptions.includePinnedState !== false ? tab.pinned : undefined,
@@ -594,24 +596,26 @@ export class SessionManager {
    * Launch all auto-launch sessions
    * Called on extension startup
    */
-  async launchAutoStartSessions(): Promise<void> {
+  async launchAutoStartSessions(): Promise<number> {
     await requirePremiumLicense();
 
     const sessions = await this.getAutoLaunchSessions();
 
     if (sessions.length === 0) {
       logger.info('SessionManager', 'No auto-launch sessions configured');
-      return;
+      return 0;
     }
 
     logger.info('SessionManager', 'Launching auto-start sessions', {
       count: sessions.length
     });
 
+    let launchedCount = 0;
     for (const session of sessions) {
       try {
         const mode = session.launchMode || 'new-window';
         await this.restoreSession(session.id, mode);
+        launchedCount++;
 
         // Small delay between launches to avoid overwhelming the browser
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -622,6 +626,8 @@ export class SessionManager {
         });
       }
     }
+
+    return launchedCount;
   }
 
   /**

@@ -25,7 +25,7 @@ rl.question('Enter your choice (1, 2, or 3): ', (answer) => {
       case '1':
         console.log('\n📦 Building FREE version...');
         console.log('Premium features will be excluded from the build.\n');
-        execSync('BUILD_PREMIUM=false BUILD_TYPE=production-free node scripts/generate-build-config.js && npm run build:compile && npm run build:minify', {
+        execSync('BUILD_PREMIUM=false BUILD_TYPE=production-free node scripts/generate-build-config.js && npm run _internal:compile && npm run _internal:minify', {
           stdio: 'inherit',
           env: { ...process.env, BUILD_PREMIUM: 'false', BUILD_TYPE: 'production-free' }
         });
@@ -37,7 +37,7 @@ rl.question('Enter your choice (1, 2, or 3): ', (answer) => {
       case '2':
         console.log('\n📦 Building PREMIUM version...');
         console.log('All premium features will be included.\n');
-        execSync('BUILD_PREMIUM=true BUILD_TYPE=production-premium node scripts/generate-build-config.js && npm run build:compile && npm run build:minify', {
+        execSync('BUILD_PREMIUM=true BUILD_TYPE=production-premium node scripts/generate-build-config.js && npm run _internal:compile && npm run _internal:minify', {
           stdio: 'inherit',
           env: { ...process.env, BUILD_PREMIUM: 'true', BUILD_TYPE: 'production-premium' }
         });
@@ -49,7 +49,7 @@ rl.question('Enter your choice (1, 2, or 3): ', (answer) => {
       case '3':
         console.log('\n📦 Building DEVELOPMENT version...');
         console.log('Premium features enabled, no minification.\n');
-        execSync('BUILD_PREMIUM=true BUILD_TYPE=development node scripts/generate-build-config.js && npm run build:compile', {
+        execSync('BUILD_PREMIUM=true BUILD_TYPE=development node scripts/generate-build-config.js && npm run _internal:compile', {
           stdio: 'inherit',
           env: { ...process.env, BUILD_PREMIUM: 'true', BUILD_TYPE: 'development' }
         });
