@@ -169,7 +169,7 @@ export async function exportLogsAsText(): Promise<string> {
   output += `=====================================\n\n`;
   output += `Extension Version: ${manifest.version}\n`;
   output += `Export Date: ${new Date().toISOString()}\n`;
-  output += `Browser: ${navigator.userAgent}\n`;
+  output += `Browser: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown'}\n`;
   output += `Total Entries: ${logs.length}\n\n`;
   output += `=====================================\n\n`;
 
@@ -197,7 +197,7 @@ export async function exportLogsAsJSON(): Promise<string> {
     metadata: {
       extensionVersion: manifest.version,
       exportDate: new Date().toISOString(),
-      browser: navigator.userAgent,
+      browser: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
       totalEntries: logs.length,
     },
     logs,

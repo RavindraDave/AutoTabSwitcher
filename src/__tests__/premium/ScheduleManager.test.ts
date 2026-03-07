@@ -61,6 +61,8 @@ describe('ScheduleManager', () => {
     jest.restoreAllMocks();
     // Use fake timers for consistent Date.now() behavior
     jest.useFakeTimers();
+    // Reset lastCheck so the 30-second cooldown doesn't block tests
+    (scheduleManager as any).lastCheck = 0;
   });
 
   afterEach(() => {

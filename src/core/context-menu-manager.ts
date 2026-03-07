@@ -206,7 +206,7 @@ async function handleExcludeTab(tab?: chrome.tabs.Tab): Promise<void> {
 
   // Get existing skip rules
   const data = await chrome.storage.local.get('skipRules');
-  const skipRules = data.skipRules || [];
+  const skipRules = data['skipRules'] || [];
 
   // Check if this URL is already excluded
   const alreadyExcluded = skipRules.some(

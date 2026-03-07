@@ -28,8 +28,8 @@ let notificationTimeout: number | undefined;
  * @param windowId - Window where the switch occurred
  */
 export async function notifyTabSwitch(
-  fromTabTitle: string,
-  toTabTitle: string,
+  _fromTabTitle: string,
+  _toTabTitle: string,
   windowId?: number
 ): Promise<void> {
   try {

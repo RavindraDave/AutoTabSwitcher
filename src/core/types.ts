@@ -545,6 +545,7 @@ export interface ScheduledAction {
     | 'set-interval'     // Change rotation interval
     | 'set-pattern'      // Change rotation pattern
     | 'set-group'        // Activate a tab group
+    | 'deactivate-group' // Deactivate current tab group
     | 'set-mode'         // Change switching mode (global/window)
     | 'launch-session'   // Launch a saved session
     | 'enable-refresh'   // Enable auto-refresh

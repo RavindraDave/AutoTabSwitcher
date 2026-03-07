@@ -10,7 +10,7 @@
  * Useful for understanding which dashboards/tabs get the most viewing time.
  */
 
-import { TabStatistics, TabVisitInfo } from './types.js';
+import { TabVisitInfo } from './types.js';
 import { getTabStatistics, updateTabStatistics, resetTabStatistics } from './storage.js';
 import { logger } from './logger.js';
 

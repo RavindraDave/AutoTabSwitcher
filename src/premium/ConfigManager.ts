@@ -555,7 +555,7 @@ export class ConfigManager {
    * Get browser name
    */
   private getBrowserName(): string {
-    const userAgent = navigator.userAgent;
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown';
 
     if (userAgent.includes('Edg/')) return 'Microsoft Edge';
     if (userAgent.includes('Chrome/')) return 'Google Chrome';

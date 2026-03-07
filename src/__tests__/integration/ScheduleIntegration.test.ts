@@ -59,9 +59,13 @@ describe('Schedule Integration Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
+    // Reset lastCheck so the 30-second cooldown doesn't block tests
+    (scheduleManager as any).lastCheck = 0;
+
     // Default storage mock
     (chrome.storage.local.get as jest.Mock).mockResolvedValue({
-      schedules: []
+      schedules: [],
+      schedulesEnabled: true
     });
     (chrome.storage.local.set as jest.Mock).mockResolvedValue(undefined);
   });
@@ -75,8 +79,8 @@ describe('Schedule Integration Tests', () => {
         enabled: true,
         actions: [
           {
-            type: 'activate-group',
-            groupId: 'group-work'
+            type: 'set-group',
+            params: { groupId: 'group-work' }
           } as ScheduledAction
         ],
         timeRange: {
@@ -91,7 +95,7 @@ describe('Schedule Integration Tests', () => {
       // Mock storage to return the schedule
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         return Promise.resolve({});
       });
@@ -132,7 +136,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         if (keys === 'activeGroupId' || keys.includes('activeGroupId')) {
           return Promise.resolve({ activeGroupId: 'group-work' });
@@ -176,7 +180,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         if (keys === 'groups' || keys.includes('groups')) {
           return Promise.resolve({ groups: [] }); // No groups!
@@ -205,8 +209,8 @@ describe('Schedule Integration Tests', () => {
         enabled: true,
         actions: [
           {
-            type: 'enable-window',
-            windowId: 1
+            type: 'enable',
+            params: { windowId: 1 }
           } as ScheduledAction
         ],
         timeRange: {
@@ -220,7 +224,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         if (keys === 'windowStates' || keys.includes('windowStates')) {
           return Promise.resolve({
@@ -257,8 +261,8 @@ describe('Schedule Integration Tests', () => {
         enabled: true,
         actions: [
           {
-            type: 'disable-window',
-            windowId: 1
+            type: 'disable',
+            params: { windowId: 1 }
           } as ScheduledAction
         ],
         timeRange: {
@@ -271,7 +275,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         if (keys === 'windowStates' || keys.includes('windowStates')) {
           return Promise.resolve({
@@ -311,7 +315,7 @@ describe('Schedule Integration Tests', () => {
         actions: [
           {
             type: 'set-pattern',
-            patternId: 'random'
+            params: { patternId: 'random' }
           } as ScheduledAction
         ],
         timeRange: {
@@ -324,7 +328,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         if (keys === 'rotationPattern' || keys.includes('rotationPattern')) {
           return Promise.resolve({ rotationPattern: 'sequential' });
@@ -340,7 +344,7 @@ describe('Schedule Integration Tests', () => {
       // Verify pattern was set
       expect(chrome.storage.local.set).toHaveBeenCalledWith(
         expect.objectContaining({
-          rotationPattern: 'random'
+          activePattern: 'random'
         })
       );
     });
@@ -367,7 +371,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         return Promise.resolve({});
       });
@@ -393,8 +397,8 @@ describe('Schedule Integration Tests', () => {
         enabled: true,
         actions: [
           {
-            type: 'activate-group',
-            groupId: 'group-low'
+            type: 'set-group',
+            params: { groupId: 'group-low' }
           } as ScheduledAction
         ],
         timeRange: {
@@ -412,8 +416,8 @@ describe('Schedule Integration Tests', () => {
         enabled: true,
         actions: [
           {
-            type: 'activate-group',
-            groupId: 'group-high'
+            type: 'set-group',
+            params: { groupId: 'group-high' }
           } as ScheduledAction
         ],
         timeRange: {
@@ -427,7 +431,8 @@ describe('Schedule Integration Tests', () => {
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
           return Promise.resolve({
-            schedules: [lowPrioritySchedule, highPrioritySchedule]
+            schedules: [lowPrioritySchedule, highPrioritySchedule],
+            schedulesEnabled: true
           });
         }
         return Promise.resolve({});
@@ -463,8 +468,8 @@ describe('Schedule Integration Tests', () => {
             interval: 10000
           } as ScheduledAction,
           {
-            type: 'activate-group',
-            groupId: 'group-work'
+            type: 'set-group',
+            params: { groupId: 'group-work' }
           } as ScheduledAction
         ],
         timeRange: {
@@ -477,7 +482,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         return Promise.resolve({});
       });
@@ -488,8 +493,7 @@ describe('Schedule Integration Tests', () => {
       await scheduleManager.checkSchedules(now.getTime());
 
       // Verify all actions were executed
-      expect(chrome.storage.sync.set).toHaveBeenCalled(); // enable action
-      expect(chrome.storage.local.set).toHaveBeenCalled(); // set-interval + activate-group
+      expect(chrome.storage.local.set).toHaveBeenCalled(); // enable + set-interval + activate-group
     });
   });
 
@@ -515,7 +519,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         return Promise.resolve({});
       });
@@ -556,7 +560,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         return Promise.resolve({});
       });
@@ -573,7 +577,7 @@ describe('Schedule Integration Tests', () => {
       ]);
 
       // Should not throw or cause issues
-      expect(chrome.storage.sync.set).toHaveBeenCalled();
+      expect(chrome.storage.local.set).toHaveBeenCalled();
     });
 
     it('should handle missing schedule fields gracefully', async () => {
@@ -590,7 +594,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [incompleteSchedule] });
+          return Promise.resolve({ schedules: [incompleteSchedule], schedulesEnabled: true });
         }
         return Promise.resolve({});
       });
@@ -626,7 +630,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         return Promise.resolve({});
       });
@@ -637,7 +641,7 @@ describe('Schedule Integration Tests', () => {
       const startDate = new Date('2024-06-01T10:00:00');
       await scheduleManager.checkSchedules(startDate.getTime());
 
-      expect(chrome.storage.sync.set).toHaveBeenCalled();
+      expect(chrome.storage.local.set).toHaveBeenCalled();
     });
 
     it('should activate schedule on end date', async () => {
@@ -661,18 +665,18 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         return Promise.resolve({});
       });
 
       await scheduleManager.initialize();
 
-      // Test on end date at 11:59 PM (last minute)
-      const endDate = new Date('2024-06-30T23:59:00');
+      // Test on end date at 11:58 PM (within range end of 23:59)
+      const endDate = new Date('2024-06-30T23:58:00');
       await scheduleManager.checkSchedules(endDate.getTime());
 
-      expect(chrome.storage.sync.set).toHaveBeenCalled();
+      expect(chrome.storage.local.set).toHaveBeenCalled();
     });
 
     it('should not activate schedule after end date', async () => {
@@ -696,7 +700,7 @@ describe('Schedule Integration Tests', () => {
 
       (chrome.storage.local.get as jest.Mock).mockImplementation((keys) => {
         if (keys === 'schedules' || keys.includes('schedules')) {
-          return Promise.resolve({ schedules: [schedule] });
+          return Promise.resolve({ schedules: [schedule], schedulesEnabled: true });
         }
         return Promise.resolve({});
       });

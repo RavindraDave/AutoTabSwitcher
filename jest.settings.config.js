@@ -11,6 +11,7 @@ module.exports = {
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   moduleNameMapper: {
+    '.*build-config(\\.js)?$': '<rootDir>/src/__tests__/settings/__mocks__/buildConfig.js',
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '\\.module\\.css$': 'identity-obj-proxy',
     '\\.css$': '<rootDir>/src/__tests__/settings/__mocks__/styleMock.js',
