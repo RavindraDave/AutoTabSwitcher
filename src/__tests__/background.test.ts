@@ -45,6 +45,7 @@ jest.mock('../core/logger.js', () => ({
     info: jest.fn().mockResolvedValue(undefined),
     warn: jest.fn().mockResolvedValue(undefined),
     error: jest.fn().mockResolvedValue(undefined),
+    debug: jest.fn().mockResolvedValue(undefined),
   },
   logModeChange: jest.fn().mockResolvedValue(undefined),
   logWindowToggle: jest.fn().mockResolvedValue(undefined),
@@ -65,6 +66,17 @@ jest.mock('../core/premium-access.js', () => ({
 
 jest.mock('../core/build-config.js', () => ({
   PREMIUM_FEATURES_AVAILABLE: false,
+}));
+
+jest.mock('../core/idle-auto-start.js', () => ({
+  initializeIdleAutoStart: jest.fn().mockResolvedValue(undefined),
+  reconfigureIdleDetection: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('../core/context-menu-manager.js', () => ({
+  initializeContextMenus: jest.fn().mockResolvedValue(undefined),
+  handleContextMenuClick: jest.fn().mockResolvedValue(undefined),
+  reconfigureContextMenus: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock Chrome APIs

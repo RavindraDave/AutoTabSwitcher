@@ -98,9 +98,9 @@ class ScheduleManager {
   /**
    * Check all schedules and execute active ones
    */
-  async checkSchedules(): Promise<void> {
+  async checkSchedules(nowOverride?: number): Promise<void> {
     try {
-      const now = Date.now();
+      const now = nowOverride ?? Date.now();
 
       // Prevent checking too frequently (at least 30 seconds apart)
       if (now - this.lastCheck < 30000) {
@@ -292,6 +292,11 @@ class ScheduleManager {
 
         case 'set-group':
           await this.executeSetGroupAction(action);
+          break;
+
+        case 'deactivate-group':
+          await chrome.storage.local.set({ activeGroupId: null });
+          await logger.info('ScheduleManager', 'Deactivated group');
           break;
 
         case 'set-mode':

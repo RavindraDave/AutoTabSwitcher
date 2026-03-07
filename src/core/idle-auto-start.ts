@@ -11,7 +11,7 @@
 import { logger } from './logger.js';
 import { getIdleSettings, getSettings, getSwitchingMode } from './storage.js';
 import { IdleState } from './types.js';
-import { DEFAULT_IDLE_THRESHOLD_SECONDS, MIN_IDLE_THRESHOLD_SECONDS, MAX_IDLE_THRESHOLD_SECONDS } from './constants.js';
+import { MIN_IDLE_THRESHOLD_SECONDS, MAX_IDLE_THRESHOLD_SECONDS } from './constants.js';
 
 /**
  * Track whether idle auto-start triggered the current cycling session.

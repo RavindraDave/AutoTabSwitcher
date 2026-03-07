@@ -9,6 +9,7 @@ module.exports = {
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   moduleNameMapper: {
+    '.*build-config(\\.js)?$': '<rootDir>/src/__tests__/__mocks__/buildConfig.js',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   collectCoverageFrom: [

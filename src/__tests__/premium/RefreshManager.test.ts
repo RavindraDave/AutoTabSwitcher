@@ -197,7 +197,7 @@ describe('RefreshManager', () => {
       ).rejects.toThrow('Global refresh interval must be between');
 
       await expect(
-        refreshManager.updateSettings({ globalRefreshInterval: 10000000 })
+        refreshManager.updateSettings({ globalRefreshInterval: 100000000 })
       ).rejects.toThrow('Global refresh interval must be between');
     });
 
@@ -776,7 +776,7 @@ describe('RefreshManager', () => {
       ).rejects.toThrow('Refresh interval must be between');
 
       await expect(
-        refreshManager.setTabRefreshInterval(1, 10000000)
+        refreshManager.setTabRefreshInterval(1, 100000000)
       ).rejects.toThrow('Refresh interval must be between');
     });
 

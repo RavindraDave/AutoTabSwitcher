@@ -138,16 +138,16 @@ describe('Onboarding', () => {
       expect(mockPrevButton.disabled).toBe(true);
 
       // Navigate to last step
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 3; i++) {
         mockNextButton.click();
       }
-      expect(mockSteps[4].classList.contains('active')).toBe(true);
+      expect(mockSteps[3].classList.contains('active')).toBe(true);
       expect(mockNextButton.style.display).toBe('none');
       expect(mockFinishButton.style.display).toBe('block');
 
       // Navigate back from last step
       mockPrevButton.click();
-      expect(mockSteps[3].classList.contains('active')).toBe(true);
+      expect(mockSteps[2].classList.contains('active')).toBe(true);
       expect(mockNextButton.style.display).toBe('block');
       expect(mockFinishButton.style.display).toBe('none');
     });
