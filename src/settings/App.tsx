@@ -10,6 +10,8 @@ const ActivitySettings = React.lazy(() => import('./sections/general/ActivitySet
 const ShortcutSettings = React.lazy(() => import('./sections/general/ShortcutSettings'));
 const IdleAutoStart = React.lazy(() => import('./sections/general/IdleAutoStart'));
 const NotificationSettings = React.lazy(() => import('./sections/general/NotificationSettings'));
+const PerTabDelays = React.lazy(() => import('./sections/general/PerTabDelays'));
+const KioskSettings = React.lazy(() => import('./sections/general/KioskSettings'));
 const StatisticsSettings = React.lazy(() => import('./sections/general/StatisticsSettings'));
 const SessionManagement = React.lazy(() => import('./sections/premium/SessionManagement'));
 const RefreshSettings = React.lazy(() => import('./sections/premium/RefreshSettings'));
@@ -37,6 +39,10 @@ function App() {
           <Route path="/idle" element={<IdleAutoStart />} />
           <Route path="/notifications" element={<NotificationSettings />} />
           <Route path="/statistics" element={<StatisticsSettings />} />
+          <Route path="/general/per-tab-delays" element={<PerTabDelays />} />
+          <Route path="/per-tab-delays" element={<PerTabDelays />} />
+          <Route path="/kiosk" element={<KioskSettings />} />
+          <Route path="/general/kiosk" element={<KioskSettings />} />
 
           {/* Premium Settings */}
           <Route path="/premium/activate" element={<PremiumActivation />} />

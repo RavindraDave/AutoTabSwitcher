@@ -10,12 +10,18 @@
  */
 
 import { logger } from './logger.js';
-import { getSettings, getSwitchingMode, getContextMenuEnabled } from './storage.js';
+import {
+  getSettings,
+  getSwitchingMode,
+  getContextMenuEnabled,
+} from './storage.js';
 import {
   CONTEXT_MENU_ID_PARENT,
   CONTEXT_MENU_ID_EXCLUDE,
   CONTEXT_MENU_ID_TOGGLE,
+  CONTEXT_MENU_ID_SET_TAB_DELAY,
 } from './constants.js';
+import { isUrlEligibleForPerTabDelay } from './url-normalizer.js';
 
 const CONTEXT_MENU_ID_TOGGLE_WINDOW = 'ats-toggle-window';
 
@@ -74,6 +80,14 @@ async function createContextMenus(): Promise<void> {
       contexts: ['page'],
     });
 
+    // Set custom display time for current tab (Phase 1.1)
+    chrome.contextMenus.create({
+      id: CONTEXT_MENU_ID_SET_TAB_DELAY,
+      parentId: CONTEXT_MENU_ID_PARENT,
+      title: 'Set Custom Rotation Time for This Tab…',
+      contexts: ['page'],
+    });
+
     await logger.info('ContextMenu', 'Context menu items created');
   } catch (error) {
     await logger.error('ContextMenu', 'Failed to create context menus', {
@@ -113,6 +127,10 @@ export async function handleContextMenuClick(
 
       case CONTEXT_MENU_ID_EXCLUDE:
         await handleExcludeTab(tab);
+        break;
+
+      case CONTEXT_MENU_ID_SET_TAB_DELAY:
+        await handleSetTabDelay(tab);
         break;
 
       default:
@@ -237,6 +255,49 @@ async function handleExcludeTab(tab?: chrome.tabs.Tab): Promise<void> {
     tabId: tab.id,
     ruleId: newRule.id,
   });
+}
+
+/**
+ * Open the per-tab delay editor for the current tab (Phase 1.1).
+ *
+ * Service workers cannot show prompt() dialogs, so we open the React settings
+ * page on the Per-Tab Delays section with the tab URL/title pre-filled via
+ * URL hash parameters. The settings section reads them on mount.
+ */
+async function handleSetTabDelay(tab?: chrome.tabs.Tab): Promise<void> {
+  if (!tab?.url) {
+    await logger.warn('ContextMenu', 'No tab URL available for setting delay');
+    return;
+  }
+
+  if (!isUrlEligibleForPerTabDelay(tab.url)) {
+    await logger.warn('ContextMenu', 'Tab URL is not eligible for a per-tab delay', {
+      url: tab.url,
+    });
+    return;
+  }
+
+  try {
+    // Hash params survive Chrome extension settings page navigation and
+    // are not sent to any server. The settings page parses them on mount.
+    const params = new URLSearchParams();
+    params.set('addTab', tab.url);
+    if (tab.title) {
+      params.set('label', tab.title);
+    }
+    const settingsUrl = chrome.runtime.getURL(
+      `settings/index.html#/general/per-tab-delays?${params.toString()}`
+    );
+    await chrome.tabs.create({ url: settingsUrl });
+
+    await logger.info('ContextMenu', 'Opened per-tab delay editor', {
+      tabId: tab.id,
+    });
+  } catch (error) {
+    await logger.error('ContextMenu', 'Failed to open per-tab delay editor', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 /**

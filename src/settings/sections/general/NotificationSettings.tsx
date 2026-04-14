@@ -5,21 +5,25 @@ import { Icon } from '../../components/common/Icon';
 import { useToast } from '../../context/ToastContext';
 import styles from './NotificationSettings.module.css';
 
+type AudioManagementMode = 'off' | 'mute-inactive';
+
 function NotificationSettings() {
   const { showToast } = useToast();
 
   const [isLoading, setIsLoading] = useState(true);
   const [switchNotification, setSwitchNotification] = useState(false);
   const [contextMenuEnabled, setContextMenuEnabled] = useState(true);
+  const [audioManagement, setAudioManagement] = useState<AudioManagementMode>('off');
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const result = await chrome.storage.local.get([
-          'switchNotification', 'contextMenuEnabled'
+          'switchNotification', 'contextMenuEnabled', 'audioManagement'
         ]);
         setSwitchNotification(result.switchNotification ?? false);
         setContextMenuEnabled(result.contextMenuEnabled ?? true);
+        setAudioManagement((result.audioManagement as AudioManagementMode) ?? 'off');
       } catch (error) {
         console.error('Failed to load notification settings:', error);
       } finally {
@@ -56,6 +60,30 @@ function NotificationSettings() {
       );
     } catch {
       showToast('Failed to update setting', 'error');
+    }
+  };
+
+  const handleAudioToggle = async (checked: boolean) => {
+    try {
+      const mode: AudioManagementMode = checked ? 'mute-inactive' : 'off';
+      await chrome.storage.local.set({ audioManagement: mode });
+      setAudioManagement(mode);
+      // When turning off, ask the background to restore original mute states.
+      if (!checked) {
+        try {
+          await chrome.runtime.sendMessage({ type: 'audio-management-disabled' });
+        } catch {
+          // Background may not respond if no listener is registered yet — non-fatal
+        }
+      }
+      showToast(
+        checked
+          ? 'Audio management enabled — only the active rotating tab will play sound'
+          : 'Audio management disabled — original tab mute states restored',
+        'success'
+      );
+    } catch {
+      showToast('Failed to update audio setting', 'error');
     }
   };
 
@@ -100,7 +128,20 @@ function NotificationSettings() {
           checked={contextMenuEnabled}
           onChange={handleContextMenuToggle}
           label="Enable context menu"
-          description="Adds 'Auto Tab Switcher' to the right-click menu with quick actions: pause/resume, toggle window, and exclude tab"
+          description="Adds 'Auto Tab Switcher' to the right-click menu with quick actions: pause/resume, toggle window, exclude tab, and set per-tab display time"
+        />
+      </Card>
+
+      <Card
+        title="Smart Audio Management"
+        description="Mute every tab except the one currently rotating"
+        icon={<Icon name="info" size={20} />}
+      >
+        <Toggle
+          checked={audioManagement === 'mute-inactive'}
+          onChange={handleAudioToggle}
+          label="Mute inactive tabs"
+          description="Useful for video walls and dashboards: only the active rotating tab plays audio. Original mute states are restored when disabled."
         />
       </Card>
     </div>

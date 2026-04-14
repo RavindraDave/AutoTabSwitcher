@@ -91,6 +91,40 @@ export class WindowTimerManager {
   }
 
   /**
+   * Reschedule a window's timer with a new delay (Phase 1.1: per-tab delays).
+   *
+   * Equivalent to calling stopTimer + startTimer, but only if the window
+   * already has an active timer (otherwise no-op).
+   *
+   * @param windowId - The window ID
+   * @param newDelayMs - The new delay in milliseconds
+   * @returns true if rescheduled, false if no active timer
+   */
+  async rescheduleTimer(windowId: number, newDelayMs: number): Promise<boolean> {
+    if (!this.windowTimers.has(windowId)) {
+      return false;
+    }
+
+    const alarmName = this.getAlarmName(windowId);
+    await chrome.alarms.clear(alarmName);
+
+    // Recreate the alarm with the new period
+    await chrome.alarms.create(alarmName, {
+      delayInMinutes: newDelayMs / (1000 * 60),
+      periodInMinutes: newDelayMs / (1000 * 60),
+    });
+
+    // Update tracked start time so getTimeUntilNextSwitch reflects the new cadence
+    this.windowTimers.set(windowId, Date.now());
+
+    await logger.info('WindowTimerManager', 'Rescheduled window timer for per-tab delay', {
+      windowId,
+      newDelayMs,
+    });
+    return true;
+  }
+
+  /**
    * Get time remaining until next switch for a window
    * @param windowId - The window ID
    * @param delayMs - Delay in milliseconds
@@ -211,3 +245,11 @@ export class WindowTimerManager {
     }
   }
 }
+
+/**
+ * Shared singleton instance.
+ *
+ * Both background.ts and tab-switcher.ts import this same instance so per-tab
+ * delay reschedules from inside switchTab() target the live window timers.
+ */
+export const windowTimerManager = new WindowTimerManager();

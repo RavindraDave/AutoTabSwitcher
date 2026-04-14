@@ -4,13 +4,18 @@
 
 import { StorageData } from './types.js';
 import { DEFAULT_WINDOW_MODE } from './constants.js';
-import { getSwitchingMode } from './storage.js';
+import { getSwitchingMode, getTabDelays } from './storage.js';
 import { updateBadge } from './badge-manager.js';
 import { logger, logTabSwitch } from './logger.js';
 import { canAccessPremium } from './premium-access.js';
 import { PREMIUM_FEATURES_AVAILABLE } from './build-config.js';
 import { recordTabSwitch } from './statistics-tracker.js';
 import { notifyTabSwitch } from './switch-notifier.js';
+import { getEffectiveDelay } from './delay-calculator.js';
+import { rescheduleHybridTimer } from './timing-hybrid.js';
+import { windowTimerManager } from './window-timer-manager.js';
+import { applyAudioManagementForSwitch } from './audio-manager.js';
+import { notifyKioskOverlayOfSwitch } from './kiosk-manager.js';
 
 // Premium feature managers (only imported if premium features are enabled at build time)
 let skipRuleEngine: any = null;
@@ -346,6 +351,44 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
       // Show switch notification (if enabled)
       await notifyTabSwitch(previousTabTitle, newTabTitle, targetWindowId);
 
+      // Phase 1.2: Apply smart audio management (mute inactive tabs)
+      // Cheap no-op when the user has the feature disabled.
+      try {
+        await applyAudioManagementForSwitch(targetWindowId, nextTab.id);
+      } catch (error) {
+        await logger.error('TabSwitcher', 'Audio management failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Non-fatal: continue with rotation
+      }
+
+      // Phase 1.3: Update the kiosk overlay (cheap no-op when disabled).
+      try {
+        const data = await chrome.storage.local.get('delayTime');
+        const approxNextSwitch = (data['delayTime'] as number | undefined) ?? 5000;
+        await notifyKioskOverlayOfSwitch(nextTab.id, nextTab.url, newTabTitle, approxNextSwitch);
+      } catch (error) {
+        await logger.debug('TabSwitcher', 'Kiosk overlay notify failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      // Phase 1.1: Reschedule the timer if the new tab has a per-tab delay
+      // (or if we need to revert from a previous per-tab delay back to the base).
+      // This is a no-op for users who haven't configured any per-tab delays.
+      try {
+        await maybeRescheduleForPerTabDelay(
+          nextTab.url,
+          targetWindowId,
+          windowMode === 'global' ? 'global' : 'window'
+        );
+      } catch (error) {
+        await logger.error('TabSwitcher', 'Error rescheduling for per-tab delay', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Non-fatal: timer continues at previous cadence
+      }
+
       return true;
     }
     return false;
@@ -355,4 +398,69 @@ export async function switchTab(specificWindowId?: number): Promise<boolean> {
     });
     return false;
   }
+}
+
+/**
+ * Phase 1.1: After a successful tab switch, decide whether the rotation timer
+ * needs to be rescheduled to honor a per-tab custom display time.
+ *
+ * Optimization: short-circuits to a no-op when the user has no per-tab delays
+ * configured at all, so the common case pays only one storage read per switch.
+ *
+ * Behavior:
+ * - If the newly active tab has a per-tab delay → reschedule with that value
+ * - If the previously-active timer was using a per-tab delay → reschedule back
+ *   to the effective base delay (group/window/global)
+ * - Otherwise → leave the periodic timer untouched
+ *
+ * @param newTabUrl - URL of the newly active tab
+ * @param windowId - Target window ID (always available after a successful switch)
+ * @param mode - Whether the active timer is global hybrid or per-window
+ */
+async function maybeRescheduleForPerTabDelay(
+  newTabUrl: string | undefined,
+  windowId: number,
+  mode: 'global' | 'window'
+): Promise<void> {
+  // Cheap short-circuit: if no per-tab delays exist anywhere, skip everything.
+  const tabDelays = await getTabDelays();
+  const hasAnyTabDelays = Object.keys(tabDelays).length > 0;
+
+  // Track which delay value the timer was previously running with
+  // so we know whether a reschedule is actually needed.
+  const stateKey = mode === 'global' ? 'currentTimerDelay' : `currentTimerDelay-${windowId}`;
+  const stored = await chrome.storage.local.get(stateKey);
+  const previousTimerDelay: number | undefined = stored[stateKey];
+
+  if (!hasAnyTabDelays && previousTimerDelay === undefined) {
+    // Nothing was rescheduled previously and nothing to apply now.
+    return;
+  }
+
+  // Compute the new effective delay including per-tab lookup
+  const data = await chrome.storage.local.get(['delayTime', 'windowStates']);
+  const globalDelay = (data['delayTime'] as number | undefined) ?? 5000;
+  const windowStates = (data['windowStates'] as Record<string, any> | undefined) || {};
+
+  const result = await getEffectiveDelay(globalDelay, windowId, windowStates, newTabUrl);
+
+  // Only reschedule when the timer's delay is actually changing
+  if (previousTimerDelay !== undefined && previousTimerDelay === result.delay) {
+    return;
+  }
+
+  if (mode === 'global') {
+    await rescheduleHybridTimer(result.delay);
+  } else {
+    await windowTimerManager.rescheduleTimer(windowId, result.delay);
+  }
+
+  await chrome.storage.local.set({ [stateKey]: result.delay });
+
+  await logger.info('TabSwitcher', 'Timer rescheduled after switch', {
+    mode,
+    windowId,
+    newDelayMs: result.delay,
+    source: result.source,
+  });
 }

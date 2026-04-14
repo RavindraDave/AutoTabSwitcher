@@ -2,7 +2,7 @@
  * Storage management helpers
  */
 
-import { StorageData, SwitchingMode, OperatingMode, TabStatistics } from './types.js';
+import { StorageData, SwitchingMode, OperatingMode, TabStatistics, TabDelayEntry, AudioManagementMode } from './types.js';
 import {
   DEFAULT_ENABLED,
   DEFAULT_ENABLE_ON_STARTUP,
@@ -17,7 +17,11 @@ import {
   DEFAULT_IDLE_STOP_ON_ACTIVE,
   DEFAULT_SWITCH_NOTIFICATION,
   DEFAULT_CONTEXT_MENU_ENABLED,
+  MAX_TAB_DELAY_ENTRIES,
+  MAX_TAB_DELAY_LABEL_LENGTH,
+  DEFAULT_AUDIO_MANAGEMENT,
 } from './constants.js';
+import { normalizeUrlKey } from './url-normalizer.js';
 import { logger } from './logger.js';
 
 /**
@@ -645,4 +649,127 @@ export async function getSwitchNotification(): Promise<boolean> {
 export async function getContextMenuEnabled(): Promise<boolean> {
   const data = await chrome.storage.local.get('contextMenuEnabled') as StorageData;
   return data.contextMenuEnabled ?? DEFAULT_CONTEXT_MENU_ENABLED;
+}
+
+// ============================================================================
+// PHASE 1.1 — PER-TAB CUSTOM DISPLAY TIME STORAGE HELPERS
+// ============================================================================
+
+/**
+ * Get all per-tab delay entries keyed by normalized URL.
+ */
+export async function getTabDelays(): Promise<{ [urlKey: string]: TabDelayEntry }> {
+  const data = await chrome.storage.local.get('tabDelays') as StorageData;
+  return data.tabDelays || {};
+}
+
+/**
+ * Look up the delay (ms) for a given URL, or null if none is set.
+ */
+export async function getTabDelayForUrl(url: string | undefined | null): Promise<number | null> {
+  const key = normalizeUrlKey(url);
+  if (!key) return null;
+  const delays = await getTabDelays();
+  const entry = delays[key];
+  return entry ? entry.delay : null;
+}
+
+/**
+ * Create or update a per-tab delay entry.
+ *
+ * @param url - Raw URL (will be normalized to a key)
+ * @param delayMs - Delay in milliseconds (will be clamped to the environment minimum)
+ * @param label - Optional user-supplied display label
+ * @returns The normalized URL key that was stored
+ * @throws Error if the URL is not eligible or if the max entry count is exceeded
+ */
+export async function setTabDelay(
+  url: string,
+  delayMs: number,
+  label?: string
+): Promise<string> {
+  const key = normalizeUrlKey(url);
+  if (!key) {
+    throw new Error('URL is not eligible for a per-tab delay');
+  }
+
+  const clamped = clampDelayTime(delayMs);
+  const delays = await getTabDelays();
+  const existing = delays[key];
+
+  if (!existing && Object.keys(delays).length >= MAX_TAB_DELAY_ENTRIES) {
+    throw new Error(`Maximum of ${MAX_TAB_DELAY_ENTRIES} per-tab delays reached`);
+  }
+
+  // Validate and trim label
+  let safeLabel: string | undefined;
+  if (typeof label === 'string') {
+    const trimmed = label.trim();
+    if (trimmed.length > 0) {
+      safeLabel = trimmed.slice(0, MAX_TAB_DELAY_LABEL_LENGTH);
+    }
+  }
+
+  const now = Date.now();
+  const entry: TabDelayEntry = {
+    url: key,
+    delay: clamped,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+    ...(safeLabel !== undefined ? { label: safeLabel } : existing?.label ? { label: existing.label } : {}),
+  };
+
+  delays[key] = entry;
+  await chrome.storage.local.set({ tabDelays: delays });
+
+  await logger.info('Storage', 'Per-tab delay saved', {
+    urlKey: key,
+    delayMs: clamped,
+    hasLabel: safeLabel !== undefined,
+  });
+
+  return key;
+}
+
+/**
+ * Delete a per-tab delay entry.
+ *
+ * @param urlKey - Normalized URL key (as stored, not raw URL)
+ */
+export async function deleteTabDelay(urlKey: string): Promise<void> {
+  const delays = await getTabDelays();
+  if (!delays[urlKey]) {
+    return;
+  }
+  delete delays[urlKey];
+  await chrome.storage.local.set({ tabDelays: delays });
+  await logger.info('Storage', 'Per-tab delay deleted', { urlKey });
+}
+
+/**
+ * Remove all per-tab delay entries.
+ */
+export async function clearAllTabDelays(): Promise<void> {
+  await chrome.storage.local.set({ tabDelays: {} });
+  await logger.info('Storage', 'All per-tab delays cleared');
+}
+
+// ============================================================================
+// PHASE 1.2 — SMART AUDIO MANAGEMENT STORAGE HELPERS
+// ============================================================================
+
+/**
+ * Get the current audio management mode.
+ */
+export async function getAudioManagementMode(): Promise<AudioManagementMode> {
+  const data = await chrome.storage.local.get('audioManagement') as StorageData;
+  return data.audioManagement ?? DEFAULT_AUDIO_MANAGEMENT;
+}
+
+/**
+ * Set the audio management mode.
+ */
+export async function setAudioManagementMode(mode: AudioManagementMode): Promise<void> {
+  await chrome.storage.local.set({ audioManagement: mode });
+  await logger.info('Storage', 'Audio management mode updated', { mode });
 }
