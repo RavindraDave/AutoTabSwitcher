@@ -105,6 +105,9 @@ export interface StorageData {
   kioskOverlayEnabled?: boolean;       // Show on-tab overlay with tab name + controls
   kioskOverlayAutoHideMs?: number;     // Auto-hide overlay after N ms of mouse idle
   kioskFullscreenWindowIds?: number[]; // Windows currently in fullscreen kiosk mode
+
+  // Phase 2.1 — URL List Rotation
+  urlListConfig?: UrlListConfig;
 }
 
 /**
@@ -116,8 +119,9 @@ export type WindowMode = 'global' | 'current-window';
  * Switching mode type - controls tab switching behavior
  * - 'global': All windows controlled together (uses hybrid timer)
  * - 'window': Per-window independent control (uses window timer manager)
+ * - 'urlList': Opens a predefined set of URLs and rotates through them (Premium)
  */
-export type SwitchingMode = 'global' | 'window';
+export type SwitchingMode = 'global' | 'window' | 'urlList';
 
 /**
  * @deprecated Use SwitchingMode instead
@@ -146,6 +150,27 @@ export interface DiagnosticLogEntry {
   previousTabTitle?: string;
   newTabTitle?: string;
   details?: string;
+}
+
+/**
+ * URL List Rotation Mode — a single entry in the rotation list.
+ */
+export interface UrlListEntry {
+  id: string;
+  url: string;
+  label?: string;
+  delayMs?: number;
+  enabled: boolean;
+  createdAt: number;
+}
+
+/**
+ * URL List Rotation Mode — overall config stored in `urlListConfig`.
+ */
+export interface UrlListConfig {
+  entries: UrlListEntry[];
+  windowId?: number;
+  lastActiveIndex?: number;
 }
 
 // ============================================================================

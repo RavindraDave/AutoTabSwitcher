@@ -126,3 +126,8 @@ export const DEFAULT_KIOSK_OVERLAY_ENABLED = true;
 export const DEFAULT_KIOSK_OVERLAY_AUTO_HIDE_MS = 3000; // 3s mouse-idle auto-hide
 export const MIN_KIOSK_OVERLAY_AUTO_HIDE_MS = 500;
 export const MAX_KIOSK_OVERLAY_AUTO_HIDE_MS = 60000;
+
+// Phase 2.1 — URL List Rotation Mode
+export const MAX_URL_LIST_ENTRIES = 100;
+export const MAX_URL_LIST_LABEL_LENGTH = 100;
+export const URL_LIST_ALARM_NAME = 'urlListTimer';

@@ -2,7 +2,7 @@
  * Badge management for extension icon
  */
 
-import { StorageData } from './types.js';
+import { StorageData, SwitchingMode } from './types.js';
 import { getSwitchingMode } from './storage.js';
 import { logger } from './logger.js';
 
@@ -24,7 +24,7 @@ function getBadgeForWindow(
   paused: boolean,
   windowMode: 'global' | 'current-window',
   selectedWindowId?: number,
-  switchingMode?: 'global' | 'window',
+  switchingMode?: SwitchingMode,
   windowStates?: { [windowId: number]: { enabled: boolean } }
 ): { text: string; color: string } {
   // Check switching mode first (takes precedence over legacy windowMode)

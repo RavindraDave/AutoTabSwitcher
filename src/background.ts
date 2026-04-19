@@ -6,7 +6,7 @@
  * All state is persisted in chrome.storage.local.
  */
 
-import { DEFAULT_ENABLED, MIN_DELAY_MS_PRODUCTION } from './core/constants.js';
+import { DEFAULT_ENABLED, MIN_DELAY_MS_PRODUCTION, URL_LIST_ALARM_NAME } from './core/constants.js';
 import { initializeStorage, getSettings, migrateToSwitchingMode, getSwitchingMode, isValidWindowId, windowExists } from './core/storage.js';
 import { setupActivityListeners, isPaused } from './core/activity-tracker.js';
 import { isManuallyPaused, clearManualPause, toggleManualPause } from './core/manual-pause-tracker.js';
@@ -22,6 +22,7 @@ import { initializeIdleAutoStart, reconfigureIdleDetection } from './core/idle-a
 import { initializeContextMenus, handleContextMenuClick, reconfigureContextMenus } from './core/context-menu-manager.js';
 import { restoreAllOriginalMuteStates, forgetTabMuteSnapshot } from './core/audio-manager.js';
 import { enterKioskMode, exitKioskMode, exitAllKioskWindows, detectKioskExits } from './core/kiosk-manager.js';
+import { startUrlListRotation, advanceUrlListRotation, stopUrlListRotation } from './core/url-list-manager.js';
 
 // Type imports for premium managers
 import type { SessionManager } from './premium/SessionManager.js';
@@ -94,8 +95,18 @@ async function toggleTabSwitcher(): Promise<void> {
     });
 
     // Route based on switching mode
-    if (switchingMode === 'global') {
+    if (switchingMode === 'urlList') {
+      // URL LIST MODE: Premium feature — open/rotate a predefined URL set
+      await toggleHybridTimer(false, delayTime, MIN_DELAY_MS_PRODUCTION);
+      await windowTimerManager.stopAllTimers();
+      if (enabled) {
+        await startUrlListRotation();
+      } else {
+        await stopUrlListRotation();
+      }
+    } else if (switchingMode === 'global') {
       // GLOBAL MODE: Check for group custom delay override
+      await stopUrlListRotation();
       const delayResult = await getEffectiveDelay(delayTime);
       await toggleHybridTimer(enabled, delayResult.delay, MIN_DELAY_MS_PRODUCTION);
       if (delayResult.source === 'group') {
@@ -104,8 +115,8 @@ async function toggleTabSwitcher(): Promise<void> {
         });
       }
     } else {
-      // WINDOW MODE: New feature - per-window control
-      // This is a NEW code path, isolated from existing logic
+      // WINDOW MODE: Per-window control
+      await stopUrlListRotation();
       await handleWindowModeToggle(data.windowStates || {}, delayTime);
     }
   } catch (error) {
@@ -629,6 +640,18 @@ setupAlarmListener();
 // Set up additional alarm listener for window-specific timers (Window Mode)
 // NEW: This is additive and doesn't interfere with existing alarm handling
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+  // Phase 2.1: Handle URL list rotation alarm
+  if (alarm.name === URL_LIST_ALARM_NAME) {
+    try {
+      await advanceUrlListRotation();
+    } catch (error) {
+      await logger.error('UrlListMode', 'Error advancing URL list rotation', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return;
+  }
+
   // Check if this is a window-specific alarm
   const windowId = WindowTimerManager.getWindowIdFromAlarm(alarm.name);
   if (windowId !== null) {

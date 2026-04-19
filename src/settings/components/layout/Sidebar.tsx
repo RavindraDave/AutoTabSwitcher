@@ -31,6 +31,7 @@ const navigation: NavigationGroup[] = [
       { id: 'idle', label: 'Idle Auto-Start', icon: 'clock', path: '/idle' },
       { id: 'per-tab-delays', label: 'Per-Tab Display Time', icon: 'clock', path: '/per-tab-delays' },
       { id: 'kiosk', label: 'Kiosk / Fullscreen', icon: 'window', path: '/kiosk' },
+      { id: 'url-list', label: 'URL List Rotation', icon: 'globe', path: '/url-list' },
       { id: 'notifications', label: 'Notifications', icon: 'info', path: '/notifications' },
       { id: 'statistics', label: 'Statistics', icon: 'tool', path: '/statistics' },
     ],

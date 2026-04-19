@@ -144,6 +144,7 @@ const windowsMock = {
   get: jest.fn(),
   create: jest.fn(),
   update: jest.fn().mockResolvedValue({}),
+  remove: jest.fn().mockResolvedValue(undefined),
   WINDOW_ID_NONE: -1,
 };
 
