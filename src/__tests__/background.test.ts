@@ -51,14 +51,19 @@ jest.mock('../core/logger.js', () => ({
   logWindowToggle: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../core/window-timer-manager.js', () => ({
-  WindowTimerManager: jest.fn().mockImplementation(() => ({
+jest.mock('../core/window-timer-manager.js', () => {
+  const mockInstance = {
     startTimer: jest.fn().mockResolvedValue(undefined),
     stopTimer: jest.fn().mockResolvedValue(undefined),
     stopAllTimers: jest.fn().mockResolvedValue(undefined),
     isStopping: jest.fn().mockReturnValue(false),
-  })),
-}));
+    rescheduleTimer: jest.fn().mockResolvedValue(undefined),
+  };
+  return {
+    WindowTimerManager: jest.fn().mockImplementation(() => mockInstance),
+    windowTimerManager: mockInstance,
+  };
+});
 
 jest.mock('../core/premium-access.js', () => ({
   canAccessPremium: jest.fn().mockResolvedValue(false),
@@ -77,6 +82,18 @@ jest.mock('../core/context-menu-manager.js', () => ({
   initializeContextMenus: jest.fn().mockResolvedValue(undefined),
   handleContextMenuClick: jest.fn().mockResolvedValue(undefined),
   reconfigureContextMenus: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('../core/audio-manager.js', () => ({
+  restoreAllOriginalMuteStates: jest.fn().mockResolvedValue(undefined),
+  forgetTabMuteSnapshot: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('../core/kiosk-manager.js', () => ({
+  enterKioskMode: jest.fn().mockResolvedValue(undefined),
+  exitKioskMode: jest.fn().mockResolvedValue(undefined),
+  exitAllKioskWindows: jest.fn().mockResolvedValue(undefined),
+  detectKioskExits: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock Chrome APIs

@@ -31,6 +31,7 @@ let modeWindowBtn: HTMLButtonElement;
 let modeValue: HTMLElement;
 let intervalValue: HTMLElement;
 let settingsButton: HTMLButtonElement;
+let kioskButton: HTMLButtonElement | null;
 let premiumTeaser: HTMLElement | null;
 let learnMorePremiumBtn: HTMLButtonElement | null;
 let statSwitches: HTMLElement;
@@ -66,6 +67,7 @@ export async function initializePopup(): Promise<void> {
   modeValue = document.getElementById('modeValue')!;
   intervalValue = document.getElementById('intervalValue')!;
   settingsButton = document.getElementById('settingsButton') as HTMLButtonElement;
+  kioskButton = document.getElementById('kioskButton') as HTMLButtonElement | null;
   premiumTeaser = document.getElementById('premiumTeaser');
   learnMorePremiumBtn = document.getElementById('learnMorePremiumBtn') as HTMLButtonElement | null;
   statSwitches = document.getElementById('statSwitches')!;
@@ -77,6 +79,9 @@ export async function initializePopup(): Promise<void> {
   modeGlobalBtn.addEventListener('click', () => handleModeSwitch('global'));
   modeWindowBtn.addEventListener('click', () => handleModeSwitch('window'));
   settingsButton.addEventListener('click', openSettings);
+  if (kioskButton) {
+    kioskButton.addEventListener('click', handleKioskEnter);
+  }
 
   // Premium teaser handler
   if (learnMorePremiumBtn) {
@@ -162,6 +167,9 @@ async function updateUI(): Promise<void> {
 
     // Apply visual theme
     applyTheme(switchingMode);
+
+    // Update kiosk button visibility
+    await updateKioskButton();
 
     // Update premium teaser visibility
     await updatePremiumTeaser();
@@ -552,6 +560,35 @@ export async function handleToggle(): Promise<void> {
     await logger.error('PopupIndex', 'Error toggling auto-switch', {
       error: error instanceof Error ? error.message : String(error)
     });
+  }
+}
+
+/**
+ * Enter kiosk (fullscreen) mode for the current window.
+ */
+async function handleKioskEnter(): Promise<void> {
+  try {
+    const win = await chrome.windows.getCurrent();
+    if (win.id !== undefined) {
+      await chrome.runtime.sendMessage({ type: 'kiosk-enter', windowId: win.id });
+    }
+  } catch (error) {
+    await logger.error('PopupIndex', 'Failed to enter kiosk mode', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Show/hide kiosk button based on kioskMode setting.
+ */
+async function updateKioskButton(): Promise<void> {
+  if (!kioskButton) return;
+  try {
+    const data = await chrome.storage.local.get('kioskMode');
+    kioskButton.style.display = data['kioskMode'] ? 'block' : 'none';
+  } catch {
+    kioskButton.style.display = 'none';
   }
 }
 

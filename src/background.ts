@@ -21,7 +21,7 @@ import { getEffectiveDelay } from './core/delay-calculator.js';
 import { initializeIdleAutoStart, reconfigureIdleDetection } from './core/idle-auto-start.js';
 import { initializeContextMenus, handleContextMenuClick, reconfigureContextMenus } from './core/context-menu-manager.js';
 import { restoreAllOriginalMuteStates, forgetTabMuteSnapshot } from './core/audio-manager.js';
-import { enterKioskMode, exitKioskMode, exitAllKioskWindows } from './core/kiosk-manager.js';
+import { enterKioskMode, exitKioskMode, exitAllKioskWindows, detectKioskExits } from './core/kiosk-manager.js';
 
 // Type imports for premium managers
 import type { SessionManager } from './premium/SessionManager.js';
@@ -520,6 +520,9 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
       // Force badge update by re-toggling
       await toggleTabSwitcher();
     }
+
+    // Detect if the user manually exited fullscreen (ESC / F11)
+    await detectKioskExits();
   } catch (error) {
     await logger.error('Window', 'Error in window focus change handler', {
       error: error instanceof Error ? error.message : String(error),

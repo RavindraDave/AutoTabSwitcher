@@ -75,6 +75,10 @@ const tabsMock = {
     addListener: jest.fn(),
     removeListener: jest.fn(),
   },
+  onRemoved: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
 };
 
 // Mock chrome.alarms API
@@ -110,6 +114,13 @@ const runtimeMock = {
     update_url: undefined, // Simulates unpacked extension
     version: '1.0.0', // Mock version for tests
   }),
+  sendMessage: jest.fn().mockResolvedValue({}),
+  onMessage: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
+  openOptionsPage: jest.fn(),
+  getURL: jest.fn((path: string) => `chrome-extension://mock-id/${path}`),
   lastError: undefined,
 };
 
@@ -132,6 +143,7 @@ const windowsMock = {
   getAll: jest.fn(),
   get: jest.fn(),
   create: jest.fn(),
+  update: jest.fn().mockResolvedValue({}),
   WINDOW_ID_NONE: -1,
 };
 
@@ -174,6 +186,11 @@ const contextMenusMock = {
   },
 };
 
+// Mock chrome.scripting API
+const scriptingMock = {
+  executeScript: jest.fn().mockResolvedValue([]),
+};
+
 // Create global chrome mock
 (global as any).chrome = {
   storage: storageMock,
@@ -186,6 +203,7 @@ const contextMenusMock = {
   downloads: downloadsMock,
   idle: idleMock,
   contextMenus: contextMenusMock,
+  scripting: scriptingMock,
 };
 
 // Reset all mocks before each test

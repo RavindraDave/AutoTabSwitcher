@@ -112,6 +112,41 @@ export async function exitAllKioskWindows(): Promise<void> {
 }
 
 /**
+ * Check all kiosk-tracked windows and remove any that are no longer in
+ * fullscreen state. This handles the case where the user pressed ESC or F11
+ * to manually exit fullscreen — we detect it and clean up our tracking list.
+ *
+ * Called from onFocusChanged and after each tab switch.
+ */
+export async function detectKioskExits(): Promise<void> {
+  const data = await chrome.storage.local.get('kioskFullscreenWindowIds') as StorageData;
+  const ids = data.kioskFullscreenWindowIds || [];
+  if (ids.length === 0) return;
+
+  const removed: number[] = [];
+
+  for (const windowId of ids) {
+    try {
+      const win = await chrome.windows.get(windowId);
+      if (win.state !== 'fullscreen') {
+        removed.push(windowId);
+      }
+    } catch {
+      removed.push(windowId);
+    }
+  }
+
+  if (removed.length > 0) {
+    const remaining = ids.filter(id => !removed.includes(id));
+    await chrome.storage.local.set({ kioskFullscreenWindowIds: remaining });
+    await logger.info('KioskManager', 'Detected manual fullscreen exit', {
+      removed,
+      remaining: remaining.length,
+    });
+  }
+}
+
+/**
  * Inject and render (or update) the kiosk overlay on the active tab of the
  * given window. Called from tab-switcher after every successful switch.
  *
