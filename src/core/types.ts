@@ -89,6 +89,22 @@ export interface StorageData {
 
   // Context Menu: Quick action settings
   contextMenuEnabled?: boolean; // Enable right-click context menu
+
+  // Per-Tab Custom Display Time (Phase 1.1)
+  // Map of normalized URL key → delay entry. See url-normalizer.ts for key format.
+  tabDelays?: { [urlKey: string]: TabDelayEntry };
+
+  // Smart Audio Management (Phase 1.2)
+  audioManagement?: AudioManagementMode;
+  // Snapshot of original mute state so we can restore on disable.
+  // Keyed by tab ID → boolean (true if the tab was user-muted before we touched it).
+  audioOriginalMuteStates?: { [tabId: number]: boolean };
+
+  // Fullscreen / Kiosk Mode (Phase 1.3)
+  kioskMode?: boolean;                 // Master toggle
+  kioskOverlayEnabled?: boolean;       // Show on-tab overlay with tab name + controls
+  kioskOverlayAutoHideMs?: number;     // Auto-hide overlay after N ms of mouse idle
+  kioskFullscreenWindowIds?: number[]; // Windows currently in fullscreen kiosk mode
 }
 
 /**
@@ -610,4 +626,27 @@ export type IdleState = 'active' | 'idle' | 'locked';
 /**
  * Context menu action type
  */
-export type ContextMenuAction = 'exclude-tab' | 'toggle-cycling' | 'toggle-window';
+export type ContextMenuAction = 'exclude-tab' | 'toggle-cycling' | 'toggle-window' | 'set-tab-delay';
+
+// ============================================================================
+// PHASE 1 FREE-TIER FEATURE TYPES
+// ============================================================================
+
+/**
+ * Per-tab custom display time entry (Phase 1.1)
+ * Stored keyed by normalized URL (origin + pathname; query/hash ignored).
+ */
+export interface TabDelayEntry {
+  url: string;        // Normalized URL key (origin + pathname)
+  delay: number;      // Dwell time in milliseconds
+  label?: string;     // Optional user-provided display name
+  createdAt: number;  // Timestamp when this entry was created
+  updatedAt?: number; // Timestamp of last update
+}
+
+/**
+ * Smart audio management mode (Phase 1.2)
+ * - 'off': Do not touch tab audio state
+ * - 'mute-inactive': Unmute the rotating tab, mute all others in the same window
+ */
+export type AudioManagementMode = 'off' | 'mute-inactive';

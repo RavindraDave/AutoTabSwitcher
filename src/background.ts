@@ -14,12 +14,14 @@ import { toggleHybridTimer, setupAlarmListener } from './core/timing-hybrid.js';
 import { updateBadge } from './core/badge-manager.js';
 import { switchTab } from './core/tab-switcher.js';
 import { logger, logModeChange, logWindowToggle } from './core/logger.js';
-import { WindowTimerManager } from './core/window-timer-manager.js';
+import { WindowTimerManager, windowTimerManager } from './core/window-timer-manager.js';
 import { canAccessPremium } from './core/premium-access.js';
 import { PREMIUM_FEATURES_AVAILABLE } from './core/build-config.js';
 import { getEffectiveDelay } from './core/delay-calculator.js';
 import { initializeIdleAutoStart, reconfigureIdleDetection } from './core/idle-auto-start.js';
 import { initializeContextMenus, handleContextMenuClick, reconfigureContextMenus } from './core/context-menu-manager.js';
+import { restoreAllOriginalMuteStates, forgetTabMuteSnapshot } from './core/audio-manager.js';
+import { enterKioskMode, exitKioskMode, exitAllKioskWindows } from './core/kiosk-manager.js';
 
 // Type imports for premium managers
 import type { SessionManager } from './premium/SessionManager.js';
@@ -57,8 +59,9 @@ if (PREMIUM_FEATURES_AVAILABLE) {
 // Default delay time: 5 seconds for all environments
 const DEFAULT_DELAY_TIME = 5000; // 5 seconds
 
-// Initialize Window Timer Manager for per-window timers (Window Mode only)
-const windowTimerManager = new WindowTimerManager();
+// Window Timer Manager for per-window timers (Window Mode only)
+// Imported as a singleton from window-timer-manager.ts so other modules
+// (notably tab-switcher.ts) can reschedule windows for per-tab delays.
 
 /**
  * Debounce timer for storage changes to prevent race conditions
@@ -747,6 +750,77 @@ chrome.commands.onCommand.addListener(async (command) => {
 
 // Set up context menu click listener
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
+
+// Phase 1.2: Drop mute snapshots when tabs close so the saved-state map
+// doesn't accumulate stale tab IDs forever.
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  try {
+    await forgetTabMuteSnapshot(tabId);
+  } catch (error) {
+    await logger.debug('AudioManager', 'forgetTabMuteSnapshot failed', {
+      tabId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+// Phase 1.2 / 1.3: Message handler for actions the extension UI cannot perform
+// directly (e.g., restoring mute states needs chrome.tabs from background).
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  // Use an async IIFE so we can return true and respond later.
+  (async () => {
+    try {
+      if (!message || typeof message !== 'object' || typeof message.type !== 'string') {
+        sendResponse({ ok: false, error: 'Invalid message' });
+        return;
+      }
+
+      switch (message.type) {
+        case 'audio-management-disabled': {
+          await restoreAllOriginalMuteStates();
+          sendResponse({ ok: true });
+          return;
+        }
+        case 'kiosk-enter': {
+          const windowId = typeof message.windowId === 'number' ? message.windowId : undefined;
+          if (windowId === undefined) {
+            sendResponse({ ok: false, error: 'kiosk-enter requires windowId' });
+            return;
+          }
+          await enterKioskMode(windowId);
+          sendResponse({ ok: true });
+          return;
+        }
+        case 'kiosk-exit': {
+          const windowId = typeof message.windowId === 'number' ? message.windowId : undefined;
+          if (windowId === undefined) {
+            sendResponse({ ok: false, error: 'kiosk-exit requires windowId' });
+            return;
+          }
+          await exitKioskMode(windowId);
+          sendResponse({ ok: true });
+          return;
+        }
+        case 'kiosk-exit-all': {
+          await exitAllKioskWindows();
+          sendResponse({ ok: true });
+          return;
+        }
+        default:
+          sendResponse({ ok: false, error: `Unknown message type: ${message.type}` });
+          return;
+      }
+    } catch (error) {
+      await logger.error('Message', 'Handler failed', {
+        type: message?.type,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  })();
+  // Indicate we will respond asynchronously
+  return true;
+});
 
 // Initialize on script load (when service worker starts)
 // Run migration first to ensure switchingMode is set

@@ -106,3 +106,23 @@ export const DEFAULT_CONTEXT_MENU_ENABLED = true;
 export const CONTEXT_MENU_ID_EXCLUDE = 'ats-exclude-tab';
 export const CONTEXT_MENU_ID_TOGGLE = 'ats-toggle-cycling';
 export const CONTEXT_MENU_ID_PARENT = 'ats-parent';
+export const CONTEXT_MENU_ID_SET_TAB_DELAY = 'ats-set-tab-delay';
+
+// ===== PHASE 1 — FREE TIER CLOSE-GAP FEATURES =====
+
+// Per-Tab Custom Display Time (1.1)
+// Hard limit on how many per-tab delay entries can be stored.
+// Protects storage from unbounded growth and keeps the UI performant.
+export const MAX_TAB_DELAY_ENTRIES = 500;
+// Max length of a user-supplied label for a per-tab delay entry.
+export const MAX_TAB_DELAY_LABEL_LENGTH = 100;
+
+// Smart Audio Management (1.2)
+export const DEFAULT_AUDIO_MANAGEMENT = 'off' as const;
+
+// Fullscreen / Kiosk Mode (1.3)
+export const DEFAULT_KIOSK_MODE = false;
+export const DEFAULT_KIOSK_OVERLAY_ENABLED = true;
+export const DEFAULT_KIOSK_OVERLAY_AUTO_HIDE_MS = 3000; // 3s mouse-idle auto-hide
+export const MIN_KIOSK_OVERLAY_AUTO_HIDE_MS = 500;
+export const MAX_KIOSK_OVERLAY_AUTO_HIDE_MS = 60000;

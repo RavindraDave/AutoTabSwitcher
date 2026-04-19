@@ -16,7 +16,8 @@
     "windows",
     "downloads",
     "idle",
-    "contextMenus"
+    "contextMenus",
+    "scripting"
   ],
   "action": {
     "default_popup": "popup/index.html",

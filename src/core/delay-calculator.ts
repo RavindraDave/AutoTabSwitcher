@@ -2,14 +2,16 @@
  * Delay Calculator - Determines effective delay with precedence rules
  *
  * Precedence Order:
- * 1. Group Custom Delay (highest priority)
- * 2. Window Custom Delay
- * 3. Global Delay (lowest priority)
+ * 1. Per-Tab Custom Delay (highest priority) — Phase 1.1, free feature
+ * 2. Group Custom Delay (premium)
+ * 3. Window Custom Delay
+ * 4. Global Delay (lowest priority)
  */
 
 import { logger } from './logger.js';
 import { canAccessPremium } from './premium-access.js';
 import { PREMIUM_FEATURES_AVAILABLE } from './build-config.js';
+import { getTabDelayForUrl } from './storage.js';
 
 // Premium manager imports
 let groupManager: any = null;
@@ -26,21 +28,43 @@ if (PREMIUM_FEATURES_AVAILABLE) {
  * Calculate the effective delay for tab switching
  *
  * Precedence:
- * 1. If premium + active group has customDelayTime → use group delay
- * 2. Else if window mode + window has customDelayTime → use window delay
- * 3. Else → use global delay
+ * 1. If tabUrl has a per-tab delay → use per-tab delay (Phase 1.1)
+ * 2. If premium + active group has customDelayTime → use group delay
+ * 3. Else if window has customDelayTime → use window delay
+ * 4. Else → use global delay
  *
  * @param globalDelay - Global delay time in milliseconds
  * @param windowId - Optional window ID for window-specific delay
  * @param windowStates - Optional window states map
- * @returns Effective delay in milliseconds
+ * @param tabUrl - Optional URL of the currently-active tab for per-tab delay lookup
+ * @returns Effective delay in milliseconds with source label
  */
 export async function getEffectiveDelay(
   globalDelay: number,
   windowId?: number,
-  windowStates?: { [windowId: number]: { enabled: boolean; customDelayTime?: number } }
-): Promise<{ delay: number; source: 'group' | 'window' | 'global' }> {
-  // Check for premium group custom delay (highest priority)
+  windowStates?: { [windowId: number]: { enabled: boolean; customDelayTime?: number } },
+  tabUrl?: string | null
+): Promise<{ delay: number; source: 'tab' | 'group' | 'window' | 'global' }> {
+  // Check for per-tab delay (highest priority)
+  if (tabUrl) {
+    try {
+      const perTabDelay = await getTabDelayForUrl(tabUrl);
+      if (perTabDelay !== null) {
+        await logger.debug('DelayCalculator', 'Using per-tab delay', {
+          tabUrl,
+          delay: perTabDelay
+        });
+        return { delay: perTabDelay, source: 'tab' };
+      }
+    } catch (error) {
+      await logger.error('DelayCalculator', 'Error checking per-tab delay', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      // Fall through to other sources
+    }
+  }
+
+  // Check for premium group custom delay
   if (PREMIUM_FEATURES_AVAILABLE && await canAccessPremium() && groupManager) {
     try {
       const activeGroupId = await groupManager.getActiveGroupId();
@@ -86,15 +110,19 @@ export async function getEffectiveDelay(
  * Simplified version that reads from storage
  *
  * @param windowId - Window ID (optional, for window mode)
+ * @param tabUrl - Optional URL of the active tab for per-tab delay lookup
  * @returns Effective delay in milliseconds
  */
-export async function getCurrentEffectiveDelay(windowId?: number): Promise<number> {
+export async function getCurrentEffectiveDelay(
+  windowId?: number,
+  tabUrl?: string | null
+): Promise<number> {
   try {
     const data = await chrome.storage.local.get(['delayTime', 'windowStates']);
     const globalDelay = data['delayTime'] ?? 5000; // Default 5 seconds
     const windowStates = data['windowStates'] || {};
 
-    const result = await getEffectiveDelay(globalDelay, windowId, windowStates);
+    const result = await getEffectiveDelay(globalDelay, windowId, windowStates, tabUrl);
     return result.delay;
   } catch (error) {
     await logger.error('DelayCalculator', 'Error getting effective delay', {

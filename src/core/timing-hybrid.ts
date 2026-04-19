@@ -266,6 +266,42 @@ export async function toggleHybridTimer(enabled: boolean, delayMs: number, minDe
 }
 
 /**
+ * Reschedule the global hybrid timer to use a new delay value WITHOUT
+ * stopping/restarting the badge state.
+ *
+ * Used by tab-switcher.ts after a switch when the newly active tab has a
+ * per-tab delay (Phase 1.1) that differs from the currently configured one.
+ * Safe to call even when the timer is currently disabled (no-op in that case).
+ *
+ * @param newDelayMs - The new delay in milliseconds (already clamped)
+ */
+export async function rescheduleHybridTimer(newDelayMs: number): Promise<void> {
+  const data = await getSettings(['enabled']);
+  if (!data.enabled) {
+    return; // No active timer to reschedule
+  }
+
+  // Stop existing timers without flipping the badge or marking us as stopping
+  if (intervalTimerId !== undefined) {
+    clearInterval(intervalTimerId);
+    intervalTimerId = undefined;
+  }
+  await chrome.alarms.clear(ALARM_NAME);
+
+  // Choose timing mechanism based on new delay duration
+  if (newDelayMs >= MIN_ALARM_DELAY_MS) {
+    await startAlarmTimer(newDelayMs);
+  } else {
+    await startIntervalTimer(newDelayMs);
+  }
+
+  await logger.info('TimingHybrid', 'Hybrid timer rescheduled for per-tab delay', {
+    newDelayMs,
+    usingAlarms: newDelayMs >= MIN_ALARM_DELAY_MS,
+  });
+}
+
+/**
  * Set up alarm listener for hybrid timing
  * Handles both main tab switching alarm and keep-alive alarm
  * BUGFIX: Added guard checks to prevent tab switching during stop operations

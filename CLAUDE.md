@@ -157,6 +157,10 @@ Never swallow errors silently. Never assume error is an `Error` object — alway
 ### Chrome Extension CSP
 No inline scripts, no `eval()` or `new Function()`, no inline event handlers. All scripts must be external files. The manifest enforces: `script-src 'self'; style-src 'self' 'unsafe-inline'`.
 
+## Branch-Specific Plans
+
+When working on branch `claude/review-extension-competitors-umdEF`, read `docs/implementation/COMPETITIVE-IMPLEMENTATION-PLAN.md` first. It contains the competitive analysis, phased feature plan, file-level implementation notes, and a progress log that must be kept up to date.
+
 ## Known Issues & Gotchas
 
 - **`npm run lint` does not exist** — referenced in CI (`--if-present` avoids failure) and old docs, but no ESLint config or lint script is defined in package.json.
