@@ -47,6 +47,7 @@ const navigation: NavigationGroup[] = [
       { id: 'intervals', label: 'Window Intervals', icon: 'clock', path: '/intervals', premium: true },
       { id: 'patterns', label: 'Rotation Patterns', icon: 'shuffle', path: '/patterns', premium: true },
       { id: 'backup', label: 'Backup & Sync', icon: 'download', path: '/backup', premium: true },
+      { id: 'remote-config', label: 'Remote Config', icon: 'globe', path: '/remote-config', premium: true },
     ],
   },
   {

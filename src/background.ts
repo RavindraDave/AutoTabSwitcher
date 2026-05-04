@@ -6,7 +6,7 @@
  * All state is persisted in chrome.storage.local.
  */
 
-import { DEFAULT_ENABLED, MIN_DELAY_MS_PRODUCTION, URL_LIST_ALARM_NAME } from './core/constants.js';
+import { DEFAULT_ENABLED, MIN_DELAY_MS_PRODUCTION, URL_LIST_ALARM_NAME, REMOTE_CONFIG_ALARM_NAME } from './core/constants.js';
 import { initializeStorage, getSettings, migrateToSwitchingMode, getSwitchingMode, isValidWindowId, windowExists } from './core/storage.js';
 import { setupActivityListeners, isPaused } from './core/activity-tracker.js';
 import { isManuallyPaused, clearManualPause, toggleManualPause } from './core/manual-pause-tracker.js';
@@ -23,6 +23,7 @@ import { initializeContextMenus, handleContextMenuClick, reconfigureContextMenus
 import { restoreAllOriginalMuteStates, forgetTabMuteSnapshot } from './core/audio-manager.js';
 import { enterKioskMode, exitKioskMode, exitAllKioskWindows, detectKioskExits } from './core/kiosk-manager.js';
 import { startUrlListRotation, advanceUrlListRotation, stopUrlListRotation } from './core/url-list-manager.js';
+import { enableRemoteConfigSync, disableRemoteConfigSync, fetchNow, applyPendingConfig, handleRemoteConfigAlarm, initRemoteConfigSync } from './premium/RemoteConfigManager.js';
 
 // Type imports for premium managers
 import type { SessionManager } from './premium/SessionManager.js';
@@ -640,6 +641,18 @@ setupAlarmListener();
 // Set up additional alarm listener for window-specific timers (Window Mode)
 // NEW: This is additive and doesn't interfere with existing alarm handling
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+  // Phase 2.2: Handle remote config sync alarm
+  if (alarm.name === REMOTE_CONFIG_ALARM_NAME) {
+    try {
+      await handleRemoteConfigAlarm();
+    } catch (error) {
+      await logger.error('RemoteConfig', 'Error handling remote config alarm', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return;
+  }
+
   // Phase 2.1: Handle URL list rotation alarm
   if (alarm.name === URL_LIST_ALARM_NAME) {
     try {
@@ -832,6 +845,31 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           sendResponse({ ok: true });
           return;
         }
+        case 'remote-config-enable': {
+          await enableRemoteConfigSync(
+            message.url,
+            message.intervalMinutes,
+            message.applyMode,
+            message.autoApply
+          );
+          sendResponse({ ok: true });
+          return;
+        }
+        case 'remote-config-disable': {
+          await disableRemoteConfigSync();
+          sendResponse({ ok: true });
+          return;
+        }
+        case 'remote-config-fetch-now': {
+          const config = await fetchNow();
+          sendResponse({ ok: true, config });
+          return;
+        }
+        case 'remote-config-apply-pending': {
+          const applied = await applyPendingConfig();
+          sendResponse({ ok: true, applied });
+          return;
+        }
         default:
           sendResponse({ ok: false, error: `Unknown message type: ${message.type}` });
           return;
@@ -850,4 +888,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 // Initialize on script load (when service worker starts)
 // Run migration first to ensure switchingMode is set
-migrateToSwitchingMode().then(() => toggleTabSwitcher());
+migrateToSwitchingMode().then(() => {
+  toggleTabSwitcher();
+  initRemoteConfigSync().catch(() => {});
+});

@@ -131,3 +131,11 @@ export const MAX_KIOSK_OVERLAY_AUTO_HIDE_MS = 60000;
 export const MAX_URL_LIST_ENTRIES = 100;
 export const MAX_URL_LIST_LABEL_LENGTH = 100;
 export const URL_LIST_ALARM_NAME = 'urlListTimer';
+
+// Phase 2.2 — Remote JSON Config Sync (Premium)
+export const REMOTE_CONFIG_ALARM_NAME = 'remoteConfigSync';
+export const MIN_REMOTE_CONFIG_INTERVAL_MINUTES = 1;
+export const MAX_REMOTE_CONFIG_INTERVAL_MINUTES = 1440; // 24 hours
+export const DEFAULT_REMOTE_CONFIG_INTERVAL_MINUTES = 15;
+export const REMOTE_CONFIG_FETCH_TIMEOUT_MS = 30000;
+export const MAX_REMOTE_CONFIG_SIZE_BYTES = 1048576; // 1 MB

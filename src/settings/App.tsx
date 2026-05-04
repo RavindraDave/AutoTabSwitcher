@@ -21,6 +21,7 @@ const WindowIntervals = React.lazy(() => import('./sections/premium/WindowInterv
 const RotationPatterns = React.lazy(() => import('./sections/premium/RotationPatterns'));
 const BackupSettings = React.lazy(() => import('./sections/premium/BackupSettings'));
 const PremiumActivation = React.lazy(() => import('./sections/premium/PremiumActivation'));
+const RemoteConfigSettings = React.lazy(() => import('./sections/premium/RemoteConfigSettings'));
 const Diagnostics = React.lazy(() => import('./sections/system/Diagnostics'));
 const About = React.lazy(() => import('./sections/system/About'));
 
@@ -54,6 +55,7 @@ function App() {
           <Route path="/intervals" element={<WindowIntervals />} />
           <Route path="/patterns" element={<RotationPatterns />} />
           <Route path="/backup" element={<BackupSettings />} />
+          <Route path="/remote-config" element={<RemoteConfigSettings />} />
 
           {/* System */}
           <Route path="/diagnostics" element={<Diagnostics />} />

@@ -108,6 +108,9 @@ export interface StorageData {
 
   // Phase 2.1 — URL List Rotation
   urlListConfig?: UrlListConfig;
+
+  // Phase 2.2 — Remote JSON Config Sync (Premium)
+  remoteConfigSync?: RemoteConfigSyncSettings;
 }
 
 /**
@@ -675,3 +678,23 @@ export interface TabDelayEntry {
  * - 'mute-inactive': Unmute the rotating tab, mute all others in the same window
  */
 export type AudioManagementMode = 'off' | 'mute-inactive';
+
+// ============================================================================
+// PHASE 2 PREMIUM FEATURE TYPES
+// ============================================================================
+
+/**
+ * Remote JSON Config Sync settings (Phase 2.2, Premium)
+ */
+export interface RemoteConfigSyncSettings {
+  enabled: boolean;
+  url: string;
+  intervalMinutes: number;
+  lastFetchTime?: number;
+  lastFetchStatus?: 'success' | 'error';
+  lastFetchError?: string;
+  lastAppliedHash?: string;
+  applyMode: 'replace' | 'merge';
+  autoApply: boolean;
+  pendingConfig?: ConfigExport;
+}
