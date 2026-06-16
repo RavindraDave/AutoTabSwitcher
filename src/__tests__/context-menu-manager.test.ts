@@ -42,7 +42,7 @@ describe('Context Menu Manager', () => {
       await initializeContextMenus();
 
       expect(chrome.contextMenus.removeAll).toHaveBeenCalled();
-      expect(chrome.contextMenus.create).toHaveBeenCalledTimes(4); // parent + 3 items
+      expect(chrome.contextMenus.create).toHaveBeenCalledTimes(5); // parent + 4 items
     });
 
     it('should remove menus when disabled', async () => {

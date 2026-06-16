@@ -75,6 +75,10 @@ const tabsMock = {
     addListener: jest.fn(),
     removeListener: jest.fn(),
   },
+  onRemoved: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
 };
 
 // Mock chrome.alarms API
@@ -103,6 +107,10 @@ const runtimeMock = {
     removeListener: jest.fn(),
   },
   onStartup: {
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+  },
+  onMessage: {
     addListener: jest.fn(),
     removeListener: jest.fn(),
   },

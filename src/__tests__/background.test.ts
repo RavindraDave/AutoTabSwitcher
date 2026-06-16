@@ -51,14 +51,18 @@ jest.mock('../core/logger.js', () => ({
   logWindowToggle: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../core/window-timer-manager.js', () => ({
-  WindowTimerManager: jest.fn().mockImplementation(() => ({
+jest.mock('../core/window-timer-manager.js', () => {
+  const mockInstance = {
     startTimer: jest.fn().mockResolvedValue(undefined),
     stopTimer: jest.fn().mockResolvedValue(undefined),
     stopAllTimers: jest.fn().mockResolvedValue(undefined),
     isStopping: jest.fn().mockReturnValue(false),
-  })),
-}));
+  };
+  return {
+    WindowTimerManager: jest.fn().mockImplementation(() => mockInstance),
+    windowTimerManager: mockInstance,
+  };
+});
 
 jest.mock('../core/premium-access.js', () => ({
   canAccessPremium: jest.fn().mockResolvedValue(false),
