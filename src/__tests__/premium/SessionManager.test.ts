@@ -246,15 +246,6 @@ describe('SessionManager', () => {
       expect(result.launchCount).toBe(0);
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(
-        sessionManager.saveCurrentWindow('Test')
-      ).rejects.toThrow();
-    });
   });
 
   describe('saveAllWindows', () => {
@@ -421,15 +412,6 @@ describe('SessionManager', () => {
       expect(mockChrome.windows.create).toHaveBeenCalled();
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(
-        sessionManager.restoreSession('test-session-123')
-      ).rejects.toThrow();
-    });
   });
 
   describe('deleteSession', () => {
@@ -468,15 +450,6 @@ describe('SessionManager', () => {
       expect(autoLaunchCall[0].autoLaunchSessionIds).toEqual(['session-2']);
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(
-        sessionManager.deleteSession('test-id')
-      ).rejects.toThrow();
-    });
   });
 
   describe('getAllSessions', () => {

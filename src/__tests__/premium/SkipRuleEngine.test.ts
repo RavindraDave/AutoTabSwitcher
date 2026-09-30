@@ -113,13 +113,6 @@ describe('SkipRuleEngine', () => {
       expect(true).toBe(true);
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(skipRuleEngine.initialize()).rejects.toThrow();
-    });
   });
 
   describe('rule management', () => {

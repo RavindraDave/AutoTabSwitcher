@@ -19,7 +19,6 @@ const SkipRules = React.lazy(() => import('./sections/premium/SkipRules'));
 const WindowIntervals = React.lazy(() => import('./sections/premium/WindowIntervals'));
 const RotationPatterns = React.lazy(() => import('./sections/premium/RotationPatterns'));
 const BackupSettings = React.lazy(() => import('./sections/premium/BackupSettings'));
-const PremiumActivation = React.lazy(() => import('./sections/premium/PremiumActivation'));
 const Diagnostics = React.lazy(() => import('./sections/system/Diagnostics'));
 const About = React.lazy(() => import('./sections/system/About'));
 
@@ -45,7 +44,6 @@ function App() {
           <Route path="/general/kiosk" element={<KioskSettings />} />
 
           {/* Premium Settings */}
-          <Route path="/premium/activate" element={<PremiumActivation />} />
           <Route path="/sessions" element={<SessionManagement />} />
           <Route path="/refresh" element={<RefreshSettings />} />
           <Route path="/skip" element={<SkipRules />} />

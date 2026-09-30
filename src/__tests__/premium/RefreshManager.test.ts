@@ -105,13 +105,6 @@ describe('RefreshManager', () => {
       expect(true).toBe(true);
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(refreshManager.initialize()).rejects.toThrow();
-    });
   });
 
   describe('enable/disable', () => {
@@ -149,14 +142,6 @@ describe('RefreshManager', () => {
       expect(true).toBe(true);
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(refreshManager.enable()).rejects.toThrow();
-      await expect(refreshManager.disable()).rejects.toThrow();
-    });
   });
 
   describe('settings management', () => {
@@ -367,15 +352,6 @@ describe('RefreshManager', () => {
       expect(rules[1].id).toBe('2');
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(
-        refreshManager.addRule({ type: 'url', pattern: 'test', action: 'refresh', enabled: true })
-      ).rejects.toThrow();
-    });
   });
 
   describe('rule matching', () => {
