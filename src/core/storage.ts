@@ -140,9 +140,6 @@ export async function initializeStorage(defaultDelayTime: number): Promise<void>
     pauseDuration: DEFAULT_PAUSE_DURATION,
     windowStates: {}, // Initialize empty window states
     lastSwitchTimes: {}, // BUGFIX: Initialize lastSwitchTimes on fresh install
-    // DEV: Auto-enable premium features in development builds
-    premiumEnabled: isDevelopmentBuild,
-    licenseKey: isDevelopmentBuild ? 'DEV-AUTO-ENABLED' : null,
     // New features defaults
     idleAutoStart: DEFAULT_IDLE_AUTO_START,
     idleThresholdSeconds: DEFAULT_IDLE_THRESHOLD_SECONDS,
@@ -503,8 +500,8 @@ export async function createConfigBackup(reason: 'manual' | 'pre-import' | 'sche
  * Check if premium features are enabled
  */
 export async function isPremiumEnabled(): Promise<boolean> {
-  const data = await chrome.storage.local.get('premiumEnabled') as StorageData;
-  return data.premiumEnabled || false;
+  // All features are free and always enabled.
+  return true;
 }
 
 /**

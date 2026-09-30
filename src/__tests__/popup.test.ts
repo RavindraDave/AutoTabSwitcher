@@ -278,35 +278,7 @@ describe('Popup UI Controller', () => {
         expect(dom.modeValue.textContent).toBe('Window Mode');
       });
 
-      it('should show premium teaser when premium not available', async () => {
-        const { canAccessPremium } = await import('../core/premium-access');
-        (canAccessPremium as jest.Mock).mockResolvedValue(false);
 
-        mockChrome.storage.local.get.mockResolvedValue({
-          enabled: false,
-          switchingMode: 'global',
-        });
-
-        const { initializePopup } = await import('../popup/index');
-        await initializePopup();
-
-        expect(dom.premiumTeaser.style.display).toBe('block');
-      });
-
-      it('should hide premium teaser when premium available', async () => {
-        const { canAccessPremium } = await import('../core/premium-access');
-        (canAccessPremium as jest.Mock).mockResolvedValue(true);
-
-        mockChrome.storage.local.get.mockResolvedValue({
-          enabled: false,
-          switchingMode: 'global',
-        });
-
-        const { initializePopup } = await import('../popup/index');
-        await initializePopup();
-
-        expect(dom.premiumTeaser.style.display).toBe('none');
-      });
     });
 
     describe('handleToggle', () => {
@@ -573,37 +545,7 @@ describe('Popup UI Controller', () => {
     });
 
     describe('Premium Teaser', () => {
-      it('should open premium activation page when learn more clicked', async () => {
-        mockChrome.storage.local.get.mockResolvedValue({
-          enabled: false,
-          switchingMode: 'global',
-        });
 
-        const { initializePopup } = await import('../popup/index');
-        await initializePopup();
-
-        dom.learnMorePremiumBtn.click();
-
-        expect(mockChrome.tabs.create).toHaveBeenCalledWith({
-          url: 'chrome-extension://test/settings/index.html#/premium/activate',
-        });
-      });
-
-      it('should handle premium teaser errors gracefully', async () => {
-        const { canAccessPremium } = await import('../core/premium-access');
-        (canAccessPremium as jest.Mock).mockRejectedValue(new Error('Premium check failed'));
-
-        mockChrome.storage.local.get.mockResolvedValue({
-          enabled: false,
-          switchingMode: 'global',
-        });
-
-        const { initializePopup } = await import('../popup/index');
-        await initializePopup();
-
-        // Should hide teaser on error
-        expect(dom.premiumTeaser.style.display).toBe('none');
-      });
     });
 
     describe('Storage Change Listener', () => {

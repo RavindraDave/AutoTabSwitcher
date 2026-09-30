@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/common/Card';
 import { Icon } from '../../components/common/Icon';
-import { usePremium } from '../../context/PremiumContext';
 import styles from './SystemStyles.module.css';
 
 function About() {
-  const { isPremium } = usePremium();
   const [version, setVersion] = useState('1.0.0');
 
   useEffect(() => {
@@ -30,7 +28,7 @@ function About() {
           <h1>Auto Tab Switcher</h1>
           <p>Automatically switch between browser tabs at your pace</p>
           <span className={styles.versionBadge}>
-            Version {version} {isPremium ? '(Premium)' : '(Free)'}
+            Version {version}
           </span>
         </div>
       </div>

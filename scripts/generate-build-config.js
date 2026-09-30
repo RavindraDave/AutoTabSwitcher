@@ -10,8 +10,9 @@ const fs = require('fs');
 const path = require('path');
 
 // Read environment variable
-const isPremiumBuild = process.env.BUILD_PREMIUM === 'true';
-const buildType = process.env.BUILD_TYPE || (isPremiumBuild ? 'production-premium' : 'production-free');
+// Every feature is free and included in every build.
+const isPremiumBuild = true;
+const buildType = process.env.BUILD_TYPE || 'production';
 
 // Generate TypeScript file content
 const content = `/**

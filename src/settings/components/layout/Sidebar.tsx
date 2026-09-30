@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { SidebarGroup } from './SidebarGroup';
 import { SidebarItem } from './SidebarItem';
-import { usePremium } from '../../context/PremiumContext';
 import { useSettings } from '../../context/SettingsContext';
 import styles from './Sidebar.module.css';
 
@@ -11,7 +10,6 @@ interface NavigationItem {
   label: string;
   icon: string;
   path: string;
-  premium?: boolean;
 }
 
 interface NavigationGroup {
@@ -36,16 +34,14 @@ const navigation: NavigationGroup[] = [
     ],
   },
   {
-    group: 'Premium',
-    badge: 'sparkles',
+    group: 'Advanced',
     items: [
-      { id: 'activate', label: 'Activate Premium', icon: 'sparkles', path: '/premium/activate' },
-      { id: 'sessions', label: 'Session Management', icon: 'folder', path: '/sessions', premium: true },
-      { id: 'refresh', label: 'Smart Refresh', icon: 'refresh', path: '/refresh', premium: true },
-      { id: 'skip', label: 'Skip Rules', icon: 'skip', path: '/skip', premium: true },
-      { id: 'intervals', label: 'Window Intervals', icon: 'clock', path: '/intervals', premium: true },
-      { id: 'patterns', label: 'Rotation Patterns', icon: 'shuffle', path: '/patterns', premium: true },
-      { id: 'backup', label: 'Backup & Sync', icon: 'download', path: '/backup', premium: true },
+      { id: 'sessions', label: 'Session Management', icon: 'folder', path: '/sessions' },
+      { id: 'refresh', label: 'Smart Refresh', icon: 'refresh', path: '/refresh' },
+      { id: 'skip', label: 'Skip Rules', icon: 'skip', path: '/skip' },
+      { id: 'intervals', label: 'Window Intervals', icon: 'clock', path: '/intervals' },
+      { id: 'patterns', label: 'Rotation Patterns', icon: 'shuffle', path: '/patterns' },
+      { id: 'backup', label: 'Backup & Sync', icon: 'download', path: '/backup' },
     ],
   },
   {
@@ -59,7 +55,6 @@ const navigation: NavigationGroup[] = [
 
 export function Sidebar() {
   const location = useLocation();
-  const { isPremium } = usePremium();
   const { settings } = useSettings();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -117,7 +112,6 @@ export function Sidebar() {
                   icon={item.icon}
                   path={item.path}
                   isActive={location.pathname === item.path}
-                  isLocked={item.premium && !isPremium}
                   onClick={() => setIsMobileOpen(false)}
                 />
               ))}
@@ -145,7 +139,6 @@ export function Sidebar() {
         {/* Footer with version */}
         <div className={styles.footer}>
           <span className={styles.version}>v1.0.0</span>
-          {isPremium && <span className={styles.premiumBadge}>Premium</span>}
         </div>
       </aside>
     </>

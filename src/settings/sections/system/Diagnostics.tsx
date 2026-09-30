@@ -3,7 +3,6 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Icon } from '../../components/common/Icon';
 import { useSettings } from '../../context/SettingsContext';
-import { usePremium } from '../../context/PremiumContext';
 import type { LogEntry } from '../../../core/logger';
 import styles from './SystemStyles.module.css';
 
@@ -12,12 +11,10 @@ interface SystemStatus {
   currentMode: string;
   delayTime: number;
   pauseOnActivity: boolean;
-  isPremium: boolean;
 }
 
 function Diagnostics() {
   const { settings, getDelayInSeconds } = useSettings();
-  const { isPremium } = usePremium();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // Default: newest first
 
@@ -26,7 +23,6 @@ function Diagnostics() {
     currentMode: settings.switchingMode,
     delayTime: getDelayInSeconds(), // Convert from ms to seconds
     pauseOnActivity: settings.pauseOnActivity,
-    isPremium,
   };
 
   useEffect(() => {
@@ -117,12 +113,6 @@ function Diagnostics() {
             <span className={styles.statusLabel}>Pause on Activity</span>
             <span className={styles.statusValue}>
               {status.pauseOnActivity ? 'Enabled' : 'Disabled'}
-            </span>
-          </div>
-          <div className={styles.statusItem}>
-            <span className={styles.statusLabel}>Premium Status</span>
-            <span className={`${styles.statusValue} ${status.isPremium ? styles.premium : ''}`}>
-              {status.isPremium ? 'Active' : 'Free'}
             </span>
           </div>
         </div>

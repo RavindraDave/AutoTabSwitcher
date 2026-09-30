@@ -198,13 +198,6 @@ describe('ConfigManager', () => {
       expect(config.exportDate).toBeLessThanOrEqual(after);
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(configManager.exportConfig()).rejects.toThrow();
-    });
   });
 
   describe('export as JSON', () => {
@@ -354,13 +347,6 @@ describe('ConfigManager', () => {
       // Should check for existing sessions
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(configManager.importConfig(validConfig)).rejects.toThrow();
-    });
   });
 
   describe('import from JSON', () => {
@@ -424,13 +410,6 @@ describe('ConfigManager', () => {
       expect(downloadCall.filename).toMatch(/autotabswitcher-config-\d+\.json/);
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(configManager.downloadConfig()).rejects.toThrow();
-    });
   });
 
   describe('validation', () => {
@@ -570,15 +549,6 @@ describe('ConfigManager', () => {
       expect(true).toBe(true);
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(configManager.createBackup()).rejects.toThrow();
-      await expect(configManager.getBackups()).rejects.toThrow();
-      await expect(configManager.restoreBackup('test')).rejects.toThrow();
-    });
   });
 
   describe('statistics', () => {
@@ -611,13 +581,6 @@ describe('ConfigManager', () => {
       expect(stats.lastBackup).toBeUndefined();
     });
 
-    test('should require premium license', async () => {
-      mockChrome.storage.local.get.mockResolvedValue({
-        premiumEnabled: false
-      });
-
-      await expect(configManager.getExportStats()).rejects.toThrow();
-    });
   });
 
   describe('URL sanitization', () => {
